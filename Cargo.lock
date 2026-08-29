@@ -787,6 +787,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "glacex"
+version = "0.1.0"
+dependencies = [
+ "arboard",
+ "bytemuck",
+ "env_logger",
+ "glyphon",
+ "pollster",
+ "taffy",
+ "wgpu",
+ "winit",
+]
+
+[[package]]
 name = "glow"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -818,20 +832,6 @@ dependencies = [
  "lru",
  "rustc-hash 2.1.3",
  "wgpu",
-]
-
-[[package]]
-name = "gpu"
-version = "0.1.0"
-dependencies = [
- "arboard",
- "bytemuck",
- "env_logger",
- "glyphon",
- "pollster",
- "taffy",
- "wgpu",
- "winit",
 ]
 
 [[package]]

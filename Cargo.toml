@@ -1,9 +1,9 @@
 [package]
-name = "gpu"
+name = "glacex"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
-description = "Experimental GPU-rendered UI toolkit built from scratch in Rust using wgpu, winit, and taffy."
+description = "GPU-rendered UI library built from scratch in Rust [WIT]"
 readme = "README.md"
 license = "MIT"
 keywords = ["gui", "wgpu", "winit", "ui", "graphics"]

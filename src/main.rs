@@ -1,6 +1,6 @@
-use gpu::{
-    Alignment, App, Button, Checkbox, Color, Label, RadioButton, ScrollView, TextArea, TextInput,
-    Ui, Widget, column, row,
+use glacex::{
+    Alignment, App, Button, Checkbox, CheckboxState, Color, Label, RadioButton, ScrollView,
+    TextArea, TextEditState, TextInput, Ui, Widget, column, row,
 };
 
 struct AppState {
@@ -17,68 +17,93 @@ impl Widget for AppState {
     type Output = ();
 
     fn ui(&mut self, ui: &mut Ui) {
-        ui.set_bgcolor(Color::rgb(12, 12, 12));
+        ui.set_bgcolor(Color::rgb(16, 16, 20));
 
-        let increment_clicked;
-        let reset_clicked;
+        let mut title = Label::new("glacex demo");
+        let mut subtitle = Label::new("Every widget below is wired to real, readable state.");
+
+        let mut count_label = Label::new(format!("Count: {}", self.count));
+        let mut increment_button = Button::new("Increment");
+        let mut reset_button = Button::new("Reset");
+
+        let mut notify_checkbox = Checkbox::new("notify_checkbox");
+        let mut sound_checkbox = Checkbox::new("sound_checkbox");
+
+        let mut theme_light = RadioButton::new("theme", "Light");
+        let mut theme_dark = RadioButton::new("theme", "Dark");
+
+        let mut name_input = TextInput::new("name_input", 220.0);
+
+        let mut activity_1 = Label::new("Loaded widget tree");
+        let mut activity_2 = Label::new("Registered focusables");
+        let mut activity_3 = Label::new("Waiting for input...");
+        let mut notes_area = TextArea::new("notes_area", 220.0, 80.0);
 
         {
-            let mut count_label = Label::new(format!("Counter: {}", self.count));
-            let mut increment_button = Button::new("Increment");
-            let mut reset_button = Button::new("Reset");
-            let mut intro_label = Label::new("GPU-rendered Rust UI demo");
-            let mut hint_label = Label::new("Try scrolling, tab focus, typing, and selection.");
-            let mut item_one = Label::new("This scroll view contains regular widgets.");
-            let mut item_two = Label::new("The counter updates when you press Increment.");
-            let mut item_three = Label::new("Text inputs preserve state between frames.");
-
             row![
                 &mut column![
-                    &mut intro_label,
-                    &mut hint_label,
+                    &mut title,
+                    &mut subtitle,
                     &mut count_label,
+                    &mut row![&mut increment_button, &mut reset_button],
+                    &mut Label::new("Name"),
+                    &mut name_input,
+                    &mut Label::new("Recent activity"),
                     &mut ScrollView::new(
-                        "main_scroll",
-                        [260.0, 110.0],
-                        &mut column![
-                            &mut item_one,
-                            &mut item_two,
-                            &mut item_three,
-                            &mut increment_button,
-                        ],
+                        "activity_scroll",
+                        [240.0, 70.0],
+                        &mut column![&mut activity_1, &mut activity_2, &mut activity_3],
                     ),
-                    &mut row![
-                        &mut reset_button,
-                        &mut column![
-                            &mut Checkbox::new("checkbox_a"),
-                            &mut Checkbox::new("checkbox_b"),
-                        ],
-                    ]
-                    .align(Alignment::Center),
-                    &mut TextInput::new("input_a", 220.0),
-                    &mut TextInput::new("input_b", 220.0),
-                    &mut TextArea::new("textarea", 220.0, 110.0),
+                    &mut Label::new("Notes"),
+                    &mut notes_area,
                 ]
                 .align(Alignment::Start),
                 &mut column![
-                    &mut RadioButton::new("theme", "light"),
-                    &mut RadioButton::new("theme", "dark"),
-                    &mut RadioButton::new("theme", "auto"),
+                    &mut Label::new("Notifications"),
+                    &mut row![
+                        &mut notify_checkbox,
+                        &mut Label::new("Enable notifications")
+                    ]
+                    .align(Alignment::Center),
+                    &mut row![&mut sound_checkbox, &mut Label::new("Play sound")]
+                        .align(Alignment::Center),
+                    &mut Label::new("Theme"),
+                    &mut row![&mut theme_light, &mut Label::new("Light")].align(Alignment::Center),
+                    &mut row![&mut theme_dark, &mut Label::new("Dark")].align(Alignment::Center),
                 ]
+                .align(Alignment::Start),
             ]
-            .align(Alignment::Center)
-            .arrange_at([50.0, 50.0], ui);
-
-            increment_clicked = increment_button.clicked();
-            reset_clicked = reset_button.clicked();
+            .align(Alignment::Start)
+            .arrange_at([40.0, 40.0], ui);
         }
 
-        if increment_clicked {
+        // Button state is cached on the widget itself, so this works
+        // straight off the widgets — no lookup needed.
+        if increment_button.clicked() {
             self.count += 1;
         }
-        if reset_clicked {
+        if reset_button.clicked() {
             self.count = 0;
         }
+
+        // Checkbox / RadioButton / TextInput / TextArea state lives in
+        // `Ui`'s persistent state map, keyed by the id string you gave
+        // them — read it back like this after the layout block runs.
+        let notify_on = ui.widget_state::<CheckboxState>("notify_checkbox").checked;
+        let sound_on = ui.widget_state::<CheckboxState>("sound_checkbox").checked;
+        let theme = ui.selected_option("theme").unwrap_or("Light").to_string();
+        let name = ui
+            .widget_state::<TextEditState>("name_input")
+            .text()
+            .to_string();
+        let notes = ui
+            .widget_state::<TextEditState>("notes_area")
+            .text()
+            .to_string();
+
+        // Nothing to do with these yet in this demo — they're here to
+        // show the read-back pattern. Wire them into real logic as needed.
+        let _ = (notify_on, sound_on, theme, name, notes);
     }
 }
 
