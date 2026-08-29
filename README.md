@@ -20,5 +20,6 @@ production use. APIs are unstable and subject to change.
 - Text rendering via `glyphon`
 - Hit-testing and interaction system
 - Layout system (Row/Column)
+- A filling system (Solid, Gradient)
 - Widgets: button, checkbox, radio button, label, text input, 
   text area, scroll view, container
