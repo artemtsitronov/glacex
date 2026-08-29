@@ -1,4 +1,5 @@
 use crate::color::Color;
+use crate::fill::Fill;
 use crate::geometry::contains;
 use crate::scrolling::{ScrollAxisState, ScrollConfig, compute_geometry, handle_drag};
 use crate::ui::Ui;
@@ -226,7 +227,12 @@ impl<'a> Measurable for ScrollView<'a> {
             ui.draw_rect(
                 thumb_position_y,
                 [self.config.thickness, geometry_y_final.thumb_size],
-                Color::rgba(255, 255, 255, if state.y.dragging { 0.5 } else { 0.3 }),
+                Fill::Solid(Color::rgba(
+                    255,
+                    255,
+                    255,
+                    if state.y.dragging { 0.5 } else { 0.3 },
+                )),
                 self.config.thickness / 2.0,
                 0.0,
                 [0.0; 4],
@@ -239,7 +245,12 @@ impl<'a> Measurable for ScrollView<'a> {
             ui.draw_rect(
                 thumb_position_x,
                 [geometry_x_final.thumb_size, self.config.thickness],
-                Color::rgba(255, 255, 255, if state.x.dragging { 0.5 } else { 0.3 }),
+                Fill::Solid(Color::rgba(
+                    255,
+                    255,
+                    255,
+                    if state.x.dragging { 0.5 } else { 0.3 },
+                )),
                 self.config.thickness / 2.0,
                 0.0,
                 [0.0; 4],

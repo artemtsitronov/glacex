@@ -1,4 +1,5 @@
 use crate::color::Color;
+use crate::fill::Fill;
 use crate::geometry::contains;
 use crate::scrolling::{ScrollAxisState, ScrollConfig, compute_geometry, handle_drag};
 use crate::text_edit::TextEditState;
@@ -368,7 +369,7 @@ impl Measurable for TextArea {
         ui.draw_rect(
             position,
             size,
-            Color::rgb(30, 30, 34),
+            Fill::Solid(Color::rgb(30, 30, 34)),
             self.corner_radius,
             1.0,
             border_color,
@@ -418,7 +419,7 @@ impl Measurable for TextArea {
                     ui.draw_rect(
                         highlight_position,
                         highlight_size,
-                        Color::rgba(76, 95, 213, 0.35),
+                        Fill::Solid(Color::rgba(76, 95, 213, 0.35)),
                         0.0,
                         0.0,
                         [0.0; 4],
@@ -450,7 +451,7 @@ impl Measurable for TextArea {
                 ui.draw_rect(
                     cursor_position,
                     [2.0, line_height],
-                    Color::WHITE,
+                    Fill::Solid(Color::WHITE),
                     0.0,
                     0.0,
                     [0.0; 4],
@@ -469,7 +470,12 @@ impl Measurable for TextArea {
             ui.draw_rect(
                 thumb_position,
                 [config.thickness, geometry_final.thumb_size],
-                Color::rgba(255, 255, 255, if extra.scroll.dragging { 0.5 } else { 0.3 }),
+                Fill::Solid(Color::rgba(
+                    255,
+                    255,
+                    255,
+                    if extra.scroll.dragging { 0.5 } else { 0.3 },
+                )),
                 config.thickness / 2.0,
                 0.0,
                 [0.0; 4],

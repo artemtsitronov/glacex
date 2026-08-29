@@ -1,4 +1,5 @@
 use crate::color::Color;
+use crate::fill::Fill;
 use crate::geometry::contains;
 use crate::text_edit::TextEditState;
 use crate::ui::Ui;
@@ -112,7 +113,7 @@ impl Measurable for TextInput {
         ui.draw_rect(
             position,
             size,
-            Color::rgba(0, 0, 0, 0.35),
+            Fill::Solid(Color::rgba(0, 0, 0, 0.35)),
             self.corner_radius,
             0.0,
             [0.0; 4],
@@ -123,7 +124,7 @@ impl Measurable for TextInput {
         ui.draw_rect(
             position,
             size,
-            Color::rgb(30, 30, 34),
+            Fill::Solid(Color::rgb(30, 30, 34)),
             self.corner_radius,
             1.0,
             border_color,
@@ -144,7 +145,7 @@ impl Measurable for TextInput {
             ui.draw_rect(
                 highlight_position,
                 highlight_size,
-                Color::rgba(76, 95, 213, 0.35),
+                Fill::Solid(Color::rgba(76, 95, 213, 0.35)),
                 0.0,
                 0.0,
                 [0.0; 4],
@@ -176,7 +177,7 @@ impl Measurable for TextInput {
                 ui.draw_rect(
                     cursor_position,
                     [2.0, ui.line_height()],
-                    Color::WHITE,
+                    Fill::Solid(Color::WHITE),
                     0.0,
                     0.0,
                     [0.0; 4],

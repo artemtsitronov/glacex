@@ -8,8 +8,8 @@ pub struct TextEditState {
     scroll_offset: f32,
     selection_anchor: Option<usize>,
     last_activity: Instant,
-    pub dragging: bool, // new
-    pub hovered: bool,  // new — if you actually need it to persist; likely you don't, see below
+    pub dragging: bool,
+    pub hovered: bool,
 }
 
 impl Default for TextEditState {

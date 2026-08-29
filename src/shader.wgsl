@@ -6,6 +6,11 @@ struct WindowSize {
 @group(0) @binding(0)
 var<uniform> window_size: WindowSize;
 
+@group(1) @binding(0)
+var gradient_atlas: texture_2d<f32>;
+@group(1) @binding(1)
+var gradient_sampler: sampler;
+
 struct QuadVertex {
     @location(0) local_position: vec2<f32>,
 }
@@ -19,6 +24,9 @@ struct RectInstance {
     @location(6) border_color: vec4<f32>,
     @location(7) blur_radius: f32,
     @location(8) sharp: f32,
+    @location(9) fill_kind: f32,
+    @location(10) gradient_angle: f32,
+    @location(11) gradient_row: f32,
 }
 
 struct VertexOutput {
@@ -31,6 +39,9 @@ struct VertexOutput {
     @location(5) border_width: f32,
     @location(6) border_color: vec4<f32>,
     @location(7) sharp: f32,
+    @location(8) fill_kind: f32,
+    @location(9) gradient_angle: f32,
+    @location(10) gradient_row: f32,
 }
 
 // Must be >= AA_PADDING below, or the fade band extends past the padded
@@ -70,6 +81,9 @@ fn vs_main(vertex: QuadVertex, instance: RectInstance) -> VertexOutput {
     out.border_width = instance.border_width;
     out.border_color = instance.border_color;
     out.sharp = instance.sharp;
+    out.fill_kind = instance.fill_kind;
+    out.gradient_angle = instance.gradient_angle;
+    out.gradient_row = instance.gradient_row;
 
     return out;
 }
@@ -82,6 +96,17 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         return vec4<f32>(in.color.rgb, in.color.a * alpha);
     }
 
+    var fill_color = in.color;
+    if in.fill_kind > 0.5 {
+        let angle_rad = radians(in.gradient_angle);
+        let direction = vec2<f32>(cos(angle_rad), sin(angle_rad));
+        let projected = dot(in.local_pos, direction);
+        let t = (projected + in.half_size.x) / (in.half_size.x * 2.0);
+        let row_count = 64.0; // must match GradientAtlas's texture height (64)
+        let v = (in.gradient_row + 0.5) / row_count;
+        fill_color = textureSample(gradient_atlas, gradient_sampler, vec2<f32>(clamp(t, 0.0, 1.0), v));
+    }
+
     let inner_dist = sd_rounded_box(in.local_pos, in.half_size, in.corner_radius);
     let outer_dist = sd_rounded_box(
         in.local_pos,
@@ -90,11 +115,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     );
 
     let fill_alpha = 1.0 - smoothstep(0.0, AA_FADE_WIDTH, inner_dist);
-    let color = mix(in.border_color, in.color, fill_alpha);
+    let color = mix(in.border_color, fill_color, fill_alpha);
 
     let alpha = select(
-        1.0 - smoothstep(0.0, AA_FADE_WIDTH, outer_dist), // normal AA
-        select(1.0, 0.0, outer_dist > 0.0),                // sharp: hard cutoff, no fade
+        1.0 - smoothstep(0.0, AA_FADE_WIDTH, outer_dist),
+        select(1.0, 0.0, outer_dist > 0.0),
         in.sharp > 0.5
     );
     return vec4<f32>(color.rgb, color.a * alpha);

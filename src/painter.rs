@@ -1,9 +1,11 @@
+use crate::fill::{Fill, Gradient, GradientHandle, GradientKind, GradientStop};
 use crate::shapes::{QUAD_VERTICES, QuadVertex, RectInstance};
 use glyphon::{
     Attrs, Cache, FontSystem, Metrics, Resolution, Shaping, SwashCache, TextArea, TextAtlas,
     TextBounds, TextRenderer, Viewport,
 };
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::iter;
 use std::sync::Arc;
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
@@ -18,6 +20,137 @@ use wgpu::{
     SurfaceConfiguration, TextureViewDescriptor, VertexState,
 };
 use winit::window::Window;
+
+fn sample_stops(stops: &[GradientStop], t: f32) -> crate::Color {
+    if stops.is_empty() {
+        return crate::Color::TRANSPARENT;
+    }
+    if t <= stops[0].position {
+        return stops[0].color;
+    }
+    for window in stops.windows(2) {
+        let (a, b) = (window[0], window[1]);
+        if t >= a.position && t <= b.position {
+            let local_t = (t - a.position) / (b.position - a.position).max(0.0001);
+            return crate::Color::linear_rgba(
+                a.color.r + (b.color.r - a.color.r) * local_t,
+                a.color.g + (b.color.g - a.color.g) * local_t,
+                a.color.b + (b.color.b - a.color.b) * local_t,
+                a.color.a + (b.color.a - a.color.a) * local_t,
+            );
+        }
+    }
+    stops.last().unwrap().color
+}
+
+fn hash_gradient(gradient: &Gradient) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    // Hash each stop's position + color bytes — f32 doesn't implement Hash
+    // directly (NaN issues), so hash the bit pattern instead.
+    for stop in &gradient.stops {
+        stop.position.to_bits().hash(&mut hasher);
+        stop.color.r.to_bits().hash(&mut hasher);
+        stop.color.g.to_bits().hash(&mut hasher);
+        stop.color.b.to_bits().hash(&mut hasher);
+        stop.color.a.to_bits().hash(&mut hasher);
+    }
+    hasher.finish()
+}
+
+struct GradientAtlas {
+    texture: wgpu::Texture,
+    texture_view: wgpu::TextureView,
+    sampler: wgpu::Sampler,
+    rows_used: u32,
+    cache: HashMap<u64, GradientHandle>,
+}
+
+impl GradientAtlas {
+    fn new(device: &wgpu::Device) -> Self {
+        let ramp_texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("gradient ramp atlas"),
+            size: wgpu::Extent3d {
+                width: 256,
+                height: 64,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8Unorm,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        });
+        let ramp_texture_view = ramp_texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let ramp_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
+            ..Default::default()
+        });
+
+        GradientAtlas {
+            texture: ramp_texture,
+            texture_view: ramp_texture_view,
+            sampler: ramp_sampler,
+            rows_used: 0,
+            cache: HashMap::new(),
+        }
+    }
+
+    fn bake_ramp(&mut self, queue: &wgpu::Queue, stops: &[GradientStop]) -> GradientHandle {
+        const ATLAS_ROWS: u32 = 64;
+        let row = self.rows_used % ATLAS_ROWS;
+        let mut pixels = [0u8; 256 * 4]; // one row, RGBA bytes
+
+        for x in 0..256 {
+            let t = x as f32 / 255.0;
+            let color = sample_stops(stops, t); // walks the stop list, finds the two
+            // stops t falls between, mix()es them —
+            // same interpolation math the shader
+            // would have done per-fragment, just
+            // run once here instead
+            let bytes = color.to_linear_rgba().map(|c| (c * 255.0) as u8);
+            pixels[x * 4..x * 4 + 4].copy_from_slice(&bytes);
+        }
+
+        queue.write_texture(
+            wgpu::TexelCopyTextureInfo {
+                texture: &self.texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d { x: 0, y: row, z: 0 },
+                aspect: wgpu::TextureAspect::All,
+            },
+            &pixels,
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(256 * 4),
+                rows_per_image: Some(1),
+            },
+            wgpu::Extent3d {
+                width: 256,
+                height: 1,
+                depth_or_array_layers: 1,
+            },
+        );
+
+        self.rows_used += 1;
+
+        GradientHandle::Ramp { row }
+    }
+
+    fn bake_cached(&mut self, queue: &wgpu::Queue, gradient: &Gradient) -> GradientHandle {
+        let key = hash_gradient(gradient);
+        if let Some(&handle) = self.cache.get(&key) {
+            return handle;
+        }
+        let handle = self.bake_ramp(queue, &gradient.stops);
+        self.cache.insert(key, handle);
+        handle
+    }
+}
 
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -51,6 +184,9 @@ pub struct Painter {
     text_renderer: TextRenderer,
     font_metrics: Metrics,
     pending_labels: Vec<(glyphon::Buffer, [f32; 2], [f32; 4])>,
+
+    gradient_atlas: GradientAtlas,
+    gradient_bind_group: BindGroup,
 
     bgcolor: Color,
 }
@@ -101,6 +237,29 @@ impl Painter {
             }],
         });
 
+        let gradient_bind_group_layout =
+            device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+                label: Some("gradient atlas bind group layout"),
+                entries: &[
+                    BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: ShaderStages::FRAGMENT,
+                        count: None,
+                        ty: BindingType::Texture {
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            multisampled: false,
+                        },
+                    },
+                    BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: ShaderStages::FRAGMENT,
+                        count: None,
+                        ty: BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    },
+                ],
+            });
+
         let bind_group = device.create_bind_group(&BindGroupDescriptor {
             label: None,
             layout: &bind_group_layout,
@@ -110,9 +269,26 @@ impl Painter {
             }],
         });
 
+        let gradient_atlas = GradientAtlas::new(&device);
+
+        let gradient_bind_group = device.create_bind_group(&BindGroupDescriptor {
+            label: Some("gradient atlas bind group"),
+            layout: &gradient_bind_group_layout,
+            entries: &[
+                BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&gradient_atlas.texture_view),
+                },
+                BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&gradient_atlas.sampler),
+                },
+            ],
+        });
+
         let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: None,
-            bind_group_layouts: &[Some(&bind_group_layout)],
+            bind_group_layouts: &[Some(&bind_group_layout), Some(&gradient_bind_group_layout)],
             immediate_size: 0,
         });
 
@@ -193,6 +369,8 @@ impl Painter {
             text_renderer,
             font_metrics,
             pending_labels: vec![],
+            gradient_atlas,
+            gradient_bind_group,
             bgcolor: Color::BLACK,
         }
     }
@@ -239,7 +417,7 @@ impl Painter {
         &mut self,
         position: [f32; 2],
         size: [f32; 2],
-        color: [f32; 4],
+        fill: Fill,
         corner_radius: f32,
         border_width: f32,
         border_color: [f32; 4],
@@ -247,11 +425,30 @@ impl Painter {
         sharp: f32,
         clip: [f32; 4],
     ) {
+        let (fill_kind, color, gradient_angle, gradient_row) = match fill {
+            Fill::Solid(color) => (0.0, color.to_linear_rgba(), 0.0, 0.0),
+            Fill::Gradient(gradient) => {
+                let handle = self.gradient_atlas.bake_cached(&self.queue, &gradient);
+                let row = match handle {
+                    GradientHandle::Ramp { row } => row as f32,
+                    GradientHandle::Mesh { .. } => 0.0, // not handled yet
+                };
+                let angle = match &gradient.kind {
+                    GradientKind::Linear { angle } => *angle,
+                    _ => 0.0, // radial/conic not handled yet
+                };
+                (1.0, [0.0; 4], angle, row)
+            }
+        };
+
         self.pending_rects.push((
             clip,
             RectInstance {
                 position,
                 size,
+                fill_kind,
+                gradient_angle,
+                gradient_row,
                 color,
                 corner_radius,
                 border_width,
@@ -283,6 +480,9 @@ impl Painter {
                 border_color: [255.0; 4],
                 blur_radius: 5.0,
                 sharp: 0.0,
+                fill_kind: 0.0,
+                gradient_angle: 0.0,
+                gradient_row: 0.0,
             };
             self.rect_instance_buffer = self.device.create_buffer_init(&BufferInitDescriptor {
                 label: None,
@@ -373,6 +573,7 @@ impl Painter {
             render_pass.set_vertex_buffer(0, self.quad_vertex_buffer.slice(..));
             render_pass.set_vertex_buffer(1, self.rect_instance_buffer.slice(..));
             render_pass.set_bind_group(0, &self.bind_group, &[]);
+            render_pass.set_bind_group(1, &self.gradient_bind_group, &[]);
 
             // Group consecutive rects sharing the same clip rect into one
             // draw call each, setting the scissor rect before every group.

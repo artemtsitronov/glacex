@@ -48,6 +48,9 @@ pub struct RectInstance {
     pub border_color: [f32; 4],
     pub blur_radius: f32,
     pub sharp: f32,
+    pub fill_kind: f32,
+    pub gradient_angle: f32,
+    pub gradient_row: f32,
 }
 
 impl RectInstance {
@@ -65,6 +68,9 @@ impl RectInstance {
             6 => Float32x4,
             7 => Float32,
             8 => Float32,
+            9 => Float32,
+            10 => Float32,
+            11 => Float32,
         ],
     };
 }

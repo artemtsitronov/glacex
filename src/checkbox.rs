@@ -1,3 +1,4 @@
+use crate::fill::Fill;
 use crate::interaction::Interaction;
 use crate::theme::Theme;
 use crate::ui::Ui;
@@ -72,7 +73,7 @@ impl Measurable for Checkbox {
         ui.draw_rect(
             position,
             size,
-            Theme::SHADOW,
+            Fill::Solid(Theme::SHADOW),
             self.corner_radius,
             0.0,
             [0.0; 4],
@@ -82,7 +83,7 @@ impl Measurable for Checkbox {
         ui.draw_rect(
             position,
             size,
-            color,
+            Fill::Solid(color),
             self.corner_radius,
             1.0,
             Theme::BORDER,

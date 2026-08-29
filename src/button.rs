@@ -1,3 +1,4 @@
+use crate::Fill;
 use crate::geometry::center_text_in;
 use crate::interaction::Interaction;
 use crate::theme::Theme;
@@ -10,6 +11,7 @@ pub struct Button {
     label: String,
     corner_radius: f32,
     interaction: Interaction,
+    fill: Option<Fill>,
 }
 
 impl Button {
@@ -18,7 +20,13 @@ impl Button {
             label: label.into(),
             corner_radius: 12.0,
             interaction: Interaction::default(),
+            fill: None,
         }
+    }
+
+    pub fn fill(mut self, fill: Fill) -> Self {
+        self.fill = Some(fill);
+        self
     }
 
     pub fn corner_radius(mut self, radius: f32) -> Self {
@@ -60,12 +68,14 @@ impl Measurable for Button {
         let interaction = Interaction::update(position, size, self.corner_radius, ui);
         self.interaction = interaction;
 
-        let color = Theme::state_color(interaction.pressed, interaction.hovered);
+        let fill = self.fill.clone().unwrap_or_else(|| {
+            Fill::Solid(Theme::state_color(interaction.pressed, interaction.hovered))
+        });
 
         ui.draw_rect(
             position,
             size,
-            Theme::SHADOW,
+            Fill::Solid(Theme::SHADOW),
             self.corner_radius,
             0.0,
             [0.0; 4],
@@ -75,7 +85,7 @@ impl Measurable for Button {
         ui.draw_rect(
             position,
             size,
-            color,
+            fill,
             self.corner_radius,
             1.0,
             Theme::BORDER,

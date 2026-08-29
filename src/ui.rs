@@ -1,4 +1,5 @@
 use crate::color::Color;
+use crate::fill::Fill;
 use crate::painter::Painter;
 use crate::widget::{FocusId, Widget};
 use std::any::Any;
@@ -379,7 +380,7 @@ impl Ui {
         &mut self,
         position: [f32; 2],
         size: [f32; 2],
-        color: Color,
+        fill: Fill,
         corner_radius: f32,
         border_width: f32,
         border_color: [f32; 4],
@@ -390,7 +391,7 @@ impl Ui {
         self.painter.draw_rect(
             position,
             size,
-            color.to_linear_rgba(),
+            fill,
             corner_radius,
             border_width,
             border_color,

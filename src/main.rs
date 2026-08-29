@@ -1,7 +1,26 @@
 use glacex::{
-    Alignment, App, Button, Checkbox, CheckboxState, Color, Label, RadioButton, ScrollView,
-    TextArea, TextEditState, TextInput, Ui, Widget, column, row,
+    Alignment, App, Button, Checkbox, CheckboxState, Color, Fill, Gradient, GradientKind,
+    GradientStop, Label, RadioButton, ScrollView, TextArea, TextEditState, TextInput, Ui, Widget,
+    column, row,
 };
+
+fn hue_gradient(hue_offset: f32) -> Fill {
+    let hue_a = hue_offset % 360.0;
+    let hue_b = (hue_offset + 60.0) % 360.0;
+    Fill::Gradient(Gradient {
+        kind: GradientKind::Linear { angle: 0.0 },
+        stops: vec![
+            GradientStop {
+                position: 0.0,
+                color: Color::hsv(hue_a, 0.8, 1.0),
+            },
+            GradientStop {
+                position: 1.0,
+                color: Color::hsv(hue_b, 0.8, 1.0),
+            },
+        ],
+    })
+}
 
 struct AppState {
     count: u32,
@@ -18,12 +37,13 @@ impl Widget for AppState {
 
     fn ui(&mut self, ui: &mut Ui) {
         ui.set_bgcolor(Color::rgb(16, 16, 20));
+        let hue = (ui.elapsed_seconds() * 60.0) % 360.0; // 60 = degrees/sec, tune to taste
 
         let mut title = Label::new("glacex demo");
         let mut subtitle = Label::new("Every widget below is wired to real, readable state.");
 
         let mut count_label = Label::new(format!("Count: {}", self.count));
-        let mut increment_button = Button::new("Increment");
+        let mut increment_button = Button::new("Increment").fill(hue_gradient(hue));
         let mut reset_button = Button::new("Reset");
 
         let mut notify_checkbox = Checkbox::new("notify_checkbox");
