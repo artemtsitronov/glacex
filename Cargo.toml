@@ -1,13 +1,14 @@
 [package]
 name = "glacex"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 rust-version = "1.85"
-description = "GPU-rendered UI library built from scratch in Rust [WIP]"
+description = "GPU-accelerated UI library built from scratch in Rust"
 readme = "README.md"
 license = "MIT"
-keywords = ["gui", "wgpu", "winit", "ui", "graphics"]
-categories = ["gui", "graphics", "rendering"]
+keywords = ["gui", "wgpu", "ui", "graphics"]
+categories = ["gui", "graphics"]
+exclude = ["screenshots/*"]
 
 [dependencies]
 arboard = "3.6.1"

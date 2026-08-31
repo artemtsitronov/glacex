@@ -109,7 +109,28 @@ impl Color {
         }
     }
 
-    // conversions
+    pub fn hex_str(s: &str) -> Color {
+        let s = s.strip_prefix('#').unwrap_or(s);
+        let value = u32::from_str_radix(s, 16).unwrap_or(0);
+        Color::hex(value)
+    }
+
+    pub fn hex(hex: u32) -> Color {
+        let r = ((hex >> 16) & 0xFF) as u8;
+        let g = ((hex >> 8) & 0xFF) as u8;
+        let b = (hex & 0xFF) as u8;
+        Color::rgb(r, g, b)
+    }
+
+    pub fn hex_alpha(hex: u32) -> Color {
+        let r = ((hex >> 24) & 0xFF) as u8;
+        let g = ((hex >> 16) & 0xFF) as u8;
+        let b = ((hex >> 8) & 0xFF) as u8;
+        let a = (hex & 0xFF) as f32 / 255.0;
+        Color::rgba(r, g, b, a)
+    }
+
+    //conversions
 
     pub fn to_rgb(&self) -> [f32; 3] {
         [self.r * 255.0, self.g * 255.0, self.b * 255.0]
