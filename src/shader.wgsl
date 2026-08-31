@@ -27,6 +27,7 @@ struct RectInstance {
     @location(9) fill_kind: f32,
     @location(10) gradient_angle: f32,
     @location(11) gradient_row: f32,
+    @location(12) gradient_center: vec2<f32>,
 }
 
 struct VertexOutput {
@@ -42,6 +43,7 @@ struct VertexOutput {
     @location(8) fill_kind: f32,
     @location(9) gradient_angle: f32,
     @location(10) gradient_row: f32,
+    @location(11) gradient_center: vec2<f32>,
 }
 
 // Must be >= AA_PADDING below, or the fade band extends past the padded
@@ -84,6 +86,7 @@ fn vs_main(vertex: QuadVertex, instance: RectInstance) -> VertexOutput {
     out.fill_kind = instance.fill_kind;
     out.gradient_angle = instance.gradient_angle;
     out.gradient_row = instance.gradient_row;
+    out.gradient_center = instance.gradient_center;
 
     return out;
 }
@@ -96,13 +99,23 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         return vec4<f32>(in.color.rgb, in.color.a * alpha);
     }
 
-    var fill_color = in.color;
-    if in.fill_kind > 0.5 {
+    var t: f32 = 0.0;
+    if in.fill_kind == 1.0 { // linear
         let angle_rad = radians(in.gradient_angle);
         let direction = vec2<f32>(cos(angle_rad), sin(angle_rad));
         let projected = dot(in.local_pos, direction);
-        let t = (projected + in.half_size.x) / (in.half_size.x * 2.0);
-        let row_count = 64.0; // must match GradientAtlas's texture height (64)
+        t = (projected + in.half_size.x) / (in.half_size.x * 2.0);
+    } else if in.fill_kind == 2.0 { // radial
+        let dist = length(in.local_pos - in.gradient_center);
+        t = dist / in.gradient_angle; // gradient_angle holds radius here
+    } else if in.fill_kind == 3.0 { // conic
+        let angle = atan2(in.local_pos.y - in.gradient_center.y, in.local_pos.x - in.gradient_center.x);
+        t = (angle + 3.14159265) / (2.0 * 3.14159265);
+    }
+
+    var fill_color = in.color;
+    if in.fill_kind >= 1.0 && in.fill_kind <= 3.0 {
+        let row_count = 64.0;
         let v = (in.gradient_row + 0.5) / row_count;
         fill_color = textureSample(gradient_atlas, gradient_sampler, vec2<f32>(clamp(t, 0.0, 1.0), v));
     }

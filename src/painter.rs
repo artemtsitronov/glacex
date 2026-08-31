@@ -425,19 +425,21 @@ impl Painter {
         sharp: f32,
         clip: [f32; 4],
     ) {
-        let (fill_kind, color, gradient_angle, gradient_row) = match fill {
-            Fill::Solid(color) => (0.0, color.to_linear_rgba(), 0.0, 0.0),
+        let (fill_kind, color, gradient_angle, gradient_center, gradient_row) = match fill {
+            Fill::Solid(color) => (0.0, color.to_linear_rgba(), 0.0, [0.0, 0.0], 0.0),
             Fill::Gradient(gradient) => {
                 let handle = self.gradient_atlas.bake_cached(&self.queue, &gradient);
                 let row = match handle {
                     GradientHandle::Ramp { row } => row as f32,
                     GradientHandle::Mesh { .. } => 0.0, // not handled yet
                 };
-                let angle = match &gradient.kind {
-                    GradientKind::Linear { angle } => *angle,
-                    _ => 0.0, // radial/conic not handled yet
+                let (kind, param0, center) = match &gradient.kind {
+                    GradientKind::Linear { angle } => (1.0, *angle, [0.0, 0.0]),
+                    GradientKind::Radial { center, radius } => (2.0, *radius, *center),
+                    GradientKind::Conic { center } => (3.0, 0.0, *center),
+                    GradientKind::Mesh { .. } => (4.0, 0.0, [0.0, 0.0]),
                 };
-                (1.0, [0.0; 4], angle, row)
+                (kind, [0.0; 4], param0, center, row)
             }
         };
 
@@ -448,6 +450,7 @@ impl Painter {
                 size,
                 fill_kind,
                 gradient_angle,
+                gradient_center,
                 gradient_row,
                 color,
                 corner_radius,
@@ -483,6 +486,7 @@ impl Painter {
                 fill_kind: 0.0,
                 gradient_angle: 0.0,
                 gradient_row: 0.0,
+                gradient_center: [0.0; 2],
             };
             self.rect_instance_buffer = self.device.create_buffer_init(&BufferInitDescriptor {
                 label: None,

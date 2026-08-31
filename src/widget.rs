@@ -53,3 +53,7 @@ impl<T: Measurable> AnyWidget for &mut T {
         None
     }
 }
+
+pub trait WidgetStyle: Clone {
+    fn default_style() -> Self;
+}

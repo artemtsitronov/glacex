@@ -1,14 +1,15 @@
 use glacex::{
-    Alignment, App, Button, Checkbox, CheckboxState, Color, Fill, Gradient, GradientKind,
-    GradientStop, Label, RadioButton, ScrollView, TextArea, TextEditState, TextInput, Ui, Widget,
-    column, row,
+    Alignment, App, Button, ButtonStyle, Checkbox, CheckboxState, Color, Fill, Gradient,
+    GradientKind, GradientStop, Label, RadioButton, ScrollView, TextArea, TextEditState, TextInput,
+    Ui, Widget, column, row,
 };
+use std::default::Default;
 
 fn hue_gradient(hue_offset: f32) -> Fill {
     let hue_a = hue_offset % 360.0;
     let hue_b = (hue_offset + 60.0) % 360.0;
     Fill::Gradient(Gradient {
-        kind: GradientKind::Linear { angle: 0.0 },
+        kind: GradientKind::Conic { center: [0.0, 0.0] },
         stops: vec![
             GradientStop {
                 position: 0.0,
@@ -43,8 +44,17 @@ impl Widget for AppState {
         let mut subtitle = Label::new("Every widget below is wired to real, readable state.");
 
         let mut count_label = Label::new(format!("Count: {}", self.count));
-        let mut increment_button = Button::new("Increment").fill(hue_gradient(hue));
-        let mut reset_button = Button::new("Reset");
+        let mut increment_button = Button::new(
+            "Increment",
+            Some(ButtonStyle {
+                fill: hue_gradient(hue),
+                border_width: 2.0,
+                border_color: [0.0, 0.0, 0.0, 1.0],
+                corner_radius: 20.0,
+                ..ButtonStyle::default_style()
+            }),
+        );
+        let mut reset_button = Button::new("Reset", None);
 
         let mut notify_checkbox = Checkbox::new("notify_checkbox");
         let mut sound_checkbox = Checkbox::new("sound_checkbox");
