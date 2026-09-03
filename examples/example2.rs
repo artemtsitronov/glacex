@@ -6,45 +6,18 @@
 //!
 //! e.g.
 //!
-//!     checkbox|corner_radius:12.0,color:#f5656f,
+//!     checkbox|corner_radius:12.0,color:#f5656f
 //!
 //! and the matching preview widget below updates immediately, every frame,
-//! straight from the typed text. This exercises `ButtonStyle`,
-//! `CheckboxStyle`, `TextInputStyle`, `TextAreaStyle`, `ScrollViewStyle`, and
-//! `ShadowStyle`, plus `Ui::set_title` (the window title reflects whichever
-//! widget you're currently editing).
-//!
-//! Recognized attributes (all optional, any subset may be given):
-//!   - `color`                 fill color, hex e.g. `#3a3a46` (all widgets)
-//!   - `hover_color`           fill while hovered (button, checkbox)
-//!   - `pressed_color`         fill while pressed (button)
-//!   - `checked_color`         fill while checked (checkbox)
-//!   - `border_color`          border color (button, checkbox, textinput, textarea)
-//!   - `border_width`          border width in px
-//!   - `corner_radius`         corner radius in px
-//!   - `focus_border_color`    border color while focused (textinput, textarea)
-//!   - `selection_color`       text selection highlight (textinput, textarea)
-//!   - `cursor_color`          blinking caret color (textinput, textarea)
-//!   - `thumb_color`           scrollbar thumb color (scrollview, textarea)
-//!   - `thumb_dragging_color`  scrollbar thumb color while dragging
-//!   - `thumb_corner_radius`   scrollbar thumb corner radius (scrollview)
-//!   - `sharp`                 `true`/`false`, hard vs anti-aliased edge
-//!   - `shadow`                `true`/`false`, enable/disable the drop shadow
-//!   - `shadow_color`          drop shadow color (implies `shadow:true`)
-//!   - `shadow_blur`           drop shadow blur radius
-//!
-//! Widget types accepted: `button`, `checkbox`, `textinput` (or `input`),
-//! `textarea` (or `area`), `scrollview` (or `scroll`).
+//! straight from the typed text.
 
 use glacex::{
-    Alignment, App, Button, ButtonStyle, Checkbox, CheckboxStyle, Color, Fill, Label, ScrollView,
-    ScrollViewStyle, ShadowStyle, TextArea, TextAreaStyle, TextEditState, TextInput,
-    TextInputStyle, Ui, Widget, column, row,
+    Alignment, App, Badge, BadgeVariant, Button, ButtonStyle, Card, Checkbox, CheckboxStyle, Color,
+    Divider, Fill, Label, ScrollView, ScrollViewStyle, ShadowStyle, TextArea, TextAreaStyle,
+    TextEditState, TextInput, TextInputStyle, Theme, Ui, Widget, column, row,
 };
 use std::collections::HashMap;
 
-/// Parses `widget_type|key:value,key:value,...`. A trailing comma, and
-/// extra whitespace around any piece, are both fine.
 fn parse_command(input: &str) -> Option<(String, HashMap<String, String>)> {
     let (widget, rest) = input.split_once('|')?;
     let widget = widget.trim().to_ascii_lowercase();
@@ -58,46 +31,50 @@ fn parse_command(input: &str) -> Option<(String, HashMap<String, String>)> {
         if pair.is_empty() {
             continue;
         }
-        if let Some((key, value)) = pair.split_once(':') {
-            attrs.insert(key.trim().to_ascii_lowercase(), value.trim().to_string());
+        if let Some((k, v)) = pair.split_once(':') {
+            attrs.insert(k.trim().to_ascii_lowercase(), v.trim().to_string());
         }
     }
-
     Some((widget, attrs))
 }
 
-fn attr_f32(attrs: &HashMap<String, String>, key: &str) -> Option<f32> {
-    attrs.get(key)?.trim().parse::<f32>().ok()
+fn attr_color(attrs: &HashMap<String, String>, key: &str) -> Option<Color> {
+    attrs.get(key).map(|v| Color::hex_str(v))
 }
 
-fn attr_color(attrs: &HashMap<String, String>, key: &str) -> Option<Color> {
-    attrs.get(key).map(|value| Color::hex_str(value.trim()))
+fn attr_f32(attrs: &HashMap<String, String>, key: &str) -> Option<f32> {
+    attrs.get(key).and_then(|v| v.parse::<f32>().ok())
 }
 
 fn attr_bool(attrs: &HashMap<String, String>, key: &str) -> Option<bool> {
-    match attrs.get(key)?.trim().to_ascii_lowercase().as_str() {
-        "true" | "1" | "yes" | "on" => Some(true),
-        "false" | "0" | "no" | "off" => Some(false),
-        _ => None,
-    }
+    attrs
+        .get(key)
+        .and_then(|v| match v.to_ascii_lowercase().as_str() {
+            "true" | "1" | "yes" => Some(true),
+            "false" | "0" | "no" => Some(false),
+            _ => None,
+        })
 }
 
-/// Shared by every style that carries an optional drop shadow: `shadow`
-/// toggles it on/off, `shadow_color`/`shadow_blur` tweak an enabled one
-/// (and implicitly turn it on if it was off).
 fn apply_shadow_attrs(attrs: &HashMap<String, String>, shadow: &mut Option<ShadowStyle>) {
-    if let Some(enabled) = attr_bool(attrs, "shadow") {
-        if enabled {
-            shadow.get_or_insert_with(ShadowStyle::default);
-        } else {
-            *shadow = None;
+    let has_shadow = attr_bool(attrs, "shadow");
+    let shadow_color = attr_color(attrs, "shadow_color");
+    let shadow_blur = attr_f32(attrs, "shadow_blur");
+
+    if has_shadow == Some(false) {
+        *shadow = None;
+        return;
+    }
+
+    if has_shadow == Some(true) || shadow_color.is_some() || shadow_blur.is_some() {
+        let mut s = shadow.unwrap_or_default();
+        if let Some(c) = shadow_color {
+            s.color = c;
         }
-    }
-    if let Some(color) = attr_color(attrs, "shadow_color") {
-        shadow.get_or_insert_with(ShadowStyle::default).color = color;
-    }
-    if let Some(blur) = attr_f32(attrs, "shadow_blur") {
-        shadow.get_or_insert_with(ShadowStyle::default).blur_radius = blur;
+        if let Some(b) = shadow_blur {
+            s.blur_radius = b;
+        }
+        *shadow = Some(s);
     }
 }
 
@@ -112,14 +89,14 @@ fn button_style(attrs: &HashMap<String, String>) -> ButtonStyle {
     if let Some(c) = attr_color(attrs, "pressed_color") {
         style.pressed_fill = Fill::Solid(c);
     }
-    if let Some(v) = attr_f32(attrs, "corner_radius") {
-        style.corner_radius = v;
-    }
-    if let Some(v) = attr_f32(attrs, "border_width") {
-        style.border_width = v;
-    }
     if let Some(c) = attr_color(attrs, "border_color") {
         style.border_color = c;
+    }
+    if let Some(w) = attr_f32(attrs, "border_width") {
+        style.border_width = w;
+    }
+    if let Some(r) = attr_f32(attrs, "corner_radius") {
+        style.corner_radius = r;
     }
     if let Some(v) = attr_bool(attrs, "sharp") {
         style.sharp = v;
@@ -139,14 +116,14 @@ fn checkbox_style(attrs: &HashMap<String, String>) -> CheckboxStyle {
     if let Some(c) = attr_color(attrs, "checked_color") {
         style.checked_fill = Fill::Solid(c);
     }
-    if let Some(v) = attr_f32(attrs, "corner_radius") {
-        style.corner_radius = v;
-    }
-    if let Some(v) = attr_f32(attrs, "border_width") {
-        style.border_width = v;
-    }
     if let Some(c) = attr_color(attrs, "border_color") {
         style.border_color = c;
+    }
+    if let Some(w) = attr_f32(attrs, "border_width") {
+        style.border_width = w;
+    }
+    if let Some(r) = attr_f32(attrs, "corner_radius") {
+        style.corner_radius = r;
     }
     if let Some(v) = attr_bool(attrs, "sharp") {
         style.sharp = v;
@@ -160,14 +137,14 @@ fn text_input_style(attrs: &HashMap<String, String>) -> TextInputStyle {
     if let Some(c) = attr_color(attrs, "color") {
         style.fill = Fill::Solid(c);
     }
-    if let Some(v) = attr_f32(attrs, "corner_radius") {
-        style.corner_radius = v;
-    }
-    if let Some(v) = attr_f32(attrs, "border_width") {
-        style.border_width = v;
-    }
     if let Some(c) = attr_color(attrs, "border_color") {
         style.border_color = c;
+    }
+    if let Some(w) = attr_f32(attrs, "border_width") {
+        style.border_width = w;
+    }
+    if let Some(r) = attr_f32(attrs, "corner_radius") {
+        style.corner_radius = r;
     }
     if let Some(c) = attr_color(attrs, "focus_border_color") {
         style.focus_border_color = c;
@@ -190,14 +167,14 @@ fn text_area_style(attrs: &HashMap<String, String>) -> TextAreaStyle {
     if let Some(c) = attr_color(attrs, "color") {
         style.fill = Fill::Solid(c);
     }
-    if let Some(v) = attr_f32(attrs, "corner_radius") {
-        style.corner_radius = v;
-    }
-    if let Some(v) = attr_f32(attrs, "border_width") {
-        style.border_width = v;
-    }
     if let Some(c) = attr_color(attrs, "border_color") {
         style.border_color = c;
+    }
+    if let Some(w) = attr_f32(attrs, "border_width") {
+        style.border_width = w;
+    }
+    if let Some(r) = attr_f32(attrs, "corner_radius") {
+        style.corner_radius = r;
     }
     if let Some(c) = attr_color(attrs, "focus_border_color") {
         style.focus_border_color = c;
@@ -251,7 +228,7 @@ impl Widget for AppState {
     type Output = ();
 
     fn ui(&mut self, ui: &mut Ui) {
-        ui.set_bgcolor(Color::rgb(18, 18, 22));
+        ui.set_bgcolor(Theme::BG_CANVAS);
 
         let command = ui
             .widget_state::<TextEditState>("command_input")
@@ -259,9 +236,6 @@ impl Widget for AppState {
             .to_string();
         let parsed = parse_command(&command);
 
-        // `Ui::set_title` demo: reflect whichever widget is currently being
-        // styled in the window title. Only call it when it actually changes,
-        // to avoid re-issuing a native title update every single frame.
         let title = match &parsed {
             Some((widget, _)) => format!("Style Playground — editing: {widget}"),
             None => "Style Playground — type a command below".to_string(),
@@ -289,24 +263,29 @@ impl Widget for AppState {
         }
 
         let mut title_label = Label::new("Style Playground");
+        let mut mode_badge = Badge::new("LIVE REPL").variant(BadgeVariant::Success);
         let mut hint_label = Label::new(
-            "Type: widget|key:value,key:value   e.g. checkbox|corner_radius:12.0,color:#f5656f,",
+            "Format: widget|key:value,key:value   e.g. checkbox|corner_radius:12.0,color:#f5656f",
         );
-        let mut command_caption = Label::new("Command");
-        let mut preview_caption = Label::new("Preview (updates live as you type)");
-        let mut command_input = TextInput::new("command_input", 460.0);
+        let mut divider_top = Divider::horizontal(620.0);
+        let mut divider_mid = Divider::horizontal(620.0);
 
-        let mut button_caption = Label::new("button");
-        let mut checkbox_caption = Label::new("checkbox");
-        let mut input_caption = Label::new("textinput");
-        let mut area_caption = Label::new("textarea");
-        let mut scroll_caption = Label::new("scrollview");
+        let mut command_caption = Label::new("Command Input");
+        let mut command_input = TextInput::new("command_input", 580.0);
+
+        let mut preview_caption = Label::new("Live Render Preview");
+
+        let mut button_caption = Label::new("Button");
+        let mut checkbox_caption = Label::new("Checkbox");
+        let mut input_caption = Label::new("TextInput");
+        let mut area_caption = Label::new("TextArea");
+        let mut scroll_caption = Label::new("ScrollView");
 
         let mut demo_button = Button::new("Button").style(button_style_value);
         let mut demo_checkbox = Checkbox::new("demo_checkbox").style(checkbox_style_value);
-        let mut demo_text_input = TextInput::new("demo_text_input", 180.0).style(input_style_value);
+        let mut demo_text_input = TextInput::new("demo_text_input", 170.0).style(input_style_value);
         let mut demo_text_area =
-            TextArea::new("demo_text_area", 180.0, 70.0).style(area_style_value);
+            TextArea::new("demo_text_area", 270.0, 80.0).style(area_style_value);
 
         let mut scroll_item_1 = Label::new("Line one");
         let mut scroll_item_2 = Label::new("Line two");
@@ -314,25 +293,66 @@ impl Widget for AppState {
         let mut scroll_item_4 = Label::new("Line four");
         let mut scroll_item_5 = Label::new("Line five");
 
+        let mut btn_col = column![&mut button_caption, &mut demo_button]
+            .spacing(6.0)
+            .align(Alignment::Start);
+        let mut chk_col = column![&mut checkbox_caption, &mut demo_checkbox]
+            .spacing(6.0)
+            .align(Alignment::Start);
+        let mut inp_col = column![&mut input_caption, &mut demo_text_input]
+            .spacing(6.0)
+            .align(Alignment::Start);
+        let mut row_controls = row![&mut btn_col, &mut chk_col, &mut inp_col]
+            .spacing(16.0)
+            .align(Alignment::Start);
+
+        let mut scroll_content = column![
+            &mut scroll_item_1,
+            &mut scroll_item_2,
+            &mut scroll_item_3,
+            &mut scroll_item_4,
+            &mut scroll_item_5,
+        ];
+
+        let mut demo_scroll = ScrollView::new("demo_scroll", [270.0, 80.0], &mut scroll_content)
+            .style(scroll_style_value);
+
+        let mut area_col = column![&mut area_caption, &mut demo_text_area]
+            .spacing(6.0)
+            .align(Alignment::Start);
+        let mut scr_col = column![&mut scroll_caption, &mut demo_scroll]
+            .spacing(6.0)
+            .align(Alignment::Start);
+        let mut row_inputs = row![&mut area_col, &mut scr_col]
+            .spacing(16.0)
+            .align(Alignment::Start);
+
+        let mut card_content = column![&mut preview_caption, &mut row_controls, &mut row_inputs,]
+            .spacing(12.0)
+            .align(Alignment::Start);
+
+        let mut interactive_card = Card::new(&mut card_content).padding(18.0, 18.0);
+
+        let mut header_row = row![&mut title_label, &mut mode_badge]
+            .spacing(10.0)
+            .align(Alignment::Center);
+
         column![
-            &mut title_label,
+            &mut header_row,
             &mut hint_label,
+            &mut divider_top,
             &mut command_caption,
             &mut command_input,
-            &mut preview_caption,
-            &mut row![
-                &mut column![&mut button_caption, &mut demo_button].align(Alignment::Start),
-                &mut column![&mut checkbox_caption, &mut demo_checkbox].align(Alignment::Start),
-                &mut column![&mut input_caption, &mut demo_text_input].align(Alignment::Start),
-            ]
-            .align(Alignment::Start),
-            &mut row![
-                &mut column![&mut area_caption, &mut demo_text_area].align(Alignment::Start),
-                &mut column![
-                    &mut scroll_caption,
-                    &mut ScrollView::new(
-                        "demo_scroll",
-                        [180.0, 90.0],
-                        &mut column![
-                            &mut scroll_item_1,
-                            &mut scroll_item_2
+            &mut divider_mid,
+            &mut interactive_card,
+        ]
+        .spacing(10.0)
+        .align(Alignment::Start)
+        .arrange_at([40.0, 30.0], ui);
+    }
+}
+
+fn main() {
+    let state = AppState::new();
+    App::new(state).run();
+}
