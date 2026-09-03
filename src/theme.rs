@@ -24,11 +24,48 @@ impl Theme {
         b: 213.0 / 255.0,
         a: 1.0,
     };
-    pub const BORDER: [f32; 4] = [0.0, 0.0, 0.0, 0.1];
+    pub const BORDER: Color = Color {
+        r: 0.0,
+        g: 0.0,
+        b: 0.0,
+        a: 0.1,
+    };
     pub const SHADOW: Color = Color {
         r: 0.0,
         g: 0.0,
         b: 0.0,
+        a: 0.35,
+    };
+
+    /// Border color shown on text inputs/text areas while focused.
+    pub const FOCUS_BORDER: Color = Color {
+        r: 0.3,
+        g: 0.4,
+        b: 0.85,
+        a: 1.0,
+    };
+
+    /// Fill used for text input / text area backgrounds.
+    pub const SURFACE: Color = Color {
+        r: 30.0 / 255.0,
+        g: 30.0 / 255.0,
+        b: 34.0 / 255.0,
+        a: 1.0,
+    };
+
+    /// Soft drop shadow drawn behind a `SURFACE` widget.
+    pub const SURFACE_SHADOW: Color = Color {
+        r: 0.0,
+        g: 0.0,
+        b: 0.0,
+        a: 0.35,
+    };
+
+    /// Highlight color for selected text.
+    pub const SELECTION: Color = Color {
+        r: 76.0 / 255.0,
+        g: 95.0 / 255.0,
+        b: 213.0 / 255.0,
         a: 0.35,
     };
 

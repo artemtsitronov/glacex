@@ -1,15 +1,50 @@
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::geometry::contains;
+use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::text_edit::TextEditState;
+use crate::theme::Theme;
 use crate::ui::Ui;
 use crate::widget::{FocusId, Measurable, Widget};
+
+#[derive(Debug, Clone)]
+pub struct TextInputStyle {
+    pub fill: Fill,
+    pub border_width: f32,
+    pub border_color: Color,
+    pub focus_border_color: Color,
+    pub corner_radius: f32,
+    pub selection_color: Color,
+    pub cursor_color: Color,
+    pub shadow: Option<ShadowStyle>,
+    pub sharp: bool,
+}
+
+impl Default for TextInputStyle {
+    fn default() -> Self {
+        TextInputStyle {
+            fill: Fill::Solid(Theme::SURFACE),
+            border_width: 1.0,
+            border_color: Theme::BORDER,
+            focus_border_color: Theme::FOCUS_BORDER,
+            corner_radius: 8.0,
+            selection_color: Theme::SELECTION,
+            cursor_color: Color::WHITE,
+            shadow: Some(ShadowStyle {
+                color: Theme::SURFACE_SHADOW,
+                blur_radius: 10.0,
+                offset: [0.0, 0.0],
+            }),
+            sharp: false,
+        }
+    }
+}
 
 pub struct TextInput {
     id: String,
     focus_id: FocusId,
     width: f32,
-    corner_radius: f32,
+    style: Option<TextInputStyle>,
 }
 
 impl TextInput {
@@ -19,8 +54,17 @@ impl TextInput {
             focus_id: FocusId::new(&id),
             id,
             width,
-            corner_radius: 8.0,
+            style: None,
         }
+    }
+
+    pub fn style(mut self, style: TextInputStyle) -> Self {
+        self.style = Some(style);
+        self
+    }
+
+    pub fn set_style(&mut self, style: Option<TextInputStyle>) {
+        self.style = style;
     }
 
     pub fn focused(&self, ui: &Ui) -> bool {
@@ -45,11 +89,13 @@ impl Measurable for TextInput {
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
         ui.register_focusable(self.focus_id);
 
+        let style = self.style.clone().unwrap_or_default();
+
         let padding = 10.0;
 
         let mouse_pos = ui.mouse_position();
         let hovered = !ui.is_input_blocked(mouse_pos)
-            && contains(position, size, self.corner_radius, mouse_pos);
+            && contains(position, size, style.corner_radius, mouse_pos);
         let focused = self.focused(ui);
 
         let text_position = [
@@ -105,31 +151,24 @@ impl Measurable for TextInput {
         state.scroll_into_view(cursor_x, text_width);
 
         let border_color = if focused {
-            [0.3, 0.4, 0.85, 1.0]
+            style.focus_border_color
         } else {
-            [0.0, 0.0, 0.0, 0.1]
+            style.border_color
         };
 
-        ui.draw_rect(
-            position,
-            size,
-            Fill::Solid(Color::rgba(0, 0, 0, 0.35)),
-            self.corner_radius,
-            0.0,
-            [0.0; 4],
-            10.0,
-            false,
-        );
+        if let Some(shadow) = &style.shadow {
+            draw_shadow(shadow, position, size, style.corner_radius, ui);
+        }
 
         ui.draw_rect(
             position,
             size,
-            Fill::Solid(Color::rgb(30, 30, 34)),
-            self.corner_radius,
-            1.0,
+            style.fill,
+            style.corner_radius,
+            style.border_width,
             border_color,
             0.0,
-            false,
+            style.sharp,
         );
 
         if let Some((start, end)) = state.selection_range() {
@@ -145,10 +184,10 @@ impl Measurable for TextInput {
             ui.draw_rect(
                 highlight_position,
                 highlight_size,
-                Fill::Solid(Color::rgba(76, 95, 213, 0.35)),
+                Fill::Solid(style.selection_color),
                 0.0,
                 0.0,
-                [0.0; 4],
+                Color::TRANSPARENT,
                 0.0,
                 false,
             );
@@ -177,10 +216,10 @@ impl Measurable for TextInput {
                 ui.draw_rect(
                     cursor_position,
                     [2.0, ui.line_height()],
-                    Fill::Solid(Color::WHITE),
+                    Fill::Solid(style.cursor_color),
                     0.0,
                     0.0,
-                    [0.0; 4],
+                    Color::TRANSPARENT,
                     0.0,
                     true,
                 );

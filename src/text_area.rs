@@ -2,7 +2,9 @@ use crate::color::Color;
 use crate::fill::Fill;
 use crate::geometry::contains;
 use crate::scrolling::{ScrollAxisState, ScrollConfig, compute_geometry, handle_drag};
+use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::text_edit::TextEditState;
+use crate::theme::Theme;
 use crate::ui::Ui;
 use crate::widget::{FocusId, Measurable, Widget};
 use winit::keyboard::{Key, NamedKey};
@@ -15,13 +17,46 @@ struct TextAreaExtra {
     text_dragging: bool,     // dragging inside the text to select, distinct from scrollbar drag
 }
 
+#[derive(Debug, Clone)]
+pub struct TextAreaStyle {
+    pub fill: Fill,
+    pub border_width: f32,
+    pub border_color: Color,
+    pub focus_border_color: Color,
+    pub corner_radius: f32,
+    pub selection_color: Color,
+    pub cursor_color: Color,
+    pub thumb_fill: Fill,
+    pub thumb_dragging_fill: Fill,
+    pub shadow: Option<ShadowStyle>,
+    pub sharp: bool,
+}
+
+impl Default for TextAreaStyle {
+    fn default() -> Self {
+        TextAreaStyle {
+            fill: Fill::Solid(Theme::SURFACE),
+            border_width: 1.0,
+            border_color: Theme::BORDER,
+            focus_border_color: Theme::FOCUS_BORDER,
+            corner_radius: 8.0,
+            selection_color: Theme::SELECTION,
+            cursor_color: Color::WHITE,
+            thumb_fill: Fill::Solid(Color::WHITE.with_alpha(0.3)),
+            thumb_dragging_fill: Fill::Solid(Color::WHITE.with_alpha(0.5)),
+            shadow: None,
+            sharp: false,
+        }
+    }
+}
+
 pub struct TextArea {
     id: String,
     extra_id: String,
     focus_id: FocusId,
     width: f32,
     height: f32,
-    corner_radius: f32,
+    style: Option<TextAreaStyle>,
 }
 
 impl TextArea {
@@ -34,8 +69,17 @@ impl TextArea {
             id,
             width,
             height,
-            corner_radius: 8.0,
+            style: None,
         }
+    }
+
+    pub fn style(mut self, style: TextAreaStyle) -> Self {
+        self.style = Some(style);
+        self
+    }
+
+    pub fn set_style(&mut self, style: Option<TextAreaStyle>) {
+        self.style = style;
     }
 
     pub fn focused(&self, ui: &Ui) -> bool {
@@ -114,13 +158,15 @@ impl Measurable for TextArea {
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
         ui.register_focusable(self.focus_id);
 
+        let style = self.style.clone().unwrap_or_default();
+
         let padding = 10.0;
         let config = ScrollConfig::default();
 
         let mouse_pos = ui.mouse_position();
         let hovered = !ui.is_input_blocked(mouse_pos)
             && ui.point_in_current_clip(mouse_pos)
-            && contains(position, size, self.corner_radius, mouse_pos);
+            && contains(position, size, style.corner_radius, mouse_pos);
 
         let focused = self.focused(ui);
 
@@ -361,20 +407,24 @@ impl Measurable for TextArea {
 
         // --- drawing ---
         let border_color = if focused {
-            [0.3, 0.4, 0.85, 1.0]
+            style.focus_border_color
         } else {
-            [0.0, 0.0, 0.0, 0.1]
+            style.border_color
         };
+
+        if let Some(shadow) = &style.shadow {
+            draw_shadow(shadow, position, size, style.corner_radius, ui);
+        }
 
         ui.draw_rect(
             position,
             size,
-            Fill::Solid(Color::rgb(30, 30, 34)),
-            self.corner_radius,
-            1.0,
+            style.fill,
+            style.corner_radius,
+            style.border_width,
             border_color,
             0.0,
-            false,
+            style.sharp,
         );
 
         let clip_rect = [
@@ -419,10 +469,10 @@ impl Measurable for TextArea {
                     ui.draw_rect(
                         highlight_position,
                         highlight_size,
-                        Fill::Solid(Color::rgba(76, 95, 213, 0.35)),
+                        Fill::Solid(style.selection_color),
                         0.0,
                         0.0,
-                        [0.0; 4],
+                        Color::TRANSPARENT,
                         0.0,
                         false,
                     );
@@ -451,10 +501,10 @@ impl Measurable for TextArea {
                 ui.draw_rect(
                     cursor_position,
                     [2.0, line_height],
-                    Fill::Solid(Color::WHITE),
+                    Fill::Solid(style.cursor_color),
                     0.0,
                     0.0,
-                    [0.0; 4],
+                    Color::TRANSPARENT,
                     0.0,
                     true,
                 );
@@ -467,18 +517,18 @@ impl Measurable for TextArea {
         }
 
         if show_scrollbar {
+            let thumb_fill = if extra.scroll.dragging {
+                style.thumb_dragging_fill
+            } else {
+                style.thumb_fill
+            };
             ui.draw_rect(
                 thumb_position,
                 [config.thickness, geometry_final.thumb_size],
-                Fill::Solid(Color::rgba(
-                    255,
-                    255,
-                    255,
-                    if extra.scroll.dragging { 0.5 } else { 0.3 },
-                )),
+                thumb_fill,
                 config.thickness / 2.0,
                 0.0,
-                [0.0; 4],
+                Color::TRANSPARENT,
                 0.0,
                 false,
             );

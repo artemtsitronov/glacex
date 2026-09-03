@@ -1,7 +1,7 @@
 use glacex::{
     Alignment, App, Button, ButtonStyle, Checkbox, CheckboxState, Color, Fill, Gradient,
-    GradientKind, GradientStop, Label, RadioButton, ScrollView, TextArea, TextEditState, TextInput,
-    Ui, Widget, column, row,
+    GradientKind, GradientStop, Label, RadioButton, ScrollView, ShadowStyle, TextArea,
+    TextEditState, TextInput, Ui, Widget, column, row,
 };
 use std::default::Default;
 
@@ -39,22 +39,29 @@ impl Widget for AppState {
     fn ui(&mut self, ui: &mut Ui) {
         ui.set_bgcolor(Color::rgb(16, 16, 20));
         let hue = (ui.elapsed_seconds() * 60.0) % 360.0; // 60 = degrees/sec, tune to taste
+        let fill = hue_gradient(hue);
 
         let mut title = Label::new("glacex demo");
         let mut subtitle = Label::new("Every widget below is wired to real, readable state.");
 
         let mut count_label = Label::new(format!("Count: {}", self.count));
-        let mut increment_button = Button::new(
-            "Increment",
-            Some(ButtonStyle {
-                fill: hue_gradient(hue),
-                border_width: 2.0,
-                border_color: [0.0, 0.0, 0.0, 1.0],
-                corner_radius: 20.0,
-                ..ButtonStyle::default_style()
+        let mut increment_button = Button::new("Increment").style(ButtonStyle {
+            fill: fill.clone(),
+            hover_fill: fill.clone().darken(0.3),
+            pressed_fill: fill.clone().darken(0.7),
+            border_width: 2.0,
+            border_color: Color::BLACK,
+            corner_radius: 20.0,
+            ..Default::default()
+        });
+        let mut reset_button = Button::new("Reset").style(ButtonStyle {
+            shadow: Some(ShadowStyle {
+                color: Color::RED,
+                blur_radius: 10.0,
+                offset: [0.0, 0.0],
             }),
-        );
-        let mut reset_button = Button::new("Reset", None);
+            ..Default::default()
+        });
 
         let mut notify_checkbox = Checkbox::new("notify_checkbox");
         let mut sound_checkbox = Checkbox::new("sound_checkbox");

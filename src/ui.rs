@@ -19,6 +19,7 @@ fn intersect_rects(a: [f32; 4], b: [f32; 4]) -> [f32; 4] {
 }
 
 pub struct Ui {
+    window: Arc<Window>,
     painter: Painter,
     persistent_state: HashMap<String, Box<dyn Any>>,
     mouse_position: [f32; 2],
@@ -49,7 +50,8 @@ pub struct Ui {
 impl Ui {
     pub async fn new(window: Arc<Window>) -> Ui {
         Ui {
-            painter: Painter::new(window).await,
+            painter: Painter::new(window.clone()).await,
+            window,
             persistent_state: HashMap::new(),
             mouse_position: [0.0, 0.0],
             mouse_pressed: false,
@@ -372,7 +374,12 @@ impl Ui {
     }
 
     pub fn set_bgcolor(&mut self, color: Color) {
-        self.painter.set_bgcolor(color.to_linear_rgba());
+        self.painter.set_bgcolor(color);
+    }
+
+    /// Sets the native window title.
+    pub fn set_title(&self, title: &str) {
+        self.window.set_title(title);
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -383,7 +390,7 @@ impl Ui {
         fill: Fill,
         corner_radius: f32,
         border_width: f32,
-        border_color: [f32; 4],
+        border_color: Color,
         blur_radius: f32,
         sharp: bool,
     ) {

@@ -1,3 +1,4 @@
+use crate::color::Color;
 use crate::fill::Fill;
 use crate::interaction::Interaction;
 use crate::theme::Theme;
@@ -72,7 +73,7 @@ impl Measurable for RadioButton {
             Fill::Solid(Theme::SHADOW),
             self.corner_radius,
             0.0,
-            [0.0; 4],
+            Color::TRANSPARENT,
             10.0,
             false,
         );

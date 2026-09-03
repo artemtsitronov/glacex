@@ -18,17 +18,13 @@ impl Widget for AppState {
         ui.set_bgcolor(Color::rgb(0, 0, 0));
 
         let mut title = Label::new("Example 1");
-        let mut button = Button::new("Button", None);
         let mut fill_input = TextInput::new("fill_input", 200.0);
 
         let fill = ui.widget_state::<TextEditState>("fill_input").text();
-
-        println!("fill: {}", fill);
-
-        button.set_style(Some(ButtonStyle {
+        let mut button = Button::new("Button").style(ButtonStyle {
             fill: Fill::Solid(Color::hex_str(fill)),
-            ..ButtonStyle::default_style()
-        }));
+            ..Default::default()
+        });
 
         {
             row![

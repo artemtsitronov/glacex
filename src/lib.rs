@@ -6,8 +6,7 @@
 //! - [`Widget`], implemented by widgets that render themselves each frame
 //!
 //! Widgets are redrawn every frame, while interactive state is kept inside [`Ui`] and
-//! keyed by stable widget IDs. The repository also includes a runnable demo in
-//! `src/main.rs`.
+//! keyed by stable widget IDs.
 
 pub mod alignment;
 pub mod button;
@@ -23,6 +22,7 @@ pub mod painter;
 pub mod radio_button;
 pub mod scroll_view;
 pub mod scrolling;
+pub mod shadow;
 pub mod shapes;
 pub mod text_area;
 pub mod text_edit;
@@ -44,6 +44,7 @@ pub use layout::*;
 pub use radio_button::*;
 pub use scroll_view::*;
 pub use scrolling::*;
+pub use shadow::*;
 pub use text_area::*;
 pub use text_edit::*;
 pub use text_input::*;

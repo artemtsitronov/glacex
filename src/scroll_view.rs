@@ -11,10 +11,31 @@ pub struct ScrollState {
     pub y: ScrollAxisState,
 }
 
+#[derive(Debug, Clone)]
+pub struct ScrollViewStyle {
+    pub thumb_fill: Fill,
+    pub thumb_dragging_fill: Fill,
+    /// Corner radius for the scrollbar thumbs. A fully-rounded "pill" thumb
+    /// uses half of `ScrollConfig::thickness` — the default matches the
+    /// default `ScrollConfig`.
+    pub thumb_corner_radius: f32,
+}
+
+impl Default for ScrollViewStyle {
+    fn default() -> Self {
+        ScrollViewStyle {
+            thumb_fill: Fill::Solid(Color::WHITE.with_alpha(0.3)),
+            thumb_dragging_fill: Fill::Solid(Color::WHITE.with_alpha(0.5)),
+            thumb_corner_radius: ScrollConfig::default().thickness / 2.0,
+        }
+    }
+}
+
 pub struct ScrollView<'a> {
     id: String,
     size: [f32; 2],
     config: ScrollConfig,
+    style: Option<ScrollViewStyle>,
     child: Box<dyn AnyWidget + 'a>,
 }
 
@@ -24,8 +45,18 @@ impl<'a> ScrollView<'a> {
             id: id.into(),
             size,
             config: ScrollConfig::default(),
+            style: None,
             child: Box::new(child),
         }
+    }
+
+    pub fn style(mut self, style: ScrollViewStyle) -> Self {
+        self.style = Some(style);
+        self
+    }
+
+    pub fn set_style(&mut self, style: Option<ScrollViewStyle>) {
+        self.style = style;
     }
 
     pub fn arrange_at(&mut self, position: [f32; 2], ui: &mut Ui) {
@@ -47,6 +78,8 @@ impl<'a> Measurable for ScrollView<'a> {
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
+        let style = self.style.clone().unwrap_or_default();
+
         let hovered = contains(position, size, 0.0, ui.mouse_position());
         let mut state = ui.take_widget_state::<ScrollState>(&self.id);
 
@@ -224,36 +257,36 @@ impl<'a> Measurable for ScrollView<'a> {
         }
 
         if show_y {
+            let thumb_fill = if state.y.dragging {
+                style.thumb_dragging_fill.clone()
+            } else {
+                style.thumb_fill.clone()
+            };
             ui.draw_rect(
                 thumb_position_y,
                 [self.config.thickness, geometry_y_final.thumb_size],
-                Fill::Solid(Color::rgba(
-                    255,
-                    255,
-                    255,
-                    if state.y.dragging { 0.5 } else { 0.3 },
-                )),
-                self.config.thickness / 2.0,
+                thumb_fill,
+                style.thumb_corner_radius,
                 0.0,
-                [0.0; 4],
+                Color::TRANSPARENT,
                 0.0,
                 false,
             );
         }
 
         if show_x {
+            let thumb_fill = if state.x.dragging {
+                style.thumb_dragging_fill
+            } else {
+                style.thumb_fill
+            };
             ui.draw_rect(
                 thumb_position_x,
                 [geometry_x_final.thumb_size, self.config.thickness],
-                Fill::Solid(Color::rgba(
-                    255,
-                    255,
-                    255,
-                    if state.x.dragging { 0.5 } else { 0.3 },
-                )),
-                self.config.thickness / 2.0,
+                thumb_fill,
+                style.thumb_corner_radius,
                 0.0,
-                [0.0; 4],
+                Color::TRANSPARENT,
                 0.0,
                 false,
             );

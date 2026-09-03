@@ -1,3 +1,4 @@
+use crate::color::Color;
 use wgpu::{BufferAddress, VertexBufferLayout, VertexStepMode, vertex_attr_array};
 
 /// One corner of the unit quad every rectangle is stamped from. Never
@@ -42,10 +43,10 @@ pub const QUAD_VERTICES: [QuadVertex; 6] = [
 pub struct RectInstance {
     pub position: [f32; 2],
     pub size: [f32; 2],
-    pub color: [f32; 4],
+    pub color: Color,
     pub corner_radius: f32,
     pub border_width: f32,
-    pub border_color: [f32; 4],
+    pub border_color: Color,
     pub blur_radius: f32,
     pub sharp: f32,
     pub fill_kind: f32,

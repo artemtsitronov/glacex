@@ -1,3 +1,4 @@
+use crate::color::Color;
 use crate::fill::{Fill, Gradient, GradientHandle, GradientKind, GradientStop};
 use crate::shapes::{QUAD_VERTICES, QuadVertex, RectInstance};
 use glyphon::{
@@ -11,19 +12,22 @@ use std::sync::Arc;
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::{
     BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayoutDescriptor,
-    BindGroupLayoutEntry, BindingType, BlendState, Buffer, BufferBindingType, BufferUsages, Color,
-    ColorTargetState, ColorWrites, CommandEncoderDescriptor, CurrentSurfaceTexture, Device,
-    DeviceDescriptor, FragmentState, Instance, LoadOp, MultisampleState, Operations,
-    PipelineCompilationOptions, PipelineLayoutDescriptor, PrimitiveState, Queue,
-    RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, RenderPipelineDescriptor,
-    RequestAdapterOptions, ShaderModuleDescriptor, ShaderSource, ShaderStages, StoreOp, Surface,
-    SurfaceConfiguration, TextureViewDescriptor, VertexState,
+    BindGroupLayoutEntry, BindingType, BlendState, Buffer, BufferBindingType, BufferUsages,
+    Color as WgpuColor, ColorTargetState, ColorWrites, CommandEncoderDescriptor,
+    CurrentSurfaceTexture, Device, DeviceDescriptor, FragmentState, Instance, LoadOp,
+    MultisampleState, Operations, PipelineCompilationOptions, PipelineLayoutDescriptor,
+    PrimitiveState, Queue, RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline,
+    RenderPipelineDescriptor, RequestAdapterOptions, ShaderModuleDescriptor, ShaderSource,
+    ShaderStages, StoreOp, Surface, SurfaceConfiguration, TextureViewDescriptor, VertexState,
 };
 use winit::window::Window;
 
-fn sample_stops(stops: &[GradientStop], t: f32) -> crate::Color {
+/// Walks the stop list, finds the two stops `t` falls between, and mixes
+/// them — the same interpolation the shader does per-fragment, just run
+/// once here while baking the ramp texture.
+fn sample_stops(stops: &[GradientStop], t: f32) -> Color {
     if stops.is_empty() {
-        return crate::Color::TRANSPARENT;
+        return Color::TRANSPARENT;
     }
     if t <= stops[0].position {
         return stops[0].color;
@@ -32,12 +36,7 @@ fn sample_stops(stops: &[GradientStop], t: f32) -> crate::Color {
         let (a, b) = (window[0], window[1]);
         if t >= a.position && t <= b.position {
             let local_t = (t - a.position) / (b.position - a.position).max(0.0001);
-            return crate::Color::linear_rgba(
-                a.color.r + (b.color.r - a.color.r) * local_t,
-                a.color.g + (b.color.g - a.color.g) * local_t,
-                a.color.b + (b.color.b - a.color.b) * local_t,
-                a.color.a + (b.color.a - a.color.a) * local_t,
-            );
+            return a.color.lerp(b.color, local_t);
         }
     }
     stops.last().unwrap().color
@@ -107,12 +106,7 @@ impl GradientAtlas {
 
         for x in 0..256 {
             let t = x as f32 / 255.0;
-            let color = sample_stops(stops, t); // walks the stop list, finds the two
-            // stops t falls between, mix()es them —
-            // same interpolation math the shader
-            // would have done per-fragment, just
-            // run once here instead
-            let bytes = color.to_linear_rgba().map(|c| (c * 255.0) as u8);
+            let bytes = sample_stops(stops, t).to_rgba_bytes();
             pixels[x * 4..x * 4 + 4].copy_from_slice(&bytes);
         }
 
@@ -188,7 +182,7 @@ pub struct Painter {
     gradient_atlas: GradientAtlas,
     gradient_bind_group: BindGroup,
 
-    bgcolor: Color,
+    bgcolor: WgpuColor,
 }
 
 impl Painter {
@@ -371,7 +365,7 @@ impl Painter {
             pending_labels: vec![],
             gradient_atlas,
             gradient_bind_group,
-            bgcolor: Color::BLACK,
+            bgcolor: WgpuColor::BLACK,
         }
     }
 
@@ -403,12 +397,12 @@ impl Painter {
             .fold(0.0, f32::max)
     }
 
-    pub fn set_bgcolor(&mut self, color: [f32; 4]) {
-        self.bgcolor = Color {
-            r: color[0] as f64,
-            g: color[1] as f64,
-            b: color[2] as f64,
-            a: color[3] as f64,
+    pub fn set_bgcolor(&mut self, color: Color) {
+        self.bgcolor = WgpuColor {
+            r: color.r as f64,
+            g: color.g as f64,
+            b: color.b as f64,
+            a: color.a as f64,
         };
     }
 
@@ -420,13 +414,13 @@ impl Painter {
         fill: Fill,
         corner_radius: f32,
         border_width: f32,
-        border_color: [f32; 4],
+        border_color: Color,
         blur_radius: f32,
         sharp: f32,
         clip: [f32; 4],
     ) {
         let (fill_kind, color, gradient_angle, gradient_center, gradient_row) = match fill {
-            Fill::Solid(color) => (0.0, color.to_linear_rgba(), 0.0, [0.0, 0.0], 0.0),
+            Fill::Solid(color) => (0.0, color, 0.0, [0.0, 0.0], 0.0),
             Fill::Gradient(gradient) => {
                 let handle = self.gradient_atlas.bake_cached(&self.queue, &gradient);
                 let row = match handle {
@@ -439,7 +433,7 @@ impl Painter {
                     GradientKind::Conic { center } => (3.0, 0.0, *center),
                     GradientKind::Mesh { .. } => (4.0, 0.0, [0.0, 0.0]),
                 };
-                (kind, [0.0; 4], param0, center, row)
+                (kind, Color::TRANSPARENT, param0, center, row)
             }
         };
 
@@ -477,10 +471,10 @@ impl Painter {
             let placeholder = RectInstance {
                 position: [0.0; 2],
                 size: [0.0; 2],
-                color: [0.0; 4],
+                color: Color::TRANSPARENT,
                 corner_radius: 8.0,
                 border_width: 5.0,
-                border_color: [255.0; 4],
+                border_color: Color::TRANSPARENT,
                 blur_radius: 5.0,
                 sharp: 0.0,
                 fill_kind: 0.0,

@@ -31,3 +31,31 @@ pub enum Fill {
     Solid(Color),
     Gradient(Gradient),
 }
+
+impl Fill {
+    pub fn darken(&self, amount: f32) -> Fill {
+        match self {
+            Fill::Solid(color) => Fill::Solid(color.darken(amount)),
+            Fill::Gradient(gradient) => {
+                let mut g = gradient.clone();
+                for stop in &mut g.stops {
+                    stop.color = stop.color.darken(amount);
+                }
+                Fill::Gradient(g)
+            }
+        }
+    }
+
+    pub fn lighten(&self, amount: f32) -> Fill {
+        match self {
+            Fill::Solid(color) => Fill::Solid(color.lighten(amount)),
+            Fill::Gradient(gradient) => {
+                let mut g = gradient.clone();
+                for stop in &mut g.stops {
+                    stop.color = stop.color.darken(amount);
+                }
+                Fill::Gradient(g)
+            }
+        }
+    }
+}

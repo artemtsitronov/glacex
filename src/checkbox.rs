@@ -1,5 +1,7 @@
+use crate::color::Color;
 use crate::fill::Fill;
 use crate::interaction::Interaction;
+use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::theme::Theme;
 use crate::ui::Ui;
 use crate::widget::{Measurable, Widget};
@@ -16,24 +18,55 @@ pub struct CheckboxResponse {
     pub hovered: bool,
 }
 
+#[derive(Debug, Clone)]
+pub struct CheckboxStyle {
+    pub fill: Fill,
+    pub hover_fill: Fill,
+    pub checked_fill: Fill,
+    pub border_width: f32,
+    pub border_color: Color,
+    pub corner_radius: f32,
+    pub shadow: Option<ShadowStyle>,
+    pub sharp: bool,
+}
+
+impl Default for CheckboxStyle {
+    fn default() -> Self {
+        CheckboxStyle {
+            fill: Fill::Solid(Theme::IDLE),
+            hover_fill: Fill::Solid(Theme::HOVERED),
+            checked_fill: Fill::Solid(Theme::ACTIVE),
+            border_width: 1.0,
+            border_color: Theme::BORDER,
+            corner_radius: 12.0,
+            shadow: Some(ShadowStyle::default()),
+            sharp: false,
+        }
+    }
+}
+
 pub struct Checkbox {
     id: String,
-    corner_radius: f32,
     interaction: Interaction,
+    style: Option<CheckboxStyle>,
 }
 
 impl Checkbox {
     pub fn new(id: impl Into<String>) -> Self {
         Checkbox {
             id: id.into(),
-            corner_radius: 12.0,
             interaction: Interaction::default(),
+            style: None,
         }
     }
 
-    pub fn corner_radius(mut self, radius: f32) -> Self {
-        self.corner_radius = radius;
+    pub fn style(mut self, style: CheckboxStyle) -> Self {
+        self.style = Some(style);
         self
+    }
+
+    pub fn set_style(&mut self, style: Option<CheckboxStyle>) {
+        self.style = style;
     }
 
     pub fn clicked(&self) -> bool {
@@ -59,7 +92,9 @@ impl Measurable for Checkbox {
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) -> CheckboxResponse {
-        let interaction = Interaction::update(position, size, self.corner_radius, ui);
+        let style = self.style.clone().unwrap_or_default();
+
+        let interaction = Interaction::update(position, size, style.corner_radius, ui);
         self.interaction = interaction;
 
         let state = ui.widget_state::<CheckboxState>(&self.id);
@@ -68,27 +103,26 @@ impl Measurable for Checkbox {
         }
         let checked = state.checked; // copy out before state's borrow needs to end for the draw_rect calls below
 
-        let color = Theme::state_color(checked, interaction.hovered);
+        let fill = if checked {
+            style.checked_fill
+        } else if interaction.hovered {
+            style.hover_fill
+        } else {
+            style.fill
+        };
 
+        if let Some(shadow) = &style.shadow {
+            draw_shadow(shadow, position, size, style.corner_radius, ui);
+        }
         ui.draw_rect(
             position,
             size,
-            Fill::Solid(Theme::SHADOW),
-            self.corner_radius,
+            fill,
+            style.corner_radius,
+            style.border_width,
+            style.border_color,
             0.0,
-            [0.0; 4],
-            10.0,
-            false,
-        );
-        ui.draw_rect(
-            position,
-            size,
-            Fill::Solid(color),
-            self.corner_radius,
-            1.0,
-            Theme::BORDER,
-            0.0,
-            false,
+            style.sharp,
         );
 
         CheckboxResponse {
