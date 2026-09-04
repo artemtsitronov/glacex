@@ -165,6 +165,7 @@ impl Measurable for Button {
             style.border_color,
             0.0,
             style.sharp,
+            0.0,
         );
 
         let text_width = ui.measure_text(&self.label);

@@ -117,6 +117,7 @@ impl Measurable for Badge {
             style.border_color,
             0.0,
             false,
+            0.0,
         );
 
         let text_width = ui.measure_text(&self.text);

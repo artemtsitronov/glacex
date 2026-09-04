@@ -53,6 +53,7 @@ pub struct RectInstance {
     pub gradient_angle: f32,
     pub gradient_row: f32,
     pub gradient_center: [f32; 2],
+    pub rotation: f32,
 }
 
 impl RectInstance {
@@ -74,6 +75,7 @@ impl RectInstance {
             10 => Float32,
             11 => Float32,
             12 => Float32x2,
+            13 => Float32,
         ],
     };
 }

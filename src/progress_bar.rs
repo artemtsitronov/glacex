@@ -83,6 +83,7 @@ impl Measurable for ProgressBar {
             style.border_color,
             0.0,
             false,
+            0.0,
         );
 
         // Draw filled progress bar
@@ -97,6 +98,7 @@ impl Measurable for ProgressBar {
                 Color::TRANSPARENT,
                 0.0,
                 false,
+                0.0,
             );
         }
     }

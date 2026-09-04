@@ -108,91 +108,39 @@ impl Widget for Checkbox {
     }
 }
 
-/// Draw a crisp diagonal checkmark using sub-pixel-aligned axis-rects that
-/// optically trace the two strokes of a tick:
-///
-///   Stroke A (short, bottom-left descend):  goes down-left, 2 px wide
-///   Stroke B (long, top-right ascend):       goes up-right,  2 px wide
-///
-/// Each stroke is approximated by stacking 1-pixel-tall slices offset by 1px
-/// each step to create the 45-degree diagonal appearance on a pixel grid.
 fn draw_checkmark(cx: f32, cy: f32, t: f32, color: Color, ui: &mut Ui) {
-    // Tick geometry tuned for an 18x18 checkbox, centered at (cx, cy).
-    // The tick bottom-valley sits slightly below center.
-    // All values in logical pixels.
-    //
-    // Left leg: descends from top-left toward the valley
-    //   Rightward offset += 1 per row step to make it look diagonal
-    // Right leg: ascends from valley toward top-right
-    //
-    // We approximate diagonals with fine horizontal slices (h=1.8px each)
-    // shifted by 1.4px per step for a ~36-degree left leg and ~57-degree right leg.
-
-    let stroke_w = 2.2_f32;
     let alpha = t.clamp(0.0, 1.0);
     let c = color.with_alpha(color.a * alpha);
+    let stroke_w = 2.2;
 
-    // Valley position (the bottom of the V)
-    let vx = cx - 1.2;
-    let vy = cy + 2.2;
+    let left = [cx - 4.0, cy + 0.5];
+    let valley = [cx - 1.5, cy + 3.5];
+    let right = [cx + 4.5, cy - 3.5];
 
-    // Left short leg — 3 segments, descending right to valley
-    let step_h = 1.8_f32;
-    let step_dx = 1.3_f32; // horizontal shift per step (gives ~36deg)
+    draw_stroke(left, valley, stroke_w, c, ui);
+    draw_stroke(valley, right, stroke_w, c, ui);
+}
 
-    // Progress gates: left leg draws during first 40%, right leg during remaining 60%
-    let left_segs = 3_usize;
-    let right_segs = 5_usize;
-    let left_full = 0.4_f32;
+fn draw_stroke(a: [f32; 2], b: [f32; 2], width: f32, color: Color, ui: &mut Ui) {
+    let dx = b[0] - a[0];
+    let dy = b[1] - a[1];
+    let length = (dx * dx + dy * dy).sqrt();
+    let angle = dy.atan2(dx);
 
-    // Draw left leg
-    for i in 0..left_segs {
-        let seg_start = (i as f32) / (left_segs as f32) * left_full;
-        let seg_alpha = ((t - seg_start) / (left_full / left_segs as f32)).clamp(0.0, 1.0);
-        if seg_alpha <= 0.0 {
-            continue;
-        }
-        let sx = vx - (left_segs - i) as f32 * step_dx + step_dx;
-        let sy = vy - (left_segs - i) as f32 * step_h + step_h;
-        let sc = c.with_alpha(c.a * seg_alpha);
-        ui.draw_rect(
-            [sx, sy],
-            [stroke_w, step_h],
-            Fill::Solid(sc),
-            0.8,
-            0.0,
-            Color::TRANSPARENT,
-            0.0,
-            false,
-        );
-    }
+    let center = [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0];
+    let position = [center[0] - length / 2.0, center[1] - width / 2.0];
 
-    // Draw right leg — longer, ascending left to top-right
-    let right_step_h = 1.8_f32;
-    let right_step_dx = 1.6_f32;
-    let right_start_t = left_full;
-
-    for i in 0..right_segs {
-        let seg_start = right_start_t + (i as f32) / (right_segs as f32) * (1.0 - right_start_t);
-        let seg_alpha =
-            ((t - seg_start) / ((1.0 - right_start_t) / right_segs as f32)).clamp(0.0, 1.0);
-        if seg_alpha <= 0.0 {
-            continue;
-        }
-        let sx = vx + i as f32 * right_step_dx;
-        let sy = vy - i as f32 * right_step_h;
-        let sc = c.with_alpha(c.a * seg_alpha);
-        ui.draw_rect(
-            [sx, sy],
-            [stroke_w, right_step_h],
-            Fill::Solid(sc),
-            0.8,
-            0.0,
-            Color::TRANSPARENT,
-            0.0,
-            false,
-        );
-    }
+    ui.draw_rect(
+        position,
+        [length, width],
+        Fill::Solid(color),
+        width / 2.0, // rounded caps
+        0.0,
+        Color::TRANSPARENT,
+        0.0,
+        false,
+        angle,
+    );
 }
 
 impl Measurable for Checkbox {
@@ -255,6 +203,7 @@ impl Measurable for Checkbox {
             style.border_color,
             0.0,
             style.sharp,
+            0.0,
         );
 
         // Draw animated checkmark when partially or fully checked

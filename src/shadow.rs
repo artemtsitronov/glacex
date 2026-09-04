@@ -34,5 +34,6 @@ pub fn draw_shadow(
         Color::TRANSPARENT,
         style.blur_radius,
         false,
+        0.0,
     );
 }

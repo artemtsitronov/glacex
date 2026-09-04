@@ -418,6 +418,7 @@ impl Painter {
         blur_radius: f32,
         sharp: f32,
         clip: [f32; 4],
+        rotation: f32,
     ) {
         let (fill_kind, color, gradient_angle, gradient_center, gradient_row) = match fill {
             Fill::Solid(color) => (0.0, color, 0.0, [0.0, 0.0], 0.0),
@@ -452,6 +453,7 @@ impl Painter {
                 border_color,
                 blur_radius,
                 sharp,
+                rotation,
             },
         ));
     }
@@ -481,6 +483,7 @@ impl Painter {
                 gradient_angle: 0.0,
                 gradient_row: 0.0,
                 gradient_center: [0.0; 2],
+                rotation: 0.0,
             };
             self.rect_instance_buffer = self.device.create_buffer_init(&BufferInitDescriptor {
                 label: None,

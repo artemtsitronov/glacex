@@ -163,6 +163,7 @@ impl Measurable for RadioButton {
             style.border_color,
             0.0,
             style.sharp,
+            0.0,
         );
 
         // Animated inner dot — scales from 0 to full size
@@ -182,6 +183,7 @@ impl Measurable for RadioButton {
                 Color::TRANSPARENT,
                 0.0,
                 false,
+                0.0,
             );
         }
 

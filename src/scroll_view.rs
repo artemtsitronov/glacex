@@ -283,6 +283,7 @@ impl<'a> Measurable for ScrollView<'a> {
                 Color::TRANSPARENT,
                 0.0,
                 false,
+                0.0,
             );
         }
 
@@ -301,6 +302,7 @@ impl<'a> Measurable for ScrollView<'a> {
                 Color::TRANSPARENT,
                 0.0,
                 false,
+                0.0,
             );
         }
 

@@ -89,6 +89,7 @@ impl<'a> Measurable for Card<'a> {
             style.border_color,
             0.0,
             false,
+            0.0,
         );
 
         let child_position = [

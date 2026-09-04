@@ -171,6 +171,7 @@ impl Measurable for Slider {
             style.border_color,
             0.0,
             false,
+            0.0,
         );
 
         let progress = ((value - self.min) / range).clamp(0.0, 1.0);
@@ -187,11 +188,13 @@ impl Measurable for Slider {
                 Color::TRANSPARENT,
                 0.0,
                 false,
+                0.0,
             );
         }
 
         // Thumb knob with animated hover glow ring
-        let thumb_x = position[0] + progress * track_width;
+        let thumb_center_x = position[0] + progress * size[0];
+        let thumb_x = thumb_center_x - style.thumb_size / 2.0;
         let thumb_y = position[1] + (size[1] - style.thumb_size) / 2.0;
         let thumb_pos = [thumb_x, thumb_y];
         let thumb_size = [style.thumb_size, style.thumb_size];
@@ -211,6 +214,7 @@ impl Measurable for Slider {
                 Color::TRANSPARENT,
                 0.0,
                 false,
+                0.0,
             );
         }
 
@@ -227,6 +231,7 @@ impl Measurable for Slider {
             Theme::BORDER,
             0.0,
             false,
+            0.0,
         );
 
         SliderResponse {

@@ -28,6 +28,7 @@ struct RectInstance {
     @location(10) gradient_angle: f32,
     @location(11) gradient_row: f32,
     @location(12) gradient_center: vec2<f32>,
+    @location(13) rotation: f32,
 }
 
 struct VertexOutput {
@@ -44,6 +45,7 @@ struct VertexOutput {
     @location(9) gradient_angle: f32,
     @location(10) gradient_row: f32,
     @location(11) gradient_center: vec2<f32>,
+    @location(12) rotation: f32,
 }
 
 // Must be >= AA_PADDING below, or the fade band extends past the padded
@@ -60,11 +62,19 @@ fn sd_rounded_box(p: vec2<f32>, half_size: vec2<f32>, radius: f32) -> f32 {
     return min(max(q.x, q.y), 0.0) + length(max(q, vec2<f32>(0.0))) - radius;
 }
 
+fn rotate(p: vec2<f32>, angle: f32) -> vec2<f32> {
+    let s = sin(angle);
+    let c = cos(angle);
+    return vec2<f32>(p.x * c - p.y * s, p.x * s + p.y * c);
+}
+
 @vertex
 fn vs_main(vertex: QuadVertex, instance: RectInstance) -> VertexOutput {
     var out: VertexOutput;
 
-    let padding = max(AA_PADDING, max(instance.blur_radius * 2.0, instance.border_width + AA_PADDING));
+    let diagonal = length(instance.size * 0.5);
+let rotation_padding = select(0.0, diagonal - max(instance.size.x, instance.size.y) * 0.5, instance.rotation != 0.0);
+let padding = max(AA_PADDING, max(instance.blur_radius * 2.0, max(instance.border_width + AA_PADDING, rotation_padding + AA_PADDING)));
     let padded_size = instance.size + vec2<f32>(padding * 2.0);
     let padded_local = vertex.local_position * padded_size - vec2<f32>(padding);
     let pixel_position = instance.position + padded_local;
@@ -87,6 +97,7 @@ fn vs_main(vertex: QuadVertex, instance: RectInstance) -> VertexOutput {
     out.gradient_angle = instance.gradient_angle;
     out.gradient_row = instance.gradient_row;
     out.gradient_center = instance.gradient_center;
+    out.rotation = instance.rotation;
 
     return out;
 }
@@ -120,9 +131,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         fill_color = textureSample(gradient_atlas, gradient_sampler, vec2<f32>(clamp(t, 0.0, 1.0), v));
     }
 
-    let inner_dist = sd_rounded_box(in.local_pos, in.half_size, in.corner_radius);
+    let rotated_pos = rotate(in.local_pos, -in.rotation);
+
+    let inner_dist = sd_rounded_box(rotated_pos, in.half_size, in.corner_radius);
     let outer_dist = sd_rounded_box(
-        in.local_pos,
+        rotated_pos,
         in.half_size + vec2<f32>(in.border_width),
         in.corner_radius + in.border_width,
     );

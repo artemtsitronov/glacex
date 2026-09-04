@@ -119,7 +119,7 @@ impl Widget for DemoApp {
 
         let mut slider_caption = Label::new("Bandwidth Allotment");
         let mut bandwidth_slider =
-            Slider::new("bandwidth_slider", 10.0, 100.0, 320.0).default_value(80.0);
+            Slider::new("bandwidth_slider", 0.0, 100.0, 320.0).default_value(80.0);
         let bandwidth_val = bandwidth_slider.state(ui).value;
         let mut bandwidth_progress_label =
             Label::new(format!("Allocated Capacity: {:.0}%", bandwidth_val));

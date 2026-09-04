@@ -181,6 +181,7 @@ impl Measurable for TextInput {
             border_color,
             0.0,
             style.sharp,
+            0.0,
         );
 
         if let Some((start, end)) = state.selection_range() {
@@ -202,6 +203,7 @@ impl Measurable for TextInput {
                 Color::TRANSPARENT,
                 0.0,
                 false,
+                0.0,
             );
         }
 
@@ -234,6 +236,7 @@ impl Measurable for TextInput {
                     Color::TRANSPARENT,
                     0.0,
                     true,
+                    0.0,
                 );
             }
         }

@@ -157,6 +157,7 @@ impl Measurable for Switch {
             style.border_color,
             0.0,
             false,
+            0.0,
         );
 
         // Draw sliding knob / thumb with smooth Apple/Linear spring-like glide
@@ -177,6 +178,7 @@ impl Measurable for Switch {
             Color::TRANSPARENT,
             0.0,
             false,
+            0.0,
         );
 
         SwitchResponse {

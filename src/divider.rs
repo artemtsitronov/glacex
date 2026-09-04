@@ -74,6 +74,7 @@ impl Measurable for Divider {
             Color::TRANSPARENT,
             0.0,
             true,
+            0.0,
         );
     }
 }

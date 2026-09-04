@@ -437,6 +437,7 @@ impl Measurable for TextArea {
             border_color,
             0.0,
             style.sharp,
+            0.0,
         );
 
         let clip_rect = [
@@ -487,6 +488,7 @@ impl Measurable for TextArea {
                         Color::TRANSPARENT,
                         0.0,
                         false,
+                        0.0,
                     );
                 }
 
@@ -519,6 +521,7 @@ impl Measurable for TextArea {
                     Color::TRANSPARENT,
                     0.0,
                     true,
+                    0.0,
                 );
             }
         }
@@ -543,6 +546,7 @@ impl Measurable for TextArea {
                 Color::TRANSPARENT,
                 0.0,
                 false,
+                0.0,
             );
         }
 

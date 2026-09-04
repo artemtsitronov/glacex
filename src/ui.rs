@@ -534,6 +534,7 @@ impl Ui {
         border_color: Color,
         blur_radius: f32,
         sharp: bool,
+        rotation: f32,
     ) {
         let clip = self.current_clip();
         self.painter.draw_rect(
@@ -546,6 +547,7 @@ impl Ui {
             blur_radius,
             if sharp { 1.0 } else { 0.0 },
             clip,
+            rotation,
         );
     }
 
@@ -586,6 +588,7 @@ impl Ui {
                 8.0,
                 0.0,
                 full_clip,
+                0.0,
             );
 
             self.painter.draw_text(
