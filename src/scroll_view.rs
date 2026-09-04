@@ -325,7 +325,6 @@ impl<'a> StatefulWidget for ScrollView<'a> {
                 offset: self.default_offset[1],
                 ..Default::default()
             },
-            ..Default::default()
         }
     }
 }

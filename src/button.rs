@@ -62,6 +62,7 @@ impl Button {
 
     pub fn set_style(&mut self, style: Option<ButtonStyle>) {
         self.style = style;
+    }
 
     pub fn tooltip(mut self, tooltip: impl Into<String>) -> Self {
         self.tooltip = Some(tooltip.into());

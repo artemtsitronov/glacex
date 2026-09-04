@@ -178,7 +178,6 @@ impl StatefulWidget for Switch {
     fn initial_state(&self) -> SwitchState {
         SwitchState {
             enabled: self.default_enabled,
-            ..Default::default()
         }
     }
 }
