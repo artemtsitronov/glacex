@@ -1,5 +1,7 @@
 # glacex
 
+![demo](screenshots/screenshot_demo.png)
+
 GPU-Rendered UI library — built from scratch in Rust [WIP]
 
 ## About
