@@ -4,6 +4,7 @@ use crate::geometry::contains;
 use crate::scrolling::{ScrollAxisState, ScrollConfig, compute_geometry, handle_drag};
 use crate::ui::Ui;
 use crate::widget::{AnyWidget, Measurable, Widget};
+use winit::window::CursorIcon;
 
 #[derive(Default)]
 pub struct ScrollState {
@@ -181,6 +182,10 @@ impl<'a> Measurable for ScrollView<'a> {
         ) {
             state.x.offset = new_offset;
             state.x.mark_activity();
+        }
+
+        if thumb_hovered_x || thumb_hovered_y || state.x.dragging || state.y.dragging {
+            ui.set_cursor_icon(CursorIcon::Pointer);
         }
 
         // Clamp AFTER both wheel and drag have had a chance to move the

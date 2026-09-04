@@ -8,6 +8,7 @@ use crate::theme::Theme;
 use crate::ui::Ui;
 use crate::widget::{FocusId, Measurable, Widget};
 use winit::keyboard::{Key, NamedKey};
+use winit::window::CursorIcon;
 
 #[derive(Default)]
 struct TextAreaExtra {
@@ -169,6 +170,10 @@ impl Measurable for TextArea {
             && contains(position, size, style.corner_radius, mouse_pos);
 
         let focused = self.focused(ui);
+
+        if hovered {
+            ui.set_cursor_icon(CursorIcon::Text);
+        }
 
         if ui.mouse_pressed_this_frame() && hovered {
             ui.request_focus(self.focus_id);
