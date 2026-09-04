@@ -87,11 +87,11 @@ impl Widget for AppState {
                 hover_fill: Fill::Solid(Theme::HOVERED),
                 pressed_fill: Fill::Solid(Theme::ACTIVE),
                 border_width: 1.0,
-            border_color: Theme::BORDER,
-            corner_radius: 8.0,
-            shadow: None,
-            sharp: false,
-        });
+                border_color: Theme::BORDER,
+                corner_radius: 8.0,
+                shadow: None,
+                sharp: false,
+            });
 
         // Form Section
         let mut form_header = Label::new("ENDPOINT SETTINGS");
