@@ -5,6 +5,7 @@ use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::theme::Theme;
 use crate::ui::Ui;
 use crate::widget::{Measurable, Widget};
+use winit::window::CursorIcon;
 
 #[derive(Default)]
 pub struct CheckboxState {
@@ -92,6 +93,10 @@ impl Measurable for Checkbox {
 
         let interaction = Interaction::update(position, size, style.corner_radius, ui);
         self.interaction = interaction;
+
+        if interaction.hovered {
+            ui.set_cursor_icon(CursorIcon::Pointer);
+        }
 
         let state = ui.widget_state::<CheckboxState>(&self.id);
         if interaction.clicked {

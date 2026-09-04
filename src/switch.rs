@@ -5,6 +5,7 @@ use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::theme::Theme;
 use crate::ui::Ui;
 use crate::widget::{Measurable, Widget};
+use winit::window::CursorIcon;
 
 #[derive(Default)]
 pub struct SwitchState {
@@ -90,6 +91,10 @@ impl Measurable for Switch {
         let style = self.style.clone().unwrap_or_default();
         let interaction = Interaction::update(position, size, style.corner_radius, ui);
         self.interaction = interaction;
+
+        if interaction.hovered {
+            ui.set_cursor_icon(CursorIcon::Pointer);
+        }
 
         let state = ui.widget_state::<SwitchState>(&self.id);
         if interaction.clicked {

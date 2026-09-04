@@ -174,9 +174,20 @@ impl<W: Widget> ApplicationHandler for App<W> {
             }
 
             WindowEvent::MouseInput { state, button, .. } => {
-                if button == MouseButton::Left {
-                    ui.set_mouse_pressed(state == ElementState::Pressed);
-                    ui.set_mouse_released(state == ElementState::Released);
+                match button {
+                    MouseButton::Left => {
+                        ui.set_mouse_pressed(state == ElementState::Pressed);
+                        ui.set_mouse_released(state == ElementState::Released);
+                    }
+                    MouseButton::Right => {
+                        ui.set_mouse_right_pressed(state == ElementState::Pressed);
+                        ui.set_mouse_right_released(state == ElementState::Released);
+                    }
+                    MouseButton::Middle => {
+                        ui.set_mouse_middle_pressed(state == ElementState::Pressed);
+                        ui.set_mouse_middle_released(state == ElementState::Released);
+                    }
+                    _ => {}
                 }
             }
 

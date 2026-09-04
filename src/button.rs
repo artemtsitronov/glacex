@@ -7,6 +7,7 @@ use crate::theme::Theme;
 use crate::ui::Ui;
 use crate::widget::{Measurable, Widget};
 use std::default::Default;
+use winit::window::CursorIcon;
 
 pub type ButtonResponse = Interaction;
 
@@ -41,6 +42,7 @@ pub struct Button {
     label: String,
     interaction: Interaction,
     style: Option<ButtonStyle>,
+    tooltip: Option<String>,
 }
 
 impl Button {
@@ -49,11 +51,17 @@ impl Button {
             label: label.into(),
             interaction: Interaction::default(),
             style: None,
+            tooltip: None,
         }
     }
 
     pub fn style(mut self, style: ButtonStyle) -> Self {
         self.style = Some(style);
+        self
+    }
+
+    pub fn tooltip(mut self, tooltip: impl Into<String>) -> Self {
+        self.tooltip = Some(tooltip.into());
         self
     }
 
@@ -126,6 +134,13 @@ impl Measurable for Button {
             position[1] + size[1],
         ];
         ui.draw_text(&self.label, text_position, clip_rect);
+
+        if interaction.hovered {
+            ui.set_cursor_icon(CursorIcon::Pointer);
+            if let Some(tooltip) = &self.tooltip {
+                ui.show_tooltip(tooltip.clone());
+            }
+        }
 
         interaction
     }

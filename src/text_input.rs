@@ -6,6 +6,7 @@ use crate::text_edit::TextEditState;
 use crate::theme::Theme;
 use crate::ui::Ui;
 use crate::widget::{FocusId, Measurable, Widget};
+use winit::window::CursorIcon;
 
 #[derive(Debug, Clone)]
 pub struct TextInputStyle {
@@ -105,6 +106,10 @@ impl Measurable for TextInput {
 
         let mut state = ui.take_widget_state::<TextEditState>(&self.id);
         state.hovered = hovered;
+
+        if hovered {
+            ui.set_cursor_icon(CursorIcon::Text);
+        }
 
         if ui.mouse_pressed_this_frame() && hovered {
             ui.request_focus(self.focus_id);
