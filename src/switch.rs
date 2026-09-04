@@ -7,9 +7,13 @@ use crate::ui::Ui;
 use crate::widget::{Measurable, StatefulWidget, Widget};
 use winit::window::CursorIcon;
 
+use crate::animation::animate_towards;
+
 #[derive(Default)]
 pub struct SwitchState {
     pub enabled: bool,
+    pub anim_progress: f32,
+    pub initialized: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -107,15 +111,32 @@ impl Measurable for Switch {
             ui.set_cursor_icon(CursorIcon::Pointer);
         }
 
+        let dt = ui.dt();
         let state = ui.widget_state_or::<SwitchState>(&self.id, self.initial_state());
+
+        if !state.initialized {
+            state.anim_progress = if state.enabled { 1.0 } else { 0.0 };
+            state.initialized = true;
+        }
 
         if interaction.clicked {
             state.enabled = !state.enabled;
         }
         let enabled = state.enabled;
+        let target_progress = if enabled { 1.0 } else { 0.0 };
+        state.anim_progress = animate_towards(state.anim_progress, target_progress, dt, 0.07);
+        let progress = state.anim_progress;
 
-        let track_fill = if enabled {
-            style.track_on_fill
+        let track_fill = if progress > 0.01 {
+            if let (Fill::Solid(off_col), Fill::Solid(on_col)) =
+                (&style.track_off_fill, &style.track_on_fill)
+            {
+                Fill::Solid(off_col.lerp(*on_col, progress))
+            } else if enabled {
+                style.track_on_fill
+            } else {
+                style.track_off_fill
+            }
         } else if interaction.hovered {
             Fill::Solid(Theme::HOVERED)
         } else {
@@ -138,14 +159,12 @@ impl Measurable for Switch {
             false,
         );
 
-        // Draw sliding knob / thumb
+        // Draw sliding knob / thumb with smooth Apple/Linear spring-like glide
         let padding = 2.0;
         let knob_size = size[1] - padding * 2.0;
-        let knob_x = if enabled {
-            position[0] + size[0] - knob_size - padding
-        } else {
-            position[0] + padding
-        };
+        let min_x = position[0] + padding;
+        let max_x = position[0] + size[0] - knob_size - padding;
+        let knob_x = min_x + (max_x - min_x) * progress;
         let knob_pos = [knob_x, position[1] + padding];
         let knob_radius = knob_size / 2.0;
 
@@ -178,6 +197,8 @@ impl StatefulWidget for Switch {
     fn initial_state(&self) -> SwitchState {
         SwitchState {
             enabled: self.default_enabled,
+            anim_progress: if self.default_enabled { 1.0 } else { 0.0 },
+            initialized: true,
         }
     }
 }

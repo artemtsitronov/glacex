@@ -1,0 +1,53 @@
+name: Bug Report
+description: File a bug or issue encountered while using Glacex
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug report. Please provide as much detail as possible to help reproduce and fix the problem.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of the bug.
+      placeholder: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction Steps
+      description: Steps or minimal code to reproduce the issue.
+      placeholder: |
+        1. Run example '...'
+        2. Click on '...'
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: System configuration and dependency versions.
+      value: |
+        - OS: [e.g. Linux (Ubuntu 24.04), macOS 14, Windows 11]
+        - Display Server: [e.g. Wayland, X11, native]
+        - GPU / Driver: [e.g. Intel Iris, NVIDIA RTX 4070 / proprietary 550]
+        - Rust Version: [e.g. rustc 1.85.0]
+        - Glacex Version / Commit: [e.g. 0.1.2 or commit hash]
+    validations:
+      required: true
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Stack traces, compiler error outputs, or screenshots.

@@ -237,8 +237,8 @@ impl Widget for AppState {
         let parsed = parse_command(&command);
 
         let title = match &parsed {
-            Some((widget, _)) => format!("Style Playground — editing: {widget}"),
-            None => "Style Playground — type a command below".to_string(),
+            Some((widget, _)) => format!("Style Playground - editing: {widget}"),
+            None => "Style Playground - type a command below".to_string(),
         };
         if title != self.last_title {
             ui.set_title(&title);

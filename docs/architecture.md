@@ -8,74 +8,106 @@ Glacex operates as an immediate-mode, GPU-accelerated UI framework:
 
 ```
 [ User Application Code ]
-          │ (every frame via Widget::ui)
-          ▼
-       [ Ui ]  ◄── Mouse / Keyboard / Clipboard (winit + arboard)
-          │
-  ┌───────┴────────┐
-  │ Layout (Taffy) │
-  └───────┬────────┘
-          │ (Position & Size bounds)
-          ▼
+          | (every frame via Widget::ui)
+          v
+       [ Ui ]  <-- Mouse / Keyboard / Clipboard / dt (winit + arboard)
+          |
+  +-------+--------+
+  | Layout (Taffy) |
+  +-------+--------+
+          | (Position & Size bounds)
+          v
       [ Widget ]
-   (Hit-testing & draw calls)
-          │
+   (Hit-testing, animation step, draw calls)
+          |
    Ui::draw_rect() / Ui::draw_text()
-          │
-          ▼
+          |
+          v
      [ Painter ]
-  ┌───────┴────────────────────────┐
-  ▼                                ▼
+  +------+------------------------------+
+  v                                     v
 [ wgpu SDF Quad Pipeline ]   [ glyphon Text Renderer ]
-          │                                │
-          └────────────────┬───────────────┘
-                           ▼
+          |                                |
+          +----------------+---------------+
+                           v
                   [ GPU Command Buffer ]
-                           │
-                           ▼
+                           |
+                           v
                   [ Native Window Surface ]
 ```
 
 ## 2. SDF Instanced Quad Pipeline
 
-Unlike GUI frameworks that triangulate shapes into vertex meshes using CPU tessellation libraries, Glacex renders shapes using Signed Distance Fields (SDF) evaluated per fragment in `src/shader.wgsl`.
+Glacex renders every shape (button backgrounds, card surfaces, checkmarks, scrollbar thumbs) as a Signed Distance Field quad evaluated per-fragment in `src/shader.wgsl`. No CPU-side polygon tessellation happens.
 
 ### Why SDF Quad Rendering
-- **No CPU Tessellation**: No polygon generation overhead for rounded corners or borders.
-- **Sharp Anti-Aliasing**: Evaluated directly in the fragment shader with sub-pixel screen derivatives (`fwidth` and `smoothstep`).
-- **Single-Pass Soft Shadows**: Drop shadows and Gaussian blur falloffs calculate from the same distance field function without extra blur passes.
+- **No CPU Tessellation**: Corner rounding and borders are resolved in the fragment shader with zero polygon overhead.
+- **Sharp Anti-Aliasing**: `smoothstep` over the SDF gradient delivers sub-pixel-clean edges.
+- **Single-Pass Soft Shadows**: Drop shadows evaluate from the same SDF without extra blur render passes.
 
-### Quad Instance Data Layout (`src/shapes.rs`)
+### Quad Instance Data (`src/shapes.rs`)
 Each rectangle submitted to the GPU contains:
-- `rect_pos`: `[f32; 2]`
-- `rect_size`: `[f32; 2]`
-- `fill`: Solid color or gradient index parameters.
+- `position`: `[f32; 2]`
+- `size`: `[f32; 2]`
+- `color`: `Color` (solid or gradient base)
 - `corner_radius`: `f32`
 - `border_width`: `f32`
-- `border_color`: `[f32; 4]`
-- `blur_radius`: Drop shadow blur size.
-- `clip_rect`: `[f32; 4]` (`[min_x, min_y, max_x, max_y]`)
+- `border_color`: `Color`
+- `blur_radius`: drop shadow soft radius
+- `fill_kind`: `0.0` solid, `1.0` linear, `2.0` radial, `3.0` conic
+- `gradient_angle`, `gradient_row`, `gradient_center`: gradient parameters
 
-## 3. Scissor Rects and Draw Batching
+## 3. Animation System (`src/animation.rs`)
 
-Drawing operations batch automatically by clipping region:
-- Widgets push and pop nested scissor rectangles using `ui.push_clip(rect)` and `ui.pop_clip()`.
-- Rectangles sharing the same clip bounds combine into a single instanced `wgpu::RenderPass::draw` call.
-- Text submissions via `glyphon` take clipped bounding boxes, preventing text overflow outside container boundaries (such as inside a `ScrollView` or `Card`).
+All widget transitions use frame-rate independent math — no hardcoded frame counts.
 
-## 4. Gradient Atlas System
+### `animate_towards(current, target, dt, half_life) -> f32`
+Exponential decay toward `target`. `half_life` is seconds to close half the gap.
+Used by every animated widget state (`hover_t`, `press_t`, `dot_t`, `anim_progress`).
 
-Gradient fills (`GradientKind::Linear`, `Radial`, `Conic`) bake onto a dedicated GPU ramp texture atlas:
-- When a new gradient is registered, its color stops are sampled into an atlas row.
-- Gradients cache by their content hash. Reusing the same gradient across widgets or frames avoids re-baking.
+### Easing Curves (`Ease`)
+Static easing functions for use in timed sequences:
+`EaseOutCubic`, `EaseInOutCubic`, `EaseOutExpo`, `EaseOutBack`, `EaseOutQuad`, `EaseInOutQuad`, `Linear`.
 
-## 5. Frame Lifecycle (`lib.rs`)
+### `Spring`
+Physics-based spring simulation (`stiffness`, `damping`) using semi-implicit Euler integration.
+Use for overshooting, elastic, or bouncy effects beyond the built-in decay.
 
-1. **`WindowEvent::RedrawRequested`**:
-   - `ui.begin_frame()` clears frame state (clip stack, focus registers, hit-test flags).
-   - If registered, `App::update` runs with `&mut root_widget`.
-   - `root_widget.ui(ui)` executes widget measurement, layout, and draw queues.
-   - Cursor updates, Tab navigation, and floating tooltips are resolved.
-   - `ui.render()` flushes the `Painter`, records GPU command encoders, and presents the surface.
-   - `ui.end_frame()` clears input buffers and resets single-frame flags.
-   - A redraw request is queued for the next frame.
+### `lerp(a, b, t) -> f32`
+Standard linear interpolation helper.
+
+### `dt` on `Ui`
+`Ui::dt()` returns elapsed seconds since the previous frame (clamped to 1..=100ms).
+Widgets read `dt` once at the top of `arrange` before borrowing mutable state.
+
+## 4. Widget Animation Pattern
+
+All animated widgets follow this pattern:
+1. Cache `let dt = ui.dt()` before borrowing state.
+2. Get or create state struct (e.g. `CheckboxState`, `SwitchState`, `ButtonState`).
+3. Advance animation fields with `animate_towards(current, target, dt, half_life)`.
+4. Copy animated scalars out of the state borrow.
+5. Use the animated scalars to interpolate fill colors (`Color::lerp`) and layout values.
+
+## 5. Scissor Rects and Draw Batching
+
+- Widgets push and pop scissor rectangles with `ui.push_clip(rect)` / `ui.pop_clip()`.
+- Rectangles sharing the same clip bounds pack into a single instanced `draw` call.
+- `glyphon` text submissions clip independently, preventing overflow outside `ScrollView` or `Card` boundaries.
+
+## 6. Gradient Atlas System
+
+Gradient fills bake onto a dedicated GPU ramp texture atlas:
+- New gradients are sampled into an atlas row on first use.
+- Gradients cache by content hash. Reusing the same definition across frames costs nothing.
+
+## 7. Frame Lifecycle (`src/lib.rs`)
+
+Each `WindowEvent::RedrawRequested`:
+1. `ui.begin_frame()` — clears clip stack, focus registers, computes `dt`.
+2. `App::update` callback runs (optional, for app-level state changes).
+3. `root_widget.ui(ui)` — measures, lays out, animates, and queues all draw calls.
+4. Tab navigation and floating tooltip compositing resolve.
+5. `ui.render()` — flushes `Painter`, submits GPU command buffer, presents surface.
+6. `ui.end_frame()` — clears per-frame input buffers and flags.
+7. `window.request_redraw()` — schedules the next frame immediately (uncapped, vsync-limited by the OS compositor).

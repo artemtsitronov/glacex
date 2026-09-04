@@ -1,0 +1,39 @@
+name: Feature Request
+description: Suggest an idea, widget, or improvement for Glacex
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature! Please check existing issues and [ROADMAP.md](../../ROADMAP.md) first to ensure it is not already tracked.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: Is your feature request related to a problem or missing capability?
+      placeholder: I am trying to build X but cannot because Y is missing or cumbersome...
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution / API Design
+      description: Describe the solution or proposed Rust API.
+      placeholder: |
+        Suggested API:
+        ```rust
+        let mut widget = NewWidget::new(...);
+        ```
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Considered Alternatives
+      description: Any alternative solutions or workarounds you considered.
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Reference libraries (Qt, GTK, egui, Iced), UI mockups, or screenshots.

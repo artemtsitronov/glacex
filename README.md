@@ -75,6 +75,7 @@ There is no retained widget tree, no XML/HTML markup, and no hidden reactivity e
 - **Flexbox Layout**: Declarative `row![]` and `column![]` macros backed by `taffy` 0.13 with alignment, gap spacing, and automatic child arrangement.
 - **Rich Interaction Model**: Hover/press/click tracking, secondary/middle mouse buttons, Tab/Shift+Tab focus traversal, double/triple-click word/line selection, clipboard integration via `arboard`, and cursor blinking.
 - **Persistent State Tracking**: Stateless syntax with stateful continuity: widget state is keyed by stable IDs (`Ui::widget_state`, `take_widget_state`, `put_widget_state`).
+- **Physics & Easing Motion Engine**: Frame-rate independent exponential decay (`animate_towards`), standard easing curves (`Ease`), and `Spring` simulations for smooth interactive feedback on buttons, toggles, checkboxes, and sliders.
 - **Precision Scrolling**: Draggable, momentum-free, auto-hiding scrollbars shared across `ScrollView` and `TextArea`.
 
 ## Requirements
@@ -467,6 +468,7 @@ glacex/
 ├── examples/             # Runnable demo examples
 ├── src/
 │   ├── lib.rs            # App runner and window lifecycle
+│   ├── animation.rs      # Physics springs, easings, frame-rate independent animations
 │   ├── ui.rs             # Ui per-frame state, focus, clipping, drawing
 │   ├── widget.rs         # Widget and Measurable traits
 │   ├── layout.rs         # row! and column! macros (Taffy flexbox)
