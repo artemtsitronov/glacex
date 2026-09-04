@@ -4,7 +4,6 @@ version = "0.1.1"
 edition = "2024"
 rust-version = "1.85"
 description = "GPU-accelerated UI library built from scratch in Rust"
-readme = "README.md"
 license = "MIT"
 keywords = ["gui", "wgpu", "ui", "graphics"]
 categories = ["gui", "graphics"]

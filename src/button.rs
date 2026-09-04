@@ -30,7 +30,7 @@ impl Default for ButtonStyle {
             pressed_fill: Fill::Solid(Theme::ACTIVE),
             border_width: 1.0,
             border_color: Theme::BORDER,
-            corner_radius: 12.0,
+            corner_radius: 8.0,
             shadow: Some(ShadowStyle::default()),
             sharp: false,
         }

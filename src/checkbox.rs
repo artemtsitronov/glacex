@@ -38,7 +38,7 @@ impl Default for CheckboxStyle {
             checked_fill: Fill::Solid(Theme::ACTIVE),
             border_width: 1.0,
             border_color: Theme::BORDER,
-            corner_radius: 12.0,
+            corner_radius: 5.0,
             shadow: Some(ShadowStyle::default()),
             sharp: false,
         }
@@ -88,7 +88,7 @@ impl Widget for Checkbox {
 
 impl Measurable for Checkbox {
     fn measure(&mut self, _ui: &mut Ui) -> [f32; 2] {
-        [30.0, 30.0]
+        [18.0, 18.0]
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) -> CheckboxResponse {

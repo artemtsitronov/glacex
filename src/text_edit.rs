@@ -35,6 +35,18 @@ impl TextEditState {
         &self.text
     }
 
+    pub fn set_text(&mut self, text: impl Into<String>) {
+        self.text = text.into();
+        self.cursor = self.text.chars().count();
+        self.selection_anchor = None;
+        self.scroll_offset = 0.0;
+        self.mark_activity();
+    }
+
+    pub fn clear(&mut self) {
+        self.set_text("");
+    }
+
     pub fn cursor(&self) -> usize {
         self.cursor
     }
