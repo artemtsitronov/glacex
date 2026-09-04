@@ -173,23 +173,21 @@ impl<W: Widget> ApplicationHandler for App<W> {
                 ui.update_mouse_position(position.x, position.y);
             }
 
-            WindowEvent::MouseInput { state, button, .. } => {
-                match button {
-                    MouseButton::Left => {
-                        ui.set_mouse_pressed(state == ElementState::Pressed);
-                        ui.set_mouse_released(state == ElementState::Released);
-                    }
-                    MouseButton::Right => {
-                        ui.set_mouse_right_pressed(state == ElementState::Pressed);
-                        ui.set_mouse_right_released(state == ElementState::Released);
-                    }
-                    MouseButton::Middle => {
-                        ui.set_mouse_middle_pressed(state == ElementState::Pressed);
-                        ui.set_mouse_middle_released(state == ElementState::Released);
-                    }
-                    _ => {}
+            WindowEvent::MouseInput { state, button, .. } => match button {
+                MouseButton::Left => {
+                    ui.set_mouse_pressed(state == ElementState::Pressed);
+                    ui.set_mouse_released(state == ElementState::Released);
                 }
-            }
+                MouseButton::Right => {
+                    ui.set_mouse_right_pressed(state == ElementState::Pressed);
+                    ui.set_mouse_right_released(state == ElementState::Released);
+                }
+                MouseButton::Middle => {
+                    ui.set_mouse_middle_pressed(state == ElementState::Pressed);
+                    ui.set_mouse_middle_released(state == ElementState::Released);
+                }
+                _ => {}
+            },
 
             WindowEvent::MouseWheel { delta, .. } => {
                 let (dx, dy) = match delta {
