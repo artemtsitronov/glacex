@@ -1,57 +1,48 @@
 # Contributing to Glacex
 
-Thanks for your interest in contributing to Glacex! This document outlines the process and guidelines.
+Thanks for contributing to Glacex!
 
 ## Getting Started
 
-1. Fork the repository and clone your fork.
-2. Install the Rust toolchain (stable, edition 2024, minimum `rustc 1.85`).
-3. Run `cargo check` to verify the build compiles.
+1. Fork and clone the repository.
+2. Ensure you have Rust 1.85+ installed (Rust 2024 edition).
+3. Verify that `cargo check` compiles cleanly.
 
 ## Development Workflow
 
 ### Code Style
 
-- Run `cargo fmt` and `cargo fmt --all` before committing.
+- Run `cargo fmt --all` before committing.
 - Run `cargo clippy --all-targets --all-features -- -D warnings` and fix any warnings.
 - Follow standard Rust naming conventions and idioms.
 
 ### Building & Testing
 
 ```sh
-cargo fmt && cargo fmt --all
+cargo fmt --all
 cargo check --workspace
 cargo clippy --all-targets --all-features -- -D warnings
 cargo test --workspace --all-features
 ```
 
-All four must pass before submitting a PR.
+All commands must pass before submitting a pull request.
 
 ### Commit Messages
 
-- Use clear, descriptive commit messages.
-- Prefix with a category when appropriate: `fix:`, `feat:`, `refactor:`, `docs:`, `chore:`.
+Use clear, descriptive commit messages with standard prefixes: `fix:`, `feat:`, `refactor:`, `docs:`, `chore:`.
 
-## Submitting a Pull Request
+## Pull Requests
 
 1. Create a feature branch from `main`.
-2. Make your changes following the guidelines above.
-3. Ensure CI checks pass (fmt, clippy, tests).
-4. Open a pull request with a clear description of what changed and why.
-5. Reference any related issues.
-
-### PR Guidelines
-
-- Keep PRs focused — one logical change per PR.
-- All new public APIs must include rustdoc comments.
-- Add examples or tests for new functionality when practical.
-- Breaking changes should be clearly noted in the PR description.
+2. Keep PRs focused on one logical change.
+3. Include rustdoc comments on all new public APIs.
+4. Add examples or tests for new functionality where practical.
+5. Note any breaking API changes in the PR description.
 
 ## Reporting Issues
 
-- Use GitHub Issues for bug reports and feature requests.
-- Include reproduction steps, expected vs. actual behavior, and your environment (OS, Rust version, GPU).
+Open an issue on GitHub with reproduction steps, expected vs actual behavior, and your environment (OS, GPU, and Rust version).
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the MIT License.
+By contributing, you agree that your contributions are licensed under the MIT License.

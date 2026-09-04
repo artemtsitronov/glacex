@@ -156,7 +156,6 @@ impl StatefulWidget for Checkbox {
     fn initial_state(&self) -> CheckboxState {
         CheckboxState {
             checked: self.default_checked,
-            ..Default::default()
         }
     }
 }
