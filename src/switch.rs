@@ -63,10 +63,6 @@ impl Switch {
         self
     }
 
-    pub fn set_style(&mut self, style: Option<SwitchStyle>) {
-        self.style = style;
-    }
-
     pub fn clicked(&self) -> bool {
         self.interaction.clicked
     }

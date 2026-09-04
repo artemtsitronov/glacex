@@ -51,11 +51,6 @@ impl ProgressBar {
         self.style = style;
         self
     }
-
-    pub fn color(mut self, color: Color) -> Self {
-        self.style.progress_fill = Fill::Solid(color);
-        self
-    }
 }
 
 impl Widget for ProgressBar {

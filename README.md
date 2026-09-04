@@ -3,6 +3,7 @@
 ![demo](screenshots/screenshot_demo.png)
 
 GPU-Rendered UI library — built from scratch in Rust [WIP]
+Built by Artem Tsitronov and Soumalya Das.
 
 ## About
 
@@ -21,7 +22,10 @@ production use. APIs are unstable and subject to change.
 - SDF rounded-corner shapes
 - Text rendering via `glyphon`
 - Hit-testing and interaction system
-- Layout system (Row/Column)
+- Layout system (Row/Column/Container) via taffy
 - A filling system (Solid, Gradient)
 - Widgets: button, checkbox, radio button, label, text input, 
-  text area, scroll view, container
+  text area, scroll view, container, card, badge, divider, 
+  progress bar, switch, slider,
+- Theme system and modern default design
+- Customizability via styling

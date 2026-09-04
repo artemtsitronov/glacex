@@ -49,16 +49,6 @@ impl<'a> Card<'a> {
         self.style = style;
         self
     }
-
-    pub fn padding(mut self, x: f32, y: f32) -> Self {
-        self.style.padding = [x, y];
-        self
-    }
-
-    pub fn corner_radius(mut self, radius: f32) -> Self {
-        self.style.corner_radius = radius;
-        self
-    }
 }
 
 impl<'a> Widget for Card<'a> {

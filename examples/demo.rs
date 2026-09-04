@@ -1,8 +1,8 @@
 use glacex::{
-    Alignment, App, Badge, BadgeVariant, Button, ButtonStyle, Card, Checkbox, CheckboxState, Color,
-    Divider, Fill, Gradient, GradientKind, GradientStop, Label, ProgressBar, RadioButton,
-    ScrollView, ShadowStyle, Slider, SliderState, Switch, SwitchState, TextArea, TextInput, Theme,
-    Ui, Widget, column, row,
+    Alignment, App, Badge, BadgeVariant, Button, ButtonStyle, Card, CardStyle, Checkbox,
+    CheckboxState, Color, Divider, Fill, Gradient, GradientKind, GradientStop, Label, ProgressBar,
+    RadioButton, ScrollView, ShadowStyle, Slider, SliderState, Switch, SwitchState, TextArea,
+    TextInput, Theme, Ui, Widget, column, row,
 };
 
 fn subtle_gradient(elapsed: f32) -> Fill {
@@ -189,8 +189,14 @@ impl Widget for AppState {
         .spacing(10.0)
         .align(Alignment::Start);
 
-        let mut left_card = Card::new(&mut left_content).padding(18.0, 18.0);
-        let mut right_card = Card::new(&mut right_content).padding(18.0, 18.0);
+        let mut left_card = Card::new(&mut left_content).style(CardStyle {
+            padding: [18.0, 18.0],
+            ..Default::default()
+        });
+        let mut right_card = Card::new(&mut right_content).style(CardStyle {
+            padding: [18.0, 18.0],
+            ..Default::default()
+        });
 
         let mut header_row = row![&mut title, &mut live_badge, &mut v_badge]
             .spacing(12.0)

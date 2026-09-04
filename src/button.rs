@@ -57,10 +57,6 @@ impl Button {
         self
     }
 
-    pub fn set_style(&mut self, style: Option<ButtonStyle>) {
-        self.style = style;
-    }
-
     pub fn hovered(&self) -> bool {
         self.interaction.hovered
     }

@@ -1,6 +1,6 @@
 use glacex::{
-    Alignment, App, Badge, BadgeVariant, Button, ButtonStyle, Card, Color, Divider, Fill, Label,
-    ShadowStyle, TextEditState, TextInput, Theme, Ui, Widget, column, row,
+    Alignment, App, Badge, BadgeVariant, Button, ButtonStyle, Card, CardStyle, Color, Divider,
+    Fill, Label, ShadowStyle, TextEditState, TextInput, Theme, Ui, Widget, column, row,
 };
 
 struct AppState {
@@ -71,9 +71,11 @@ impl Widget for AppState {
         .spacing(12.0)
         .align(Alignment::Start);
 
-        let mut card = Card::new(&mut card_content)
-            .padding(24.0, 24.0)
-            .corner_radius(16.0);
+        let mut card = Card::new(&mut card_content).style(CardStyle {
+            padding: [24.0, 24.0],
+            corner_radius: 16.0,
+            ..Default::default()
+        });
 
         column![&mut card]
             .align(Alignment::Center)

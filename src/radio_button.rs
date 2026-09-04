@@ -63,17 +63,6 @@ impl RadioButton {
         self
     }
 
-    pub fn set_style(&mut self, style: Option<RadioButtonStyle>) {
-        self.style = style;
-    }
-
-    pub fn corner_radius(mut self, radius: f32) -> Self {
-        let mut s = self.style.unwrap_or_default();
-        s.corner_radius = radius;
-        self.style = Some(s);
-        self
-    }
-
     pub fn clicked(&self) -> bool {
         self.interaction.clicked
     }

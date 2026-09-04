@@ -12,9 +12,9 @@
 //! straight from the typed text.
 
 use glacex::{
-    Alignment, App, Badge, BadgeVariant, Button, ButtonStyle, Card, Checkbox, CheckboxStyle, Color,
-    Divider, Fill, Label, ScrollView, ScrollViewStyle, ShadowStyle, TextArea, TextAreaStyle,
-    TextEditState, TextInput, TextInputStyle, Theme, Ui, Widget, column, row,
+    Alignment, App, Badge, BadgeVariant, Button, ButtonStyle, Card, CardStyle, Checkbox,
+    CheckboxStyle, Color, Divider, Fill, Label, ScrollView, ScrollViewStyle, ShadowStyle, TextArea,
+    TextAreaStyle, TextEditState, TextInput, TextInputStyle, Theme, Ui, Widget, column, row,
 };
 use std::collections::HashMap;
 
@@ -331,7 +331,10 @@ impl Widget for AppState {
             .spacing(12.0)
             .align(Alignment::Start);
 
-        let mut interactive_card = Card::new(&mut card_content).padding(18.0, 18.0);
+        let mut interactive_card = Card::new(&mut card_content).style(CardStyle {
+            padding: [18.0, 18.0],
+            ..Default::default()
+        });
 
         let mut header_row = row![&mut title_label, &mut mode_badge]
             .spacing(10.0)
