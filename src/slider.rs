@@ -5,6 +5,7 @@ use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::theme::Theme;
 use crate::ui::Ui;
 use crate::widget::{Measurable, StatefulWidget, Widget};
+use winit::window::CursorIcon;
 
 #[derive(Clone, Default)]
 pub struct SliderState {
@@ -108,7 +109,11 @@ impl Measurable for Slider {
             && !ui.is_input_blocked(mouse_pos)
             && ui.point_in_current_clip(mouse_pos);
 
-        let state = ui.widget_state_or::<SliderState>(&self.id, self.initial_state());
+        let mut state = ui.take_widget_state_or::<SliderState>(&self.id, self.initial_state());
+
+        if hovered || state.dragging {
+            ui.set_cursor_icon(CursorIcon::EwResize);
+        }
 
         let mut changed = false;
         if hovered && mouse_pressed_this_frame {
@@ -137,6 +142,7 @@ impl Measurable for Slider {
 
         let value = state.value;
         let dragging = state.dragging;
+        ui.put_widget_state(&self.id, state);
 
         // Visual layout
         let track_y = position[1] + (size[1] - style.track_height) / 2.0;

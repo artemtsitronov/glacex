@@ -49,31 +49,35 @@ impl Widget for AppState {
         // Left Panel: Metric Counter & Action Buttons
         let mut counter_header = Label::new("METRICS");
         let mut counter_val = Label::new(format!("Events Processed: {}", self.count));
-        let mut primary_btn = Button::new("Deploy Trigger").style(ButtonStyle {
-            fill: brand_gradient,
-            hover_fill: Fill::Solid(Theme::ACTIVE_HOVER),
-            pressed_fill: Fill::Solid(Theme::ACTIVE),
-            border_width: 1.0,
-            border_color: Color::WHITE.with_alpha(0.2),
-            corner_radius: 8.0,
-            shadow: Some(ShadowStyle {
-                color: Theme::ACTIVE.with_alpha(0.4),
-                blur_radius: 12.0,
-                offset: [0.0, 3.0],
-            }),
-            sharp: false,
-        });
+        let mut primary_btn = Button::new("Deploy Trigger")
+            .tooltip("Triggers a simulated deployment event")
+            .style(ButtonStyle {
+                fill: brand_gradient,
+                hover_fill: Fill::Solid(Theme::ACTIVE_HOVER),
+                pressed_fill: Fill::Solid(Theme::ACTIVE),
+                border_width: 1.0,
+                border_color: Color::WHITE.with_alpha(0.2),
+                corner_radius: 8.0,
+                shadow: Some(ShadowStyle {
+                    color: Theme::ACTIVE.with_alpha(0.4),
+                    blur_radius: 12.0,
+                    offset: [0.0, 3.0],
+                }),
+                sharp: false,
+            });
 
-        let mut reset_btn = Button::new("Reset Counter").style(ButtonStyle {
-            fill: Fill::Solid(Theme::SURFACE_SUBTLE),
-            hover_fill: Fill::Solid(Theme::HOVERED),
-            pressed_fill: Fill::Solid(Theme::ACTIVE),
-            border_width: 1.0,
-            border_color: Theme::BORDER,
-            corner_radius: 8.0,
-            shadow: None,
-            sharp: false,
-        });
+        let mut reset_btn = Button::new("Reset Counter")
+            .tooltip("Resets processed events to zero")
+            .style(ButtonStyle {
+                fill: Fill::Solid(Theme::SURFACE_SUBTLE),
+                hover_fill: Fill::Solid(Theme::HOVERED),
+                pressed_fill: Fill::Solid(Theme::ACTIVE),
+                border_width: 1.0,
+                border_color: Theme::BORDER,
+                corner_radius: 8.0,
+                shadow: None,
+                sharp: false,
+            });
 
         // Form Section
         let mut form_header = Label::new("ENDPOINT SETTINGS");

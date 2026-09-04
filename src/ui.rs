@@ -1,13 +1,14 @@
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::painter::Painter;
+use crate::theme::Theme;
 use crate::widget::{FocusId, Widget};
 use std::any::Any;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Instant;
 use winit::keyboard::{Key, PhysicalKey};
-use winit::window::Window;
+use winit::window::{CursorIcon, Window};
 
 fn intersect_rects(a: [f32; 4], b: [f32; 4]) -> [f32; 4] {
     [
@@ -45,6 +46,17 @@ pub struct Ui {
     input_block_stack: Vec<[f32; 4]>,
     selected: HashMap<String, String>,
     click_count: u32,
+    cursor_icon: CursorIcon,
+    cursor_icon_set_this_frame: bool,
+    mouse_right_pressed: bool,
+    mouse_right_released: bool,
+    mouse_right_pressed_this_frame: bool,
+    mouse_right_released_this_frame: bool,
+    mouse_middle_pressed: bool,
+    mouse_middle_released: bool,
+    mouse_middle_pressed_this_frame: bool,
+    mouse_middle_released_this_frame: bool,
+    pending_tooltip: Option<(String, [f32; 2])>,
 }
 
 impl Ui {
@@ -82,6 +94,17 @@ impl Ui {
             input_block_stack: Vec::new(),
             selected: HashMap::new(),
             click_count: 0,
+            cursor_icon: CursorIcon::Default,
+            cursor_icon_set_this_frame: false,
+            mouse_right_pressed: false,
+            mouse_right_released: false,
+            mouse_right_pressed_this_frame: false,
+            mouse_right_released_this_frame: false,
+            mouse_middle_pressed: false,
+            mouse_middle_released: false,
+            mouse_middle_pressed_this_frame: false,
+            mouse_middle_released_this_frame: false,
+            pending_tooltip: None,
         }
     }
 
@@ -320,6 +343,76 @@ impl Ui {
         self.mouse_released = released;
     }
 
+    pub fn mouse_right_pressed(&self) -> bool {
+        self.mouse_right_pressed
+    }
+
+    pub fn mouse_right_released(&self) -> bool {
+        self.mouse_right_released
+    }
+
+    pub fn mouse_right_pressed_this_frame(&self) -> bool {
+        self.mouse_right_pressed_this_frame
+    }
+
+    pub fn mouse_right_released_this_frame(&self) -> bool {
+        self.mouse_right_released_this_frame
+    }
+
+    pub fn set_mouse_right_pressed(&mut self, pressed: bool) {
+        self.mouse_right_pressed_this_frame = pressed && !self.mouse_right_pressed;
+        self.mouse_right_pressed = pressed;
+    }
+
+    pub fn set_mouse_right_released(&mut self, released: bool) {
+        self.mouse_right_released_this_frame = released && !self.mouse_right_released;
+        self.mouse_right_released = released;
+    }
+
+    pub fn mouse_middle_pressed(&self) -> bool {
+        self.mouse_middle_pressed
+    }
+
+    pub fn mouse_middle_released(&self) -> bool {
+        self.mouse_middle_released
+    }
+
+    pub fn mouse_middle_pressed_this_frame(&self) -> bool {
+        self.mouse_middle_pressed_this_frame
+    }
+
+    pub fn mouse_middle_released_this_frame(&self) -> bool {
+        self.mouse_middle_released_this_frame
+    }
+
+    pub fn set_mouse_middle_pressed(&mut self, pressed: bool) {
+        self.mouse_middle_pressed_this_frame = pressed && !self.mouse_middle_pressed;
+        self.mouse_middle_pressed = pressed;
+    }
+
+    pub fn set_mouse_middle_released(&mut self, released: bool) {
+        self.mouse_middle_released_this_frame = released && !self.mouse_middle_released;
+        self.mouse_middle_released = released;
+    }
+
+    pub fn set_cursor_icon(&mut self, icon: CursorIcon) {
+        self.cursor_icon = icon;
+        self.cursor_icon_set_this_frame = true;
+        self.window.set_cursor(icon);
+    }
+
+    pub fn cursor_icon(&self) -> CursorIcon {
+        self.cursor_icon
+    }
+
+    pub fn show_tooltip(&mut self, text: impl Into<String>) {
+        self.pending_tooltip = Some((text.into(), self.mouse_position));
+    }
+
+    pub fn show_tooltip_at(&mut self, text: impl Into<String>, position: [f32; 2]) {
+        self.pending_tooltip = Some((text.into(), position));
+    }
+
     pub fn mouse_position(&self) -> [f32; 2] {
         self.mouse_position
     }
@@ -377,12 +470,23 @@ impl Ui {
     pub fn end_frame(&mut self) {
         self.mouse_pressed_this_frame = false;
         self.mouse_released_this_frame = false;
+        self.mouse_right_pressed_this_frame = false;
+        self.mouse_right_released_this_frame = false;
+        self.mouse_middle_pressed_this_frame = false;
+        self.mouse_middle_released_this_frame = false;
         self.typed_text.clear();
         self.keys_pressed_this_frame.clear();
         self.physical_keys_pressed_this_frame.clear();
         self.focus_requested_this_frame = false;
         self.scroll_delta_x = 0.0;
         self.scroll_delta_y = 0.0;
+
+        if !self.cursor_icon_set_this_frame && self.cursor_icon != CursorIcon::Default {
+            self.cursor_icon = CursorIcon::Default;
+            self.window.set_cursor(CursorIcon::Default);
+        }
+        self.cursor_icon_set_this_frame = false;
+        self.pending_tooltip = None;
     }
 
     pub fn line_height(&self) -> f32 {
@@ -438,6 +542,47 @@ impl Ui {
     }
 
     pub fn render(&mut self) {
+        if let Some((text, pos)) = self.pending_tooltip.take() {
+            let text_width = self.measure_text(&text);
+            let pad_x = 8.0;
+            let pad_y = 5.0;
+            let width = text_width + pad_x * 2.0;
+            let height = self.line_height() + pad_y * 2.0;
+
+            let window_size = self.painter.window_size();
+            let mut tooltip_pos = [pos[0] + 12.0, pos[1] + 18.0];
+            if tooltip_pos[0] + width > window_size[0] {
+                tooltip_pos[0] = (window_size[0] - width - 4.0).max(0.0);
+            }
+            if tooltip_pos[1] + height > window_size[1] {
+                tooltip_pos[1] = (pos[1] - height - 6.0).max(0.0);
+            }
+
+            let full_clip = [0.0, 0.0, window_size[0], window_size[1]];
+            self.painter.draw_rect(
+                tooltip_pos,
+                [width, height],
+                Fill::Solid(Theme::SURFACE_ELEVATED),
+                6.0,
+                1.0,
+                Theme::BORDER_STRONG,
+                8.0,
+                0.0,
+                full_clip,
+            );
+
+            self.painter.draw_text(
+                &text,
+                [tooltip_pos[0] + pad_x, tooltip_pos[1] + pad_y],
+                [
+                    tooltip_pos[0],
+                    tooltip_pos[1],
+                    tooltip_pos[0] + width,
+                    tooltip_pos[1] + height,
+                ],
+            );
+        }
+
         self.painter.present();
     }
 

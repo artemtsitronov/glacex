@@ -5,9 +5,10 @@ edition = "2024"
 rust-version = "1.85"
 description = "GPU-accelerated UI library built from scratch in Rust"
 license = "MIT"
+repository = "https://github.com/artemtsitronov/glacex"
 keywords = ["gui", "wgpu", "ui", "graphics"]
 categories = ["gui", "graphics"]
-exclude = ["screenshots/*"]
+include = ["screenshots/*"]
 
 [dependencies]
 arboard = "3.6.1"

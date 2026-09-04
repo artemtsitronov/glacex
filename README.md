@@ -3,7 +3,8 @@
 ![demo](screenshots/demo.png)
 
 GPU-Rendered UI library — built from scratch in Rust [WIP]
-Built by Artem Tsitronov and Soumalya Das.
+
+Built by **Artem Tsitronov** and **Soumalya Das**.
 
 ## About
 
