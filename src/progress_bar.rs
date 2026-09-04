@@ -29,7 +29,7 @@ pub struct ProgressBar {
     progress: f32,
     width: f32,
     height: f32,
-    style: ProgressBarStyle,
+    style: Option<ProgressBarStyle>,
 }
 
 impl ProgressBar {
@@ -38,7 +38,7 @@ impl ProgressBar {
             progress: progress.clamp(0.0, 1.0),
             width,
             height: 8.0,
-            style: ProgressBarStyle::default(),
+            style: None,
         }
     }
 
@@ -48,8 +48,12 @@ impl ProgressBar {
     }
 
     pub fn style(mut self, style: ProgressBarStyle) -> Self {
-        self.style = style;
+        self.style = Some(style);
         self
+    }
+
+    pub fn set_style(&mut self, style: Option<ProgressBarStyle>) {
+        self.style = style;
     }
 }
 
@@ -68,14 +72,15 @@ impl Measurable for ProgressBar {
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
+        let style = self.style.clone().unwrap_or_default();
         // Draw track
         ui.draw_rect(
             position,
             size,
-            self.style.track_fill.clone(),
-            self.style.corner_radius,
-            self.style.border_width,
-            self.style.border_color,
+            style.track_fill.clone(),
+            style.corner_radius,
+            style.border_width,
+            style.border_color,
             0.0,
             false,
         );
@@ -86,8 +91,8 @@ impl Measurable for ProgressBar {
             ui.draw_rect(
                 position,
                 [filled_width, size[1]],
-                self.style.progress_fill.clone(),
-                self.style.corner_radius,
+                style.progress_fill.clone(),
+                style.corner_radius,
                 0.0,
                 Color::TRANSPARENT,
                 0.0,

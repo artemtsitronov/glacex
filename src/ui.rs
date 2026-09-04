@@ -125,6 +125,14 @@ impl Ui {
             .expect("widget id reused with a different state type")
     }
 
+    pub fn widget_state_or<T: 'static>(&mut self, id: &str, initial: T) -> &mut T {
+        self.persistent_state
+            .entry(id.to_string())
+            .or_insert_with(|| Box::new(initial))
+            .downcast_mut::<T>()
+            .unwrap()
+    }
+
     pub fn take_widget_state<T: Default + 'static>(&mut self, id: &str) -> T {
         self.persistent_state
             .remove(id)
@@ -133,9 +141,21 @@ impl Ui {
             .unwrap_or_default()
     }
 
+    pub fn take_widget_state_or<T: 'static>(&mut self, id: &str, initial: T) -> T {
+        self.persistent_state
+            .remove(id)
+            .and_then(|b| b.downcast::<T>().ok())
+            .map(|b| *b)
+            .unwrap_or(initial)
+    }
+
     pub fn put_widget_state<T: 'static>(&mut self, id: &str, state: T) {
         self.persistent_state
             .insert(id.to_string(), Box::new(state));
+    }
+
+    pub fn get_state<T: Default + Clone + 'static>(&mut self, id: &str) -> T {
+        self.widget_state_or::<T>(id, T::default()).clone()
     }
 
     pub fn scroll_delta_x(&self) -> f32 {

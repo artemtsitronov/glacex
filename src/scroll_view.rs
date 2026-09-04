@@ -3,7 +3,7 @@ use crate::fill::Fill;
 use crate::geometry::contains;
 use crate::scrolling::{ScrollAxisState, ScrollConfig, compute_geometry, handle_drag};
 use crate::ui::Ui;
-use crate::widget::{AnyWidget, Measurable, Widget};
+use crate::widget::{AnyWidget, Measurable, StatefulWidget, Widget};
 
 #[derive(Default)]
 pub struct ScrollState {
@@ -37,6 +37,7 @@ pub struct ScrollView<'a> {
     config: ScrollConfig,
     style: Option<ScrollViewStyle>,
     child: Box<dyn AnyWidget + 'a>,
+    default_offset: [f32; 2],
 }
 
 impl<'a> ScrollView<'a> {
@@ -47,6 +48,7 @@ impl<'a> ScrollView<'a> {
             config: ScrollConfig::default(),
             style: None,
             child: Box::new(child),
+            default_offset: [0.0; 2],
         }
     }
 
@@ -57,6 +59,11 @@ impl<'a> ScrollView<'a> {
 
     pub fn set_style(&mut self, style: Option<ScrollViewStyle>) {
         self.style = style;
+    }
+
+    pub fn default_offset(mut self, offset: [f32; 2]) -> Self {
+        self.default_offset = offset;
+        self
     }
 
     pub fn arrange_at(&mut self, position: [f32; 2], ui: &mut Ui) {
@@ -81,7 +88,7 @@ impl<'a> Measurable for ScrollView<'a> {
         let style = self.style.clone().unwrap_or_default();
 
         let hovered = contains(position, size, 0.0, ui.mouse_position());
-        let mut state = ui.take_widget_state::<ScrollState>(&self.id);
+        let mut state = ui.take_widget_state_or(&self.id, self.initial_state());
 
         let scrolled_this_frame =
             hovered && (ui.scroll_delta_x() != 0.0 || ui.scroll_delta_y() != 0.0);
@@ -293,5 +300,27 @@ impl<'a> Measurable for ScrollView<'a> {
         }
 
         ui.put_widget_state(&self.id, state);
+    }
+}
+
+impl<'a> StatefulWidget for ScrollView<'a> {
+    type State = ScrollState;
+
+    fn state_id(&self) -> &str {
+        &self.id
+    }
+
+    fn initial_state(&self) -> ScrollState {
+        ScrollState {
+            x: ScrollAxisState {
+                offset: self.default_offset[0],
+                ..Default::default()
+            },
+            y: ScrollAxisState {
+                offset: self.default_offset[1],
+                ..Default::default()
+            },
+            ..Default::default()
+        }
     }
 }

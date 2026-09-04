@@ -4,7 +4,7 @@ use crate::interaction::Interaction;
 use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::theme::Theme;
 use crate::ui::Ui;
-use crate::widget::{Measurable, Widget};
+use crate::widget::{Measurable, StatefulWidget, Widget};
 
 #[derive(Default)]
 pub struct SwitchState {
@@ -47,6 +47,7 @@ pub struct Switch {
     id: String,
     style: Option<SwitchStyle>,
     interaction: Interaction,
+    default_enabled: bool,
 }
 
 impl Switch {
@@ -55,11 +56,21 @@ impl Switch {
             id: id.into(),
             style: None,
             interaction: Interaction::default(),
+            default_enabled: false,
         }
     }
 
     pub fn style(mut self, style: SwitchStyle) -> Self {
         self.style = Some(style);
+        self
+    }
+
+    pub fn set_style(&mut self, style: Option<SwitchStyle>) {
+        self.style = style;
+    }
+
+    pub fn default_enabled(mut self, default_enabled: bool) -> Self {
+        self.default_enabled = default_enabled;
         self
     }
 
@@ -91,7 +102,7 @@ impl Measurable for Switch {
         let interaction = Interaction::update(position, size, style.corner_radius, ui);
         self.interaction = interaction;
 
-        let state = ui.widget_state::<SwitchState>(&self.id);
+        let state = ui.widget_state_or::<SwitchState>(&self.id, self.initial_state());
         if interaction.clicked {
             state.enabled = !state.enabled;
         }
@@ -147,6 +158,21 @@ impl Measurable for Switch {
             enabled,
             clicked: interaction.clicked,
             hovered: interaction.hovered,
+        }
+    }
+}
+
+impl StatefulWidget for Switch {
+    type State = SwitchState;
+
+    fn state_id(&self) -> &str {
+        &self.id
+    }
+
+    fn initial_state(&self) -> SwitchState {
+        SwitchState {
+            enabled: self.default_enabled,
+            ..Default::default()
         }
     }
 }

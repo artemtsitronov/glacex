@@ -4,9 +4,9 @@ use crate::geometry::contains;
 use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::theme::Theme;
 use crate::ui::Ui;
-use crate::widget::{Measurable, Widget};
+use crate::widget::{Measurable, StatefulWidget, Widget};
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct SliderState {
     pub value: f32,
     pub dragging: bool,
@@ -53,6 +53,7 @@ pub struct Slider {
     max: f32,
     width: f32,
     style: Option<SliderStyle>,
+    default_value: f32,
 }
 
 impl Slider {
@@ -63,11 +64,21 @@ impl Slider {
             max,
             width,
             style: None,
+            default_value: 0.0,
         }
     }
 
     pub fn style(mut self, style: SliderStyle) -> Self {
         self.style = Some(style);
+        self
+    }
+
+    pub fn set_style(&mut self, style: Option<SliderStyle>) {
+        self.style = style;
+    }
+
+    pub fn default_value(mut self, default_value: f32) -> Self {
+        self.default_value = default_value;
         self
     }
 }
@@ -97,7 +108,7 @@ impl Measurable for Slider {
             && !ui.is_input_blocked(mouse_pos)
             && ui.point_in_current_clip(mouse_pos);
 
-        let state = ui.widget_state::<SliderState>(&self.id);
+        let state = ui.widget_state_or::<SliderState>(&self.id, self.initial_state());
 
         let mut changed = false;
         if hovered && mouse_pressed_this_frame {
@@ -187,6 +198,21 @@ impl Measurable for Slider {
             changed,
             dragging,
             hovered,
+        }
+    }
+}
+
+impl StatefulWidget for Slider {
+    type State = SliderState;
+
+    fn state_id(&self) -> &str {
+        &self.id
+    }
+
+    fn initial_state(&self) -> SliderState {
+        SliderState {
+            value: self.default_value,
+            ..Default::default()
         }
     }
 }

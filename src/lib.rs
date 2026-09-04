@@ -134,8 +134,10 @@ impl<W: Widget> ApplicationHandler for App<W> {
             }
         };
 
-        self.ui = Some(pollster::block_on(Ui::new(window.clone())));
+        let mut ui = pollster::block_on(Ui::new(window.clone()));
+        self.root.on_start(&mut ui);
         self.window = Some(window);
+        self.ui = Some(ui);
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {

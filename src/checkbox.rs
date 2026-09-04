@@ -4,7 +4,7 @@ use crate::interaction::Interaction;
 use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::theme::Theme;
 use crate::ui::Ui;
-use crate::widget::{Measurable, Widget};
+use crate::widget::{Measurable, StatefulWidget, Widget};
 
 #[derive(Default)]
 pub struct CheckboxState {
@@ -49,6 +49,7 @@ pub struct Checkbox {
     id: String,
     interaction: Interaction,
     style: Option<CheckboxStyle>,
+    default_checked: bool,
 }
 
 impl Checkbox {
@@ -57,11 +58,21 @@ impl Checkbox {
             id: id.into(),
             interaction: Interaction::default(),
             style: None,
+            default_checked: false,
         }
     }
 
     pub fn style(mut self, style: CheckboxStyle) -> Self {
         self.style = Some(style);
+        self
+    }
+
+    pub fn set_style(&mut self, style: Option<CheckboxStyle>) {
+        self.style = style;
+    }
+
+    pub fn default_checked(mut self, checked: bool) -> Self {
+        self.default_checked = checked;
         self
     }
 
@@ -93,7 +104,7 @@ impl Measurable for Checkbox {
         let interaction = Interaction::update(position, size, style.corner_radius, ui);
         self.interaction = interaction;
 
-        let state = ui.widget_state::<CheckboxState>(&self.id);
+        let state = ui.widget_state_or(&self.id, self.initial_state());
         if interaction.clicked {
             state.checked = !state.checked;
         }
@@ -125,6 +136,21 @@ impl Measurable for Checkbox {
             checked,
             clicked: interaction.clicked,
             hovered: interaction.hovered,
+        }
+    }
+}
+
+impl StatefulWidget for Checkbox {
+    type State = CheckboxState;
+
+    fn state_id(&self) -> &str {
+        &self.id
+    }
+
+    fn initial_state(&self) -> CheckboxState {
+        CheckboxState {
+            checked: self.default_checked,
+            ..Default::default()
         }
     }
 }

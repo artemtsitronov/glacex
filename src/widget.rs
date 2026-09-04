@@ -17,6 +17,7 @@ impl FocusId {
 pub trait Widget {
     type Output;
     fn ui(&mut self, ui: &mut Ui) -> Self::Output;
+    fn on_start(&mut self, _ui: &mut Ui) {}
 }
 
 pub trait Measurable: Widget {
@@ -56,4 +57,15 @@ impl<T: Measurable> AnyWidget for &mut T {
 
 pub trait WidgetStyle: Clone {
     fn default_style() -> Self;
+}
+
+pub trait StatefulWidget {
+    type State: Default + 'static;
+    fn state_id(&self) -> &str;
+    fn initial_state(&self) -> Self::State {
+        Self::State::default()
+    }
+    fn state<'a>(&self, ui: &'a mut Ui) -> &'a mut Self::State {
+        ui.widget_state_or(self.state_id(), self.initial_state())
+    }
 }

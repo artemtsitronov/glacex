@@ -63,6 +63,10 @@ impl RadioButton {
         self
     }
 
+    pub fn set_style(&mut self, style: Option<RadioButtonStyle>) {
+        self.style = style;
+    }
+
     pub fn clicked(&self) -> bool {
         self.interaction.clicked
     }

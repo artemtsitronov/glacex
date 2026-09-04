@@ -5,7 +5,7 @@ use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::text_edit::TextEditState;
 use crate::theme::Theme;
 use crate::ui::Ui;
-use crate::widget::{FocusId, Measurable, Widget};
+use crate::widget::{FocusId, Measurable, StatefulWidget, Widget};
 
 #[derive(Debug, Clone)]
 pub struct TextInputStyle {
@@ -45,6 +45,7 @@ pub struct TextInput {
     focus_id: FocusId,
     width: f32,
     style: Option<TextInputStyle>,
+    default_text: String,
 }
 
 impl TextInput {
@@ -55,6 +56,7 @@ impl TextInput {
             id,
             width,
             style: None,
+            default_text: String::new(),
         }
     }
 
@@ -65,6 +67,11 @@ impl TextInput {
 
     pub fn set_style(&mut self, style: Option<TextInputStyle>) {
         self.style = style;
+    }
+
+    pub fn default_text(mut self, text: impl Into<String>) -> Self {
+        self.default_text = text.into();
+        self
     }
 
     pub fn focused(&self, ui: &Ui) -> bool {
@@ -103,7 +110,7 @@ impl Measurable for TextInput {
             position[1] + (size[1] - ui.line_height()) / 2.0,
         ];
 
-        let mut state = ui.take_widget_state::<TextEditState>(&self.id);
+        let mut state = ui.take_widget_state_or(&self.id, self.initial_state());
         state.hovered = hovered;
 
         if ui.mouse_pressed_this_frame() && hovered {
@@ -227,5 +234,19 @@ impl Measurable for TextInput {
         }
 
         ui.put_widget_state(&self.id, state);
+    }
+}
+
+impl StatefulWidget for TextInput {
+    type State = TextEditState;
+
+    fn state_id(&self) -> &str {
+        &self.id
+    }
+
+    fn initial_state(&self) -> TextEditState {
+        let mut state = TextEditState::default();
+        state.set_text(&self.default_text);
+        state
     }
 }

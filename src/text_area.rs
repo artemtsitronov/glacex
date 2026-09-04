@@ -6,7 +6,7 @@ use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::text_edit::TextEditState;
 use crate::theme::Theme;
 use crate::ui::Ui;
-use crate::widget::{FocusId, Measurable, Widget};
+use crate::widget::{FocusId, Measurable, StatefulWidget, Widget};
 use winit::keyboard::{Key, NamedKey};
 
 #[derive(Default)]
@@ -57,6 +57,7 @@ pub struct TextArea {
     width: f32,
     height: f32,
     style: Option<TextAreaStyle>,
+    default_text: String,
 }
 
 impl TextArea {
@@ -70,6 +71,7 @@ impl TextArea {
             width,
             height,
             style: None,
+            default_text: String::new(),
         }
     }
 
@@ -80,6 +82,11 @@ impl TextArea {
 
     pub fn set_style(&mut self, style: Option<TextAreaStyle>) {
         self.style = style;
+    }
+
+    pub fn default_text(mut self, text: impl Into<String>) -> Self {
+        self.default_text = text.into();
+        self
     }
 
     pub fn focused(&self, ui: &Ui) -> bool {
@@ -174,7 +181,7 @@ impl Measurable for TextArea {
             ui.request_focus(self.focus_id);
         }
 
-        let mut state = ui.take_widget_state::<TextEditState>(&self.id);
+        let mut state = ui.take_widget_state_or(&self.id, self.initial_state());
         let mut extra = ui.take_widget_state::<TextAreaExtra>(&self.extra_id);
 
         let enter = ui.key_pressed(Key::Named(NamedKey::Enter));
@@ -536,5 +543,19 @@ impl Measurable for TextArea {
 
         ui.put_widget_state(&self.id, state);
         ui.put_widget_state(&self.extra_id, extra);
+    }
+}
+
+impl StatefulWidget for TextArea {
+    type State = TextEditState;
+
+    fn state_id(&self) -> &str {
+        &self.id
+    }
+
+    fn initial_state(&self) -> TextEditState {
+        let mut state = TextEditState::default();
+        state.set_text(&self.default_text);
+        state
     }
 }

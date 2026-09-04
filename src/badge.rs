@@ -37,46 +37,52 @@ impl Default for BadgeStyle {
 
 pub struct Badge {
     text: String,
-    style: BadgeStyle,
+    style: Option<BadgeStyle>,
 }
 
 impl Badge {
     pub fn new(text: impl Into<String>) -> Self {
         Badge {
             text: text.into(),
-            style: BadgeStyle::default(),
+            style: None,
         }
     }
 
     pub fn variant(mut self, variant: BadgeVariant) -> Self {
+        let mut style = self.style.take().unwrap_or_default();
         match variant {
             BadgeVariant::Default => {
-                self.style.fill = Fill::Solid(Theme::SURFACE_SUBTLE);
-                self.style.border_color = Theme::BORDER;
+                style.fill = Fill::Solid(Theme::SURFACE_SUBTLE);
+                style.border_color = Theme::BORDER;
             }
             BadgeVariant::Outline => {
-                self.style.fill = Fill::Solid(Color::TRANSPARENT);
-                self.style.border_color = Theme::BORDER_STRONG;
+                style.fill = Fill::Solid(Color::TRANSPARENT);
+                style.border_color = Theme::BORDER_STRONG;
             }
             BadgeVariant::Success => {
-                self.style.fill = Fill::Solid(Theme::SUCCESS.with_alpha(0.18));
-                self.style.border_color = Theme::SUCCESS.with_alpha(0.4);
+                style.fill = Fill::Solid(Theme::SUCCESS.with_alpha(0.18));
+                style.border_color = Theme::SUCCESS.with_alpha(0.4);
             }
             BadgeVariant::Warning => {
-                self.style.fill = Fill::Solid(Theme::WARNING.with_alpha(0.18));
-                self.style.border_color = Theme::WARNING.with_alpha(0.4);
+                style.fill = Fill::Solid(Theme::WARNING.with_alpha(0.18));
+                style.border_color = Theme::WARNING.with_alpha(0.4);
             }
             BadgeVariant::Error => {
-                self.style.fill = Fill::Solid(Theme::ERROR.with_alpha(0.18));
-                self.style.border_color = Theme::ERROR.with_alpha(0.4);
+                style.fill = Fill::Solid(Theme::ERROR.with_alpha(0.18));
+                style.border_color = Theme::ERROR.with_alpha(0.4);
             }
         }
+        self.style = Some(style);
         self
     }
 
     pub fn style(mut self, style: BadgeStyle) -> Self {
-        self.style = style;
+        self.style = Some(style);
         self
+    }
+
+    pub fn set_style(&mut self, style: Option<BadgeStyle>) {
+        self.style = style;
     }
 }
 
@@ -91,21 +97,24 @@ impl Widget for Badge {
 
 impl Measurable for Badge {
     fn measure(&mut self, ui: &mut Ui) -> [f32; 2] {
+        let style = self.style.clone().unwrap_or_default();
         let text_width = ui.measure_text(&self.text);
         [
-            text_width + self.style.padding[0] * 2.0,
-            ui.line_height() + self.style.padding[1] * 2.0,
+            text_width + style.padding[0] * 2.0,
+            ui.line_height() + style.padding[1] * 2.0,
         ]
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
+        let style = self.style.clone().unwrap_or_default();
+
         ui.draw_rect(
             position,
             size,
-            self.style.fill.clone(),
-            self.style.corner_radius,
-            self.style.border_width,
-            self.style.border_color,
+            style.fill.clone(),
+            style.corner_radius,
+            style.border_width,
+            style.border_color,
             0.0,
             false,
         );
