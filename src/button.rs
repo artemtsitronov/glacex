@@ -1,11 +1,12 @@
 use crate::Fill;
+use crate::animation::animate_towards;
 use crate::color::Color;
 use crate::geometry::center_text_in;
 use crate::interaction::Interaction;
 use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::theme::Theme;
 use crate::ui::Ui;
-use crate::widget::{Measurable, Widget};
+use crate::widget::{Measurable, StatefulWidget, Widget};
 use std::default::Default;
 use winit::window::CursorIcon;
 
@@ -34,6 +35,22 @@ impl Default for ButtonStyle {
             corner_radius: 8.0,
             shadow: Some(ShadowStyle::default()),
             sharp: false,
+        }
+    }
+}
+
+/// Per-button animation state — persists between frames.
+pub struct ButtonState {
+    /// 0.0 = resting, 1.0 = fully hovered/pressed.
+    pub hover_t: f32,
+    pub press_t: f32,
+}
+
+impl Default for ButtonState {
+    fn default() -> Self {
+        ButtonState {
+            hover_t: 0.0,
+            press_t: 0.0,
         }
     }
 }
@@ -103,11 +120,32 @@ impl Measurable for Button {
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) -> ButtonResponse {
         let style = self.style.clone().unwrap_or_default();
+        let dt = ui.dt();
 
         let interaction = Interaction::update(position, size, style.corner_radius, ui);
         self.interaction = interaction;
 
-        let color = if interaction.pressed {
+        // Animate hover and press smoothly
+        let state_id = format!(
+            "__btn_anim_{}_{}_{}",
+            self.label, position[0] as i32, position[1] as i32
+        );
+        let state = ui.widget_state::<ButtonState>(&state_id);
+
+        let hover_target = if interaction.hovered { 1.0f32 } else { 0.0 };
+        let press_target = if interaction.pressed { 1.0f32 } else { 0.0 };
+        state.hover_t = animate_towards(state.hover_t, hover_target, dt, 0.055);
+        state.press_t = animate_towards(state.press_t, press_target, dt, 0.04);
+        let hover_t = state.hover_t;
+        let press_t = state.press_t;
+
+        // Blend fill colors based on animation progress
+        let color = if let (Fill::Solid(base), Fill::Solid(hov), Fill::Solid(prs)) =
+            (&style.fill, &style.hover_fill, &style.pressed_fill)
+        {
+            let blended = base.lerp(*hov, hover_t);
+            Fill::Solid(blended.lerp(*prs, press_t))
+        } else if interaction.pressed {
             style.pressed_fill
         } else if interaction.hovered {
             style.hover_fill
@@ -147,5 +185,17 @@ impl Measurable for Button {
         }
 
         interaction
+    }
+}
+
+impl StatefulWidget for Button {
+    type State = ButtonState;
+
+    fn state_id(&self) -> &str {
+        &self.label
+    }
+
+    fn initial_state(&self) -> ButtonState {
+        ButtonState::default()
     }
 }

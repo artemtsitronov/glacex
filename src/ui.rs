@@ -29,6 +29,8 @@ pub struct Ui {
     mouse_pressed_this_frame: bool,
     mouse_released_this_frame: bool,
     start_time: Instant,
+    last_frame_time: Instant,
+    dt: f32,
     typed_text: String,
     keys_pressed_this_frame: HashSet<Key>,
     physical_keys_pressed_this_frame: HashSet<PhysicalKey>,
@@ -71,6 +73,8 @@ impl Ui {
             mouse_pressed_this_frame: false,
             mouse_released_this_frame: false,
             start_time: Instant::now(),
+            last_frame_time: Instant::now(),
+            dt: 1.0 / 60.0,
             typed_text: String::new(),
             keys_pressed_this_frame: HashSet::new(),
             physical_keys_pressed_this_frame: HashSet::new(),
@@ -287,7 +291,16 @@ impl Ui {
         self.start_time.elapsed().as_secs_f32()
     }
 
+    pub fn dt(&self) -> f32 {
+        self.dt
+    }
+
     pub fn begin_frame(&mut self) {
+        let now = Instant::now();
+        let frame_elapsed = now.duration_since(self.last_frame_time).as_secs_f32();
+        self.dt = frame_elapsed.clamp(0.001, 0.1);
+        self.last_frame_time = now;
+
         self.painter.begin_frame();
         self.focus_order.clear();
         self.clip_stack.clear();
@@ -499,6 +512,10 @@ impl Ui {
 
     pub fn set_bgcolor(&mut self, color: Color) {
         self.painter.set_bgcolor(color);
+    }
+
+    pub fn window_size(&self) -> [f32; 2] {
+        self.painter.window_size()
     }
 
     /// Sets the native window title.

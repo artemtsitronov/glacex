@@ -1,3 +1,4 @@
+use crate::animation::animate_towards;
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::geometry::contains;
@@ -11,6 +12,8 @@ use winit::window::CursorIcon;
 pub struct SliderState {
     pub value: f32,
     pub dragging: bool,
+    /// Animated hover glow on the thumb, 0.0..=1.0
+    pub hover_t: f32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -101,6 +104,7 @@ impl Measurable for Slider {
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) -> SliderResponse {
         let style = self.style.clone().unwrap_or_default();
+        let dt = ui.dt();
         let mouse_pos = ui.mouse_position();
         let mouse_pressed = ui.mouse_pressed();
         let mouse_pressed_this_frame = ui.mouse_pressed_this_frame();
@@ -140,8 +144,17 @@ impl Measurable for Slider {
             state.value = state.value.clamp(self.min, self.max);
         }
 
+        // Animate hover glow on thumb
+        let hover_target = if hovered || state.dragging {
+            1.0f32
+        } else {
+            0.0
+        };
+        state.hover_t = animate_towards(state.hover_t, hover_target, dt, 0.07);
+
         let value = state.value;
         let dragging = state.dragging;
+        let hover_t = state.hover_t;
         ui.put_widget_state(&self.id, state);
 
         // Visual layout
@@ -177,12 +190,29 @@ impl Measurable for Slider {
             );
         }
 
-        // Thumb knob
+        // Thumb knob with animated hover glow ring
         let thumb_x = position[0] + progress * track_width;
         let thumb_y = position[1] + (size[1] - style.thumb_size) / 2.0;
         let thumb_pos = [thumb_x, thumb_y];
         let thumb_size = [style.thumb_size, style.thumb_size];
         let thumb_radius = style.thumb_size / 2.0;
+
+        // Soft glow halo on hover/drag
+        if hover_t > 0.01 {
+            let glow_size = style.thumb_size + 8.0 * hover_t;
+            let glow_offset = (glow_size - style.thumb_size) / 2.0;
+            let glow_pos = [thumb_x - glow_offset, thumb_y - glow_offset];
+            ui.draw_rect(
+                glow_pos,
+                [glow_size, glow_size],
+                Fill::Solid(Theme::ACTIVE.with_alpha(0.18 * hover_t)),
+                glow_size / 2.0,
+                0.0,
+                Color::TRANSPARENT,
+                0.0,
+                false,
+            );
+        }
 
         if let Some(shadow) = &style.shadow {
             draw_shadow(shadow, thumb_pos, thumb_size, thumb_radius, ui);

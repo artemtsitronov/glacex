@@ -3,45 +3,42 @@ use glacex::{
     Fill, Label, ShadowStyle, TextEditState, TextInput, Theme, Ui, Widget, column, row,
 };
 
-struct AppState {
-    last_hex: String,
+struct ColorDemo {
+    default_hex: String,
 }
 
-impl AppState {
+impl ColorDemo {
     fn new() -> Self {
-        AppState {
-            last_hex: "#4f46e5".to_string(),
+        ColorDemo {
+            default_hex: "#4f46e5".to_string(),
         }
     }
 }
 
-impl Widget for AppState {
+impl Widget for ColorDemo {
     type Output = ();
 
     fn ui(&mut self, ui: &mut Ui) {
         ui.set_bgcolor(Theme::BG_CANVAS);
 
-        let input_state = ui.widget_state::<TextEditState>("fill_input");
+        let input_state = ui.widget_state::<TextEditState>("color_hex_input");
         if input_state.text().is_empty() {
-            input_state.set_text(&self.last_hex);
+            input_state.set_text(&self.default_hex);
         }
-        let current_text = input_state.text().to_string();
+        let hex_text = input_state.text().to_string();
+        let parsed_color = Color::hex_str(&hex_text);
 
-        let parsed_color = Color::hex_str(&current_text);
-
-        let mut header_badge = Badge::new("COLOR ENGINE").variant(BadgeVariant::Success);
-        let mut title = Label::new("Dynamic Palette & Surface Playground");
-        let mut subtitle = Label::new(
-            "Type any valid 6-char hex code below to dynamically re-style live GPU primitives.",
-        );
-
+        let mut badge = Badge::new("COLOR").variant(BadgeVariant::Success);
+        let mut title = Label::new("Dynamic Color Preview");
+        let mut subtitle =
+            Label::new("Enter a 6-digit hex code to update the button style in real time.");
         let mut divider = Divider::horizontal(360.0);
 
-        let mut input_caption = Label::new("Hex Code (#RRGGBB)");
-        let mut fill_input = TextInput::new("fill_input", 320.0);
+        let mut input_label = Label::new("Hex Code (#RRGGBB)");
+        let mut hex_input = TextInput::new("color_hex_input", 320.0);
 
-        let mut preview_label = Label::new("Interactive Button Surface");
-        let mut preview_btn = Button::new("Press to Test Fill").style(ButtonStyle {
+        let mut preview_label = Label::new("Styled Preview");
+        let mut preview_btn = Button::new("Sample Button").style(ButtonStyle {
             fill: Fill::Solid(parsed_color),
             hover_fill: Fill::Solid(parsed_color.lighten(0.15)),
             pressed_fill: Fill::Solid(parsed_color.darken(0.2)),
@@ -56,15 +53,15 @@ impl Widget for AppState {
             sharp: false,
         });
 
-        let mut header_row = row![&mut header_badge].align(Alignment::Start);
+        let mut badge_row = row![&mut badge].align(Alignment::Start);
 
         let mut card_content = column![
-            &mut header_row,
+            &mut badge_row,
             &mut title,
             &mut subtitle,
             &mut divider,
-            &mut input_caption,
-            &mut fill_input,
+            &mut input_label,
+            &mut hex_input,
             &mut preview_label,
             &mut preview_btn,
         ]
@@ -84,6 +81,5 @@ impl Widget for AppState {
 }
 
 fn main() {
-    let state = AppState::new();
-    App::new(state).run();
+    App::new(ColorDemo::new()).run();
 }

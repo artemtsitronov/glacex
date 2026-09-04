@@ -9,6 +9,7 @@
 //! keyed by stable widget IDs.
 
 pub mod alignment;
+pub mod animation;
 pub mod badge;
 pub mod button;
 pub mod card;
@@ -38,6 +39,7 @@ pub mod ui;
 pub mod widget;
 
 pub use alignment::*;
+pub use animation::*;
 pub use badge::*;
 pub use button::*;
 pub use card::*;
@@ -85,6 +87,7 @@ pub struct App<W: Widget> {
     ui: Option<Ui>,
     root: W,
     update_fn: Option<UpdateFn<W>>,
+    window_attributes: Option<winit::window::WindowAttributes>,
 }
 
 impl<W: Widget> App<W> {
@@ -94,7 +97,35 @@ impl<W: Widget> App<W> {
             ui: None,
             root,
             update_fn: None,
+            window_attributes: None,
         }
+    }
+
+    /// Customizes initial window attributes (e.g. title, inner size).
+    pub fn window_attributes(mut self, attributes: winit::window::WindowAttributes) -> Self {
+        self.window_attributes = Some(attributes);
+        self
+    }
+
+    /// Sets the initial window size in logical pixels.
+    pub fn window_size(mut self, width: u32, height: u32) -> Self {
+        let size = winit::dpi::LogicalSize::new(width, height);
+        let attrs = self
+            .window_attributes
+            .unwrap_or_default()
+            .with_inner_size(size);
+        self.window_attributes = Some(attrs);
+        self
+    }
+
+    /// Sets the initial window title.
+    pub fn title(mut self, title: impl Into<String>) -> Self {
+        let attrs = self
+            .window_attributes
+            .unwrap_or_default()
+            .with_title(title.into());
+        self.window_attributes = Some(attrs);
+        self
     }
 
     /// Registers a callback that runs once per frame, before drawing.
@@ -125,7 +156,11 @@ impl<W: Widget> App<W> {
 
 impl<W: Widget> ApplicationHandler for App<W> {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        let window = match event_loop.create_window(Window::default_attributes()) {
+        let attrs = self
+            .window_attributes
+            .take()
+            .unwrap_or_else(Window::default_attributes);
+        let window = match event_loop.create_window(attrs) {
             Ok(window) => Arc::new(window),
             Err(error) => {
                 eprintln!("failed to create window: {error}");
