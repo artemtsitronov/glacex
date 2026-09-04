@@ -1,8 +1,8 @@
 <div align="center">
 
-# glacex
-
 ![demo](screenshots/demo.png)
+
+# glacex
 
 <p align="center">
   <a href="https://crates.io/crates/glacex"><img src="https://img.shields.io/crates/v/glacex?style=for-the-badge&logo=rust&logoColor=cdd6f4&label=crates.io&labelColor=181825&color=cba6f7" alt="Crates.io Version"></a>
