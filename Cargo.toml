@@ -7,7 +7,7 @@ description = "GPU-accelerated UI library built from scratch in Rust"
 license = "MIT"
 keywords = ["gui", "wgpu", "ui", "graphics"]
 categories = ["gui", "graphics"]
-exclude = ["screenshots/*"]
+include = ["screenshots/*"]
 
 [dependencies]
 arboard = "3.6.1"
