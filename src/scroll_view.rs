@@ -95,14 +95,14 @@ impl<'a> Measurable for ScrollView<'a> {
             let theme = *ui.theme();
             if theme.is_dark {
                 ScrollViewStyle {
-                    thumb_fill: Fill::Solid(Color::WHITE.with_alpha(0.28)),
-                    thumb_dragging_fill: Fill::Solid(Color::WHITE.with_alpha(0.50)),
+                    thumb_fill: Fill::Solid(Color::WHITE.with_alpha(0.35)),
+                    thumb_dragging_fill: Fill::Solid(Color::WHITE.with_alpha(0.65)),
                     thumb_corner_radius: ScrollConfig::default().thickness / 2.0,
                 }
             } else {
                 ScrollViewStyle {
-                    thumb_fill: Fill::Solid(theme.text_secondary.with_alpha(0.45)),
-                    thumb_dragging_fill: Fill::Solid(theme.text_secondary.with_alpha(0.80)),
+                    thumb_fill: Fill::Solid(theme.text_secondary.with_alpha(0.60)),
+                    thumb_dragging_fill: Fill::Solid(theme.text_primary.with_alpha(0.85)),
                     thumb_corner_radius: ScrollConfig::default().thickness / 2.0,
                 }
             }
@@ -246,10 +246,13 @@ impl<'a> Measurable for ScrollView<'a> {
             track_y,
         ];
 
-        let show_y = geometry_y.max_scroll > 0.0
-            && (track_hovered_y || state.y.dragging || state.y.recently_active(&self.config));
-        let show_x = geometry_x.max_scroll > 0.0
-            && (track_hovered_x || state.x.dragging || state.x.recently_active(&self.config));
+        let has_scroll_y = geometry_y.max_scroll > 0.0;
+        let has_scroll_x = geometry_x.max_scroll > 0.0;
+        let active_y = track_hovered_y || state.y.dragging || state.y.recently_active(&self.config);
+        let active_x = track_hovered_x || state.x.dragging || state.x.recently_active(&self.config);
+
+        let show_y = has_scroll_y;
+        let show_x = has_scroll_x;
 
         if show_y {
             ui.push_input_block([
@@ -289,7 +292,7 @@ impl<'a> Measurable for ScrollView<'a> {
         }
 
         if show_y {
-            let thumb_fill = if state.y.dragging {
+            let thumb_fill = if state.y.dragging || active_y {
                 style.thumb_dragging_fill.clone()
             } else {
                 style.thumb_fill.clone()
@@ -308,7 +311,7 @@ impl<'a> Measurable for ScrollView<'a> {
         }
 
         if show_x {
-            let thumb_fill = if state.x.dragging {
+            let thumb_fill = if state.x.dragging || active_x {
                 style.thumb_dragging_fill
             } else {
                 style.thumb_fill

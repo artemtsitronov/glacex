@@ -1,7 +1,6 @@
 use glacex::{
     Alignment, App, Badge, BadgeVariant, Button, Card, Checkbox, Divider, Label, ProgressBar,
-    RadioButton, ScrollView, Slider, StatefulWidget, Switch, TextArea, TextInput, Theme, Ui,
-    Widget, column, row,
+    RadioButton, ScrollView, Slider, Switch, TextArea, TextInput, Theme, Ui, Widget, column, row,
 };
 
 struct DemoApp {
@@ -13,7 +12,7 @@ impl DemoApp {
     fn new() -> Self {
         DemoApp {
             events_count: 148,
-            current_theme_idx: 0,
+            current_theme_idx: 1, // Start on Theme::DARK (Pure Black OLED)
         }
     }
 }

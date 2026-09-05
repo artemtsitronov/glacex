@@ -236,107 +236,108 @@ impl Theme {
         },
     };
 
-    /// Refined Linear / Vercel Dark Theme.
-    /// Deep zinc-charcoal with an electric indigo accent.
+    /// Pure Pitch-Black OLED / shadcn Pure Dark Theme.
+    /// Deep pure black canvas (#000000), rich elevated zinc cards (#09090b, #121215),
+    /// crisp subtle borders and razor-sharp contrast.
     pub const DARK: Theme = Theme {
         name: "shadcn-dark",
         is_dark: true,
         bg_canvas: Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        }, // #000000 (Pure Black)
+        surface: Color {
             r: 9.0 / 255.0,
             g: 9.0 / 255.0,
             b: 11.0 / 255.0,
             a: 1.0,
-        }, // #09090b
-        surface: Color {
-            r: 15.0 / 255.0,
-            g: 15.0 / 255.0,
-            b: 18.0 / 255.0,
-            a: 1.0,
-        }, // #0f0f12
+        }, // #09090b (Zinc 950)
         surface_subtle: Color {
-            r: 20.0 / 255.0,
-            g: 20.0 / 255.0,
-            b: 24.0 / 255.0,
+            r: 18.0 / 255.0,
+            g: 18.0 / 255.0,
+            b: 21.0 / 255.0,
             a: 1.0,
-        }, // #141418
+        }, // #121215 (Zinc 900)
         surface_elevated: Color {
-            r: 28.0 / 255.0,
-            g: 28.0 / 255.0,
-            b: 34.0 / 255.0,
-            a: 1.0,
-        }, // #1c1c22
-        idle: Color {
             r: 24.0 / 255.0,
             g: 24.0 / 255.0,
-            b: 28.0 / 255.0,
+            b: 27.0 / 255.0,
             a: 1.0,
-        }, // #18181c
-        hovered: Color {
-            r: 35.0 / 255.0,
-            g: 35.0 / 255.0,
-            b: 41.0 / 255.0,
+        }, // #18181b (Zinc 850)
+        idle: Color {
+            r: 18.0 / 255.0,
+            g: 18.0 / 255.0,
+            b: 21.0 / 255.0,
             a: 1.0,
-        }, // #232329
-        pressed: Color {
-            r: 45.0 / 255.0,
-            g: 44.0 / 255.0,
-            b: 54.0 / 255.0,
-            a: 1.0,
-        }, // #2d2c36
-        active: Color {
-            r: 79.0 / 255.0,
-            g: 70.0 / 255.0,
-            b: 229.0 / 255.0,
-            a: 1.0,
-        }, // #4f46e5 (Indigo 600)
-        active_hover: Color {
-            r: 99.0 / 255.0,
-            g: 102.0 / 255.0,
-            b: 241.0 / 255.0,
-            a: 1.0,
-        }, // #6366f1 (Indigo 500)
-        border_faint: Color {
-            r: 1.0,
-            g: 1.0,
-            b: 1.0,
-            a: 0.05,
         },
-        border: Color {
+        hovered: Color {
+            r: 32.0 / 255.0,
+            g: 32.0 / 255.0,
+            b: 36.0 / 255.0,
+            a: 1.0,
+        }, // #202024
+        pressed: Color {
+            r: 39.0 / 255.0,
+            g: 39.0 / 255.0,
+            b: 42.0 / 255.0,
+            a: 1.0,
+        }, // #27272a
+        active: Color {
+            r: 250.0 / 255.0,
+            g: 250.0 / 255.0,
+            b: 250.0 / 255.0,
+            a: 1.0,
+        }, // #fafafa (Pure White high-contrast shadcn dark button)
+        active_hover: Color {
+            r: 228.0 / 255.0,
+            g: 228.0 / 255.0,
+            b: 231.0 / 255.0,
+            a: 1.0,
+        }, // #e4e4e7
+        border_faint: Color {
             r: 1.0,
             g: 1.0,
             b: 1.0,
             a: 0.08,
         },
+        border: Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 0.14,
+        },
         border_strong: Color {
             r: 1.0,
             g: 1.0,
             b: 1.0,
-            a: 0.16,
+            a: 0.25,
         },
         focus_border: Color {
-            r: 99.0 / 255.0,
-            g: 102.0 / 255.0,
-            b: 241.0 / 255.0,
-            a: 1.0,
+            r: 250.0 / 255.0,
+            g: 250.0 / 255.0,
+            b: 250.0 / 255.0,
+            a: 0.85,
         },
         text_primary: Color {
-            r: 242.0 / 255.0,
-            g: 242.0 / 255.0,
-            b: 245.0 / 255.0,
+            r: 250.0 / 255.0,
+            g: 250.0 / 255.0,
+            b: 250.0 / 255.0,
             a: 1.0,
-        }, // #f2f2f5
+        }, // #fafafa (Zinc 50)
         text_secondary: Color {
             r: 161.0 / 255.0,
             g: 161.0 / 255.0,
             b: 170.0 / 255.0,
             a: 1.0,
-        }, // Zinc 400
+        }, // #a1a1aa (Zinc 400)
         text_muted: Color {
             r: 113.0 / 255.0,
             g: 113.0 / 255.0,
             b: 122.0 / 255.0,
             a: 1.0,
-        }, // Zinc 500
+        }, // #71717a (Zinc 500)
         success: Color {
             r: 34.0 / 255.0,
             g: 197.0 / 255.0,
@@ -1127,19 +1128,19 @@ impl Theme {
             r: 216.0 / 255.0,
             g: 222.0 / 255.0,
             b: 233.0 / 255.0,
-            a: 0.06,
+            a: 0.12,
         },
         border: Color {
             r: 216.0 / 255.0,
             g: 222.0 / 255.0,
             b: 233.0 / 255.0,
-            a: 0.10,
+            a: 0.22,
         },
         border_strong: Color {
             r: 216.0 / 255.0,
             g: 222.0 / 255.0,
             b: 233.0 / 255.0,
-            a: 0.20,
+            a: 0.38,
         },
         focus_border: Color {
             r: 136.0 / 255.0,
@@ -1160,11 +1161,11 @@ impl Theme {
             a: 1.0,
         }, // #d8dee9 (Snow Storm 2)
         text_muted: Color {
-            r: 123.0 / 255.0,
-            g: 136.0 / 255.0,
-            b: 161.0 / 255.0,
+            r: 165.0 / 255.0,
+            g: 178.0 / 255.0,
+            b: 202.0 / 255.0,
             a: 1.0,
-        },
+        }, // #a5b2ca (Soft, high-readability Nord muted)
         success: Color {
             r: 163.0 / 255.0,
             g: 190.0 / 255.0,

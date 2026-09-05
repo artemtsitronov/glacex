@@ -171,6 +171,7 @@ pub struct Painter {
     rect_instance_buffer: Buffer,
     rect_instance_capacity: usize,
     pending_rects: Vec<([f32; 4], RectInstance)>,
+    pending_overlay_rects: Vec<([f32; 4], RectInstance)>,
 
     font_system: FontSystem,
     swash_cache: SwashCache,
@@ -179,6 +180,7 @@ pub struct Painter {
     text_renderer: TextRenderer,
     font_metrics: Metrics,
     pending_labels: Vec<(glyphon::Buffer, [f32; 2], [f32; 4], Color)>,
+    pending_overlay_labels: Vec<(glyphon::Buffer, [f32; 2], [f32; 4], Color)>,
 
     gradient_atlas: GradientAtlas,
     gradient_bind_group: BindGroup,
@@ -372,6 +374,7 @@ impl Painter {
             rect_instance_buffer,
             rect_instance_capacity,
             pending_rects: vec![],
+            pending_overlay_rects: vec![],
             font_system,
             swash_cache,
             viewport,
@@ -379,6 +382,7 @@ impl Painter {
             text_renderer,
             font_metrics,
             pending_labels: vec![],
+            pending_overlay_labels: vec![],
             gradient_atlas,
             gradient_bind_group,
             bgcolor: WgpuColor::WHITE,
@@ -388,6 +392,8 @@ impl Painter {
     pub fn begin_frame(&mut self) {
         self.pending_rects.clear();
         self.pending_labels.clear();
+        self.pending_overlay_rects.clear();
+        self.pending_overlay_labels.clear();
     }
 
     pub fn window_size(&self) -> [f32; 2] {
@@ -576,9 +582,93 @@ impl Painter {
         self.pending_labels.push((buffer, position, bounds, color));
     }
 
+    #[allow(clippy::too_many_arguments)]
+    pub fn draw_overlay_rect(
+        &mut self,
+        position: [f32; 2],
+        size: [f32; 2],
+        fill: Fill,
+        corner_radius: f32,
+        border_width: f32,
+        border_color: Color,
+        blur_radius: f32,
+        sharp: f32,
+        clip: [f32; 4],
+        rotation: f32,
+    ) {
+        let (fill_kind, color, gradient_angle, gradient_center, gradient_row) = match fill {
+            Fill::Solid(color) => (0.0, color, 0.0, [0.0, 0.0], 0.0),
+            Fill::Gradient(gradient) => {
+                let handle = self.gradient_atlas.bake_cached(&self.queue, &gradient);
+                let row = match handle {
+                    GradientHandle::Ramp { row } => row as f32,
+                    GradientHandle::Mesh { .. } => 0.0,
+                };
+                let (kind, param0, center) = match &gradient.kind {
+                    GradientKind::Linear { angle } => (1.0, *angle, [0.0, 0.0]),
+                    GradientKind::Radial { center, radius } => (2.0, *radius, *center),
+                    GradientKind::Conic { center } => (3.0, 0.0, *center),
+                    GradientKind::Mesh { .. } => (4.0, 0.0, [0.0, 0.0]),
+                };
+                (kind, Color::TRANSPARENT, param0, center, row)
+            }
+        };
+
+        self.pending_overlay_rects.push((
+            clip,
+            RectInstance {
+                position,
+                size,
+                fill_kind,
+                gradient_angle,
+                gradient_center,
+                gradient_row,
+                color,
+                corner_radius,
+                border_width,
+                border_color,
+                blur_radius,
+                sharp,
+                rotation,
+            },
+        ));
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn draw_overlay_text_styled(
+        &mut self,
+        text: &str,
+        position: [f32; 2],
+        bounds: [f32; 4],
+        color: Color,
+        font_size: f32,
+        line_height: f32,
+        weight: FontWeight,
+        is_mono: bool,
+    ) {
+        let metrics = Metrics {
+            font_size,
+            line_height,
+        };
+        let mut buffer = glyphon::Buffer::new(&mut self.font_system, metrics);
+        buffer.set_size(Some(10000.0), Some(10000.0));
+        let family = if is_mono {
+            Family::Name("Geist Mono")
+        } else {
+            Family::Name("Geist")
+        };
+        let attrs = Attrs::new().family(family).weight(weight.to_glyphon());
+        buffer.set_text(text, &attrs, Shaping::Basic, None);
+        buffer.shape_until_scroll(&mut self.font_system, false);
+
+        self.pending_overlay_labels
+            .push((buffer, position, bounds, color));
+    }
+
     pub fn present(&mut self) {
-        if self.pending_rects.len() > self.rect_instance_capacity {
-            self.rect_instance_capacity = self.pending_rects.len() * 2;
+        let total_rects = self.pending_rects.len() + self.pending_overlay_rects.len();
+        if total_rects > self.rect_instance_capacity {
+            self.rect_instance_capacity = total_rects * 2;
             let placeholder = RectInstance {
                 position: [0.0; 2],
                 size: [0.0; 2],
@@ -601,9 +691,9 @@ impl Painter {
             });
         }
 
-        // Upload just the instance data — clip rects stay CPU-side, used only
-        // to decide scissor rects/draw ranges below, never sent to the GPU.
-        let instances: Vec<RectInstance> = self.pending_rects.iter().map(|(_, r)| *r).collect();
+        // Upload instances: base rects followed by overlay rects
+        let mut instances: Vec<RectInstance> = self.pending_rects.iter().map(|(_, r)| *r).collect();
+        instances.extend(self.pending_overlay_rects.iter().map(|(_, r)| *r));
         self.queue.write_buffer(
             &self.rect_instance_buffer,
             0,
@@ -729,11 +819,43 @@ impl Painter {
                 range_start = range_end;
             }
 
-            render_pass.set_scissor_rect(0, 0, surface_w, surface_h);
-
+            // Render base text
             self.text_renderer
                 .render(&self.text_atlas, &self.viewport, &mut render_pass)
                 .expect("failed to render text");
+
+            // --- OVERLAY PASS (Tooltips, Popovers, Modals) ---
+            // Rendered strictly on top of all base geometry and base text
+            if !self.pending_overlay_rects.is_empty() {
+                let overlay_offset = self.pending_rects.len();
+                let mut range_start = 0usize;
+                while range_start < self.pending_overlay_rects.len() {
+                    let clip = self.pending_overlay_rects[range_start].0;
+                    let mut range_end = range_start + 1;
+                    while range_end < self.pending_overlay_rects.len()
+                        && self.pending_overlay_rects[range_end].0 == clip
+                    {
+                        range_end += 1;
+                    }
+
+                    let x = clip[0].max(0.0) as u32;
+                    let y = clip[1].max(0.0) as u32;
+                    let right = (clip[2].max(0.0) as u32).min(surface_w);
+                    let bottom = (clip[3].max(0.0) as u32).min(surface_h);
+
+                    if right > x && bottom > y {
+                        render_pass.set_scissor_rect(x, y, right - x, bottom - y);
+                        render_pass.draw(
+                            0..QUAD_VERTICES.len() as u32,
+                            (overlay_offset + range_start) as u32
+                                ..(overlay_offset + range_end) as u32,
+                        );
+                    }
+                    range_start = range_end;
+                }
+            }
+
+            render_pass.set_scissor_rect(0, 0, surface_w, surface_h);
         }
 
         self.queue.submit(iter::once(command_encoder.finish()));

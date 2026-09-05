@@ -1,7 +1,6 @@
 use glacex::{
     Alignment, App, Badge, BadgeVariant, Button, Card, Checkbox, Divider, Label, ProgressBar,
-    RadioButton, Slider, StatefulWidget, Switch, TextArea, TextInput, Theme, Ui, Widget, column,
-    row,
+    RadioButton, Slider, Switch, TextArea, TextInput, Theme, Ui, Widget, column, row,
 };
 
 struct ThemesApp {

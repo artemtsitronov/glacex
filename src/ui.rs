@@ -649,15 +649,15 @@ impl Ui {
 
             let full_clip = [0.0, 0.0, window_size[0], window_size[1]];
 
-            // Ambient shadow behind tooltip card
-            self.painter.draw_rect(
+            // Ambient shadow behind tooltip card (rendered on overlay pass)
+            self.painter.draw_overlay_rect(
                 [tooltip_pos[0] - 4.0, tooltip_pos[1] - 4.0],
                 [width + 8.0, height + 8.0],
                 Fill::Solid(Color {
                     r: 0.0,
                     g: 0.0,
                     b: 0.0,
-                    a: if self.theme.is_dark { 0.45 } else { 0.10 },
+                    a: if self.theme.is_dark { 0.55 } else { 0.12 },
                 }),
                 12.0,
                 0.0,
@@ -668,8 +668,8 @@ impl Ui {
                 0.0,
             );
 
-            // Tooltip surface card
-            self.painter.draw_rect(
+            // Tooltip surface card (rendered on overlay pass)
+            self.painter.draw_overlay_rect(
                 tooltip_pos,
                 [width, height],
                 Fill::Solid(self.theme.surface_elevated),
@@ -682,7 +682,7 @@ impl Ui {
                 0.0,
             );
 
-            // Geist 12px Medium text
+            // Geist 12px Medium text (rendered on overlay pass)
             self.painter.draw_text_styled(
                 &text,
                 [tooltip_pos[0] + pad_x, tooltip_pos[1] + pad_y],
