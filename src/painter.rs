@@ -176,8 +176,13 @@ pub struct Painter {
     viewport: Viewport,
     text_atlas: TextAtlas,
     text_renderer: TextRenderer,
+    overlay_text_renderer: TextRenderer,
     font_metrics: Metrics,
     pending_labels: Vec<(glyphon::Buffer, [f32; 2], [f32; 4])>,
+
+    overlay_rects: Vec<([f32; 4], RectInstance)>,
+    overlay_labels: Vec<(glyphon::Buffer, [f32; 2], [f32; 4])>,
+    in_overlay_phase: bool,
 
     gradient_atlas: GradientAtlas,
     gradient_bind_group: BindGroup,
@@ -338,6 +343,8 @@ impl Painter {
         let mut text_atlas = TextAtlas::new(&device, &queue, &cache, surface_config.format);
         let text_renderer =
             TextRenderer::new(&mut text_atlas, &device, MultisampleState::default(), None);
+        let overlay_text_renderer =
+            TextRenderer::new(&mut text_atlas, &device, MultisampleState::default(), None);
 
         let font_metrics = Metrics {
             font_size: 16.0,
@@ -361,17 +368,31 @@ impl Painter {
             viewport,
             text_atlas,
             text_renderer,
+            overlay_text_renderer,
             font_metrics,
             pending_labels: vec![],
             gradient_atlas,
             gradient_bind_group,
+            overlay_rects: vec![],
+            overlay_labels: vec![],
+            in_overlay_phase: false,
             bgcolor: WgpuColor::BLACK,
         }
+    }
+
+    pub fn begin_overlay_phase(&mut self) {
+        self.in_overlay_phase = true;
+    }
+
+    pub fn end_overlay_phase(&mut self) {
+        self.in_overlay_phase = false;
     }
 
     pub fn begin_frame(&mut self) {
         self.pending_rects.clear();
         self.pending_labels.clear();
+        self.overlay_rects.clear();
+        self.overlay_labels.clear();
     }
 
     pub fn window_size(&self) -> [f32; 2] {
@@ -438,24 +459,27 @@ impl Painter {
             }
         };
 
-        self.pending_rects.push((
-            clip,
-            RectInstance {
-                position,
-                size,
-                fill_kind,
-                gradient_angle,
-                gradient_center,
-                gradient_row,
-                color,
-                corner_radius,
-                border_width,
-                border_color,
-                blur_radius,
-                sharp,
-                rotation,
-            },
-        ));
+        let instance = RectInstance {
+            position,
+            size,
+            fill_kind,
+            gradient_angle,
+            gradient_center,
+            gradient_row,
+            color,
+            corner_radius,
+            border_width,
+            border_color,
+            blur_radius,
+            sharp,
+            rotation,
+        };
+
+        if self.in_overlay_phase {
+            self.overlay_rects.push((clip, instance));
+        } else {
+            self.pending_rects.push((clip, instance));
+        }
     }
 
     pub fn draw_text(&mut self, text: &str, position: [f32; 2], bounds: [f32; 4]) {
@@ -464,12 +488,17 @@ impl Painter {
         buffer.set_text(text, &Attrs::new(), Shaping::Basic, None);
         buffer.shape_until_scroll(&mut self.font_system, false);
 
-        self.pending_labels.push((buffer, position, bounds));
+        if self.in_overlay_phase {
+            self.overlay_labels.push((buffer, position, bounds));
+        } else {
+            self.pending_labels.push((buffer, position, bounds));
+        }
     }
 
     pub fn present(&mut self) {
-        if self.pending_rects.len() > self.rect_instance_capacity {
-            self.rect_instance_capacity = self.pending_rects.len() * 2;
+        let total_rects = self.pending_rects.len() + self.overlay_rects.len();
+        if total_rects > self.rect_instance_capacity {
+            self.rect_instance_capacity = total_rects * 2;
             let placeholder = RectInstance {
                 position: [0.0; 2],
                 size: [0.0; 2],
@@ -492,9 +521,10 @@ impl Painter {
             });
         }
 
-        // Upload just the instance data — clip rects stay CPU-side, used only
-        // to decide scissor rects/draw ranges below, never sent to the GPU.
-        let instances: Vec<RectInstance> = self.pending_rects.iter().map(|(_, r)| *r).collect();
+        let mut instances: Vec<RectInstance> = self.pending_rects.iter().map(|(_, r)| *r).collect();
+        let overlay_start = instances.len();
+        instances.extend(self.overlay_rects.iter().map(|(_, r)| *r));
+
         self.queue.write_buffer(
             &self.rect_instance_buffer,
             0,
@@ -522,6 +552,48 @@ impl Painter {
             },
         );
 
+        let surface_w = self.surface_config.width;
+        let surface_h = self.surface_config.height;
+
+        let draw_rect_group = |render_pass: &mut wgpu::RenderPass<'_>,
+                               rects: &[([f32; 4], RectInstance)],
+                               base_index: usize| {
+            let mut range_start = 0usize;
+            while range_start < rects.len() {
+                let clip = rects[range_start].0;
+                let mut range_end = range_start + 1;
+                while range_end < rects.len() && rects[range_end].0 == clip {
+                    range_end += 1;
+                }
+
+                let x = clip[0].max(0.0) as u32;
+                let y = clip[1].max(0.0) as u32;
+                let right = (clip[2].max(0.0) as u32).min(surface_w);
+                let bottom = (clip[3].max(0.0) as u32).min(surface_h);
+
+                if right > x && bottom > y {
+                    render_pass.set_scissor_rect(x, y, right - x, bottom - y);
+                    render_pass.draw(
+                        0..QUAD_VERTICES.len() as u32,
+                        (base_index + range_start) as u32..(base_index + range_end) as u32,
+                    );
+                }
+                range_start = range_end;
+            }
+        };
+
+        let bind_rect_pipeline = |render_pass: &mut wgpu::RenderPass<'_>| {
+            render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.set_vertex_buffer(0, self.quad_vertex_buffer.slice(..));
+            render_pass.set_vertex_buffer(1, self.rect_instance_buffer.slice(..));
+            render_pass.set_bind_group(0, &self.bind_group, &[]);
+            render_pass.set_bind_group(1, &self.gradient_bind_group, &[]);
+        };
+
+        // Normal text prepared on self.text_renderer, overlay text on
+        // self.overlay_text_renderer — two separate instances sharing one
+        // TextAtlas, since glyphon's TextRenderer isn't safe to prepare()
+        // twice on the same instance within one frame.
         let text_areas = self
             .pending_labels
             .iter()
@@ -552,6 +624,36 @@ impl Painter {
             )
             .expect("failed to prepare text");
 
+        let overlay_text_areas = self
+            .overlay_labels
+            .iter()
+            .map(|(buffer, position, bounds)| TextArea {
+                buffer,
+                left: position[0],
+                top: position[1],
+                scale: 1.0,
+                bounds: TextBounds {
+                    left: bounds[0] as i32,
+                    top: bounds[1] as i32,
+                    right: bounds[2] as i32,
+                    bottom: bounds[3] as i32,
+                },
+                default_color: glyphon::Color::rgb(255, 255, 255),
+                custom_glyphs: &[],
+            });
+
+        self.overlay_text_renderer
+            .prepare(
+                &self.device,
+                &self.queue,
+                &mut self.font_system,
+                &mut self.text_atlas,
+                &self.viewport,
+                overlay_text_areas,
+                &mut self.swash_cache,
+            )
+            .expect("failed to prepare overlay text");
+
         {
             let mut render_pass = command_encoder.begin_render_pass(&RenderPassDescriptor {
                 label: None,
@@ -570,56 +672,27 @@ impl Painter {
                 multiview_mask: None,
             });
 
-            render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_vertex_buffer(0, self.quad_vertex_buffer.slice(..));
-            render_pass.set_vertex_buffer(1, self.rect_instance_buffer.slice(..));
-            render_pass.set_bind_group(0, &self.bind_group, &[]);
-            render_pass.set_bind_group(1, &self.gradient_bind_group, &[]);
-
-            // Group consecutive rects sharing the same clip rect into one
-            // draw call each, setting the scissor rect before every group.
-            // Submission order is preserved — only the *batching* changes,
-            // never the paint order.
-            let surface_w = self.surface_config.width;
-            let surface_h = self.surface_config.height;
-
-            let mut range_start = 0usize;
-            while range_start < self.pending_rects.len() {
-                let clip = self.pending_rects[range_start].0;
-                let mut range_end = range_start + 1;
-                while range_end < self.pending_rects.len()
-                    && self.pending_rects[range_end].0 == clip
-                {
-                    range_end += 1;
-                }
-
-                // Clip rect -> scissor rect, clamped into the surface bounds.
-                // wgpu panics on a scissor rect that extends past the render
-                // target or has zero/negative size, so both are guarded here.
-                let x = clip[0].max(0.0) as u32;
-                let y = clip[1].max(0.0) as u32;
-                let right = (clip[2].max(0.0) as u32).min(surface_w);
-                let bottom = (clip[3].max(0.0) as u32).min(surface_h);
-
-                if right > x && bottom > y {
-                    render_pass.set_scissor_rect(x, y, right - x, bottom - y);
-                    render_pass.draw(
-                        0..QUAD_VERTICES.len() as u32,
-                        range_start as u32..range_end as u32,
-                    );
-                }
-                // else: this group's clip rect is fully offscreen/degenerate
-                // (e.g. scrolled entirely out of view) — correctly skipped,
-                // not drawn at all.
-
-                range_start = range_end;
-            }
-
+            // --- Pass 1: normal rects ---
+            bind_rect_pipeline(&mut render_pass);
+            draw_rect_group(&mut render_pass, &self.pending_rects, 0);
             render_pass.set_scissor_rect(0, 0, surface_w, surface_h);
 
+            // --- Pass 2: normal text ---
             self.text_renderer
                 .render(&self.text_atlas, &self.viewport, &mut render_pass)
                 .expect("failed to render text");
+
+            // --- Pass 3: overlay rects ---
+            // Re-bind: glyphon's render() call above rebinds its own
+            // pipeline/buffers on this render pass, clobbering ours.
+            bind_rect_pipeline(&mut render_pass);
+            draw_rect_group(&mut render_pass, &self.overlay_rects, overlay_start);
+            render_pass.set_scissor_rect(0, 0, surface_w, surface_h);
+
+            // --- Pass 4: overlay text ---
+            self.overlay_text_renderer
+                .render(&self.text_atlas, &self.viewport, &mut render_pass)
+                .expect("failed to render overlay text");
         }
 
         self.queue.submit(iter::once(command_encoder.finish()));

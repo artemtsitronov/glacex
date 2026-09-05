@@ -35,6 +35,7 @@ pub mod text_area;
 pub mod text_edit;
 pub mod text_input;
 pub mod theme;
+pub mod tooltip;
 pub mod ui;
 pub mod widget;
 
@@ -65,6 +66,7 @@ pub use text_area::*;
 pub use text_edit::*;
 pub use text_input::*;
 pub use theme::*;
+pub use tooltip::*;
 pub use ui::*;
 pub use widget::*;
 
@@ -190,6 +192,8 @@ impl<W: Widget> ApplicationHandler for App<W> {
                     update_fn(&mut self.root);
                 }
                 let _ = self.root.ui(ui);
+
+                ui.flush_overlays();
 
                 if ui.key_pressed(Key::Named(NamedKey::Tab)) {
                     ui.advance_focus(ui.shift_held());

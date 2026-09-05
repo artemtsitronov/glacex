@@ -61,7 +61,7 @@ impl Widget for DemoApp {
         let mut col1_title = Label::new("Compute & Dispatch");
         let mut counter_stat = Label::new(format!("Dispatched Tasks: {}", self.events_count));
 
-        let mut primary_action_btn = Button::new("Dispatch Task")
+        let mut primary_action_btn = Button::new("dispatch_task", "Dispatch Task")
             .tooltip("Submits a high-priority background worker task")
             .style(ButtonStyle {
                 fill: accent,
@@ -78,7 +78,7 @@ impl Widget for DemoApp {
                 sharp: false,
             });
 
-        let mut reset_counter_btn = Button::new("Reset Metrics")
+        let mut reset_counter_btn = Button::new("reset_monitor", "Reset Metrics")
             .tooltip("Resets processed counters to default baseline")
             .style(ButtonStyle {
                 fill: Fill::Solid(Theme::SURFACE_SUBTLE),

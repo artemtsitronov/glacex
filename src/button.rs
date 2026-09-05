@@ -5,6 +5,7 @@ use crate::geometry::center_text_in;
 use crate::interaction::Interaction;
 use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::theme::Theme;
+use crate::tooltip::Tooltip;
 use crate::ui::Ui;
 use crate::widget::{Measurable, StatefulWidget, Widget};
 use std::default::Default;
@@ -44,6 +45,7 @@ pub struct ButtonState {
     /// 0.0 = resting, 1.0 = fully hovered/pressed.
     pub hover_t: f32,
     pub press_t: f32,
+    pub hover_started: Option<std::time::Instant>,
 }
 
 impl Default for ButtonState {
@@ -51,24 +53,27 @@ impl Default for ButtonState {
         ButtonState {
             hover_t: 0.0,
             press_t: 0.0,
+            hover_started: None,
         }
     }
 }
 
 pub struct Button {
+    id: String,
     label: String,
     interaction: Interaction,
     style: Option<ButtonStyle>,
-    tooltip: Option<String>,
+    tooltip_text: Option<String>,
 }
 
 impl Button {
-    pub fn new(label: impl Into<String>) -> Self {
+    pub fn new(id: impl Into<String>, label: impl Into<String>) -> Self {
         Button {
+            id: id.into(),
             label: label.into(),
             interaction: Interaction::default(),
             style: None,
-            tooltip: None,
+            tooltip_text: None,
         }
     }
 
@@ -81,8 +86,8 @@ impl Button {
         self.style = style;
     }
 
-    pub fn tooltip(mut self, tooltip: impl Into<String>) -> Self {
-        self.tooltip = Some(tooltip.into());
+    pub fn tooltip(mut self, tooltip_text: impl Into<String>) -> Self {
+        self.tooltip_text = Some(tooltip_text.into());
         self
     }
 
@@ -125,12 +130,7 @@ impl Measurable for Button {
         let interaction = Interaction::update(position, size, style.corner_radius, ui);
         self.interaction = interaction;
 
-        // Animate hover and press smoothly
-        let state_id = format!(
-            "__btn_anim_{}_{}_{}",
-            self.label, position[0] as i32, position[1] as i32
-        );
-        let state = ui.widget_state::<ButtonState>(&state_id);
+        let mut state = ui.take_widget_state_or::<ButtonState>(&self.id, self.initial_state());
 
         let hover_target = if interaction.hovered { 1.0f32 } else { 0.0 };
         let press_target = if interaction.pressed { 1.0f32 } else { 0.0 };
@@ -180,10 +180,18 @@ impl Measurable for Button {
 
         if interaction.hovered {
             ui.set_cursor_icon(CursorIcon::Pointer);
-            if let Some(tooltip) = &self.tooltip {
-                ui.show_tooltip(tooltip.clone());
+            if state.hover_started.is_none() {
+                state.hover_started = Some(std::time::Instant::now());
             }
+        } else {
+            state.hover_started = None;
         }
+
+        if let Some(tooltip_text) = &self.tooltip_text {
+            Tooltip::show(interaction.hovered, state.hover_started, tooltip_text, ui);
+        }
+
+        ui.put_widget_state(&self.id, state);
 
         interaction
     }
