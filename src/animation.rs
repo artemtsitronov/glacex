@@ -1,4 +1,5 @@
-//! Easing functions and animation utilities for smooth interactive transitions.
+//! Easing functions, physics-based springs, and animation utilities
+//! matching modern design systems (Framer Motion, Linear, Apple, Vercel, Stripe).
 
 /// Standard animation curve presets matching modern design systems (Linear, Vercel, Apple).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -8,6 +9,7 @@ pub enum Ease {
     EaseInOutQuad,
     EaseOutCubic,
     EaseInOutCubic,
+    EaseOutQuart,
     EaseOutExpo,
     EaseOutBack,
 }
@@ -35,6 +37,7 @@ impl Ease {
                     1.0 - (-2.0 * t + 2.0).powi(3) / 2.0
                 }
             }
+            Ease::EaseOutQuart => 1.0 - (1.0 - t).powi(4),
             Ease::EaseOutExpo => {
                 if t >= 1.0 {
                     1.0
@@ -47,6 +50,55 @@ impl Ease {
                 let c3 = c1 + 1.0;
                 1.0 + c3 * (t - 1.0).powi(3) + c1 * (t - 1.0).powi(2)
             }
+        }
+    }
+}
+
+/// Standard design system motion constants (half-life in seconds).
+///
+/// Half-life is the time to close half the remaining gap between current and target.
+/// All values are frame-rate independent via exponential decay.
+pub struct Motion;
+
+impl Motion {
+    /// Single-frame micro snap for imperceptible but frame-precise color transitions (16ms).
+    pub const MICRO: f32 = 0.016;
+    /// Ultra-responsive feedback for button press and immediate state changes (30ms).
+    pub const INSTANT: f32 = 0.030;
+    /// Snappy hover and border highlight transitions for controls (45ms).
+    pub const SNAPPY: f32 = 0.045;
+    /// Smooth fluid glide for switches, sliders, and toggles (60ms).
+    pub const FLUID: f32 = 0.060;
+    /// Gentle easing for focus rings, glow shadows, and overlays (90ms).
+    pub const GENTLE: f32 = 0.090;
+
+    /// Standard UI spring matching Framer Motion's recommended interactive preset.
+    /// stiffness: 400, damping: 25 -- firm, responsive, no overshoot.
+    pub fn standard_spring() -> Spring {
+        Spring {
+            stiffness: 400.0,
+            damping: 25.0,
+            ..Default::default()
+        }
+    }
+
+    /// Snappy spring for toggles, tabs, and active-state knob transitions.
+    /// stiffness: 450, damping: 32 -- fast settle, zero overshoot.
+    pub fn snappy_spring() -> Spring {
+        Spring {
+            stiffness: 450.0,
+            damping: 32.0,
+            ..Default::default()
+        }
+    }
+
+    /// Fluid spring matching Apple's interactive control feel.
+    /// stiffness: 300, damping: 26 -- soft, physical, slightly cushioned.
+    pub fn fluid_spring() -> Spring {
+        Spring {
+            stiffness: 300.0,
+            damping: 26.0,
+            ..Default::default()
         }
     }
 }
@@ -85,8 +137,8 @@ impl Default for Spring {
             value: 0.0,
             velocity: 0.0,
             target: 0.0,
-            stiffness: 280.0,
-            damping: 24.0,
+            stiffness: 320.0,
+            damping: 26.0,
         }
     }
 }
@@ -97,6 +149,16 @@ impl Spring {
             value: initial,
             target: initial,
             ..Default::default()
+        }
+    }
+
+    pub fn with_physics(initial: f32, stiffness: f32, damping: f32) -> Self {
+        Spring {
+            value: initial,
+            target: initial,
+            stiffness,
+            damping,
+            velocity: 0.0,
         }
     }
 
@@ -115,9 +177,15 @@ impl Spring {
         self.velocity += acceleration * dt;
         self.value += self.velocity * dt;
 
-        if displacement.abs() < 0.001 && self.velocity.abs() < 0.001 {
+        if displacement.abs() < 0.0005 && self.velocity.abs() < 0.0005 {
             self.value = self.target;
             self.velocity = 0.0;
         }
+    }
+
+    /// True if the spring has settled at the target.
+    #[inline]
+    pub fn is_settled(&self) -> bool {
+        (self.value - self.target).abs() < 0.0005 && self.velocity.abs() < 0.0005
     }
 }

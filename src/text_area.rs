@@ -1,3 +1,4 @@
+use crate::animation::{Motion, animate_towards};
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::geometry::contains;
@@ -21,6 +22,7 @@ struct TextAreaExtra {
 #[derive(Debug, Clone)]
 pub struct TextAreaStyle {
     pub fill: Fill,
+    pub text_color: Color,
     pub border_width: f32,
     pub border_color: Color,
     pub focus_border_color: Color,
@@ -37,15 +39,22 @@ impl Default for TextAreaStyle {
     fn default() -> Self {
         TextAreaStyle {
             fill: Fill::Solid(Theme::SURFACE),
+            text_color: Theme::TEXT_PRIMARY,
             border_width: 1.0,
             border_color: Theme::BORDER,
             focus_border_color: Theme::FOCUS_BORDER,
-            corner_radius: 8.0,
+            corner_radius: Theme::RADIUS_MD,
             selection_color: Theme::SELECTION,
-            cursor_color: Color::WHITE,
-            thumb_fill: Fill::Solid(Color::WHITE.with_alpha(0.3)),
-            thumb_dragging_fill: Fill::Solid(Color::WHITE.with_alpha(0.5)),
-            shadow: None,
+            cursor_color: Theme::ACTIVE,
+            // Neutral zinc fallback — the real thumb colors are resolved
+            // per-theme in arrange() against the live theme palette.
+            thumb_fill: Fill::Solid(Color::rgb(113, 113, 122).with_alpha(0.45)),
+            thumb_dragging_fill: Fill::Solid(Color::rgb(82, 82, 91).with_alpha(0.75)),
+            shadow: Some(ShadowStyle {
+                color: Theme::SURFACE_SHADOW,
+                blur_radius: 8.0,
+                offset: [0.0, 1.0],
+            }),
             sharp: false,
         }
     }
@@ -166,7 +175,11 @@ impl Measurable for TextArea {
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
         ui.register_focusable(self.focus_id);
 
-        let style = self.style.clone().unwrap_or_default();
+        let theme = *ui.theme();
+        let style = self
+            .style
+            .clone()
+            .unwrap_or_else(|| theme.text_area_style());
 
         let padding = 10.0;
         let config = ScrollConfig::default();
@@ -417,15 +430,28 @@ impl Measurable for TextArea {
         }
         extra.scroll_x = extra.scroll_x.max(0.0);
 
-        // --- drawing ---
-        let border_color = if focused {
-            style.focus_border_color
-        } else {
-            style.border_color
-        };
+        let dt = ui.dt();
+        let focus_target = if focused { 1.0f32 } else { 0.0 };
+        let hover_target = if hovered { 1.0f32 } else { 0.0 };
+        state.focus_t = animate_towards(state.focus_t, focus_target, dt, Motion::GENTLE);
+        state.hover_t = animate_towards(state.hover_t, hover_target, dt, Motion::SNAPPY);
+        let focus_t = state.focus_t;
+        let hover_t = state.hover_t;
+
+        // Dynamic border color and width blending
+        let base_or_hover = style.border_color.lerp(theme.border_strong, hover_t);
+        let border_color = base_or_hover.lerp(style.focus_border_color, focus_t);
+        let border_width = style.border_width + focus_t * 0.5;
 
         if let Some(shadow) = &style.shadow {
-            draw_shadow(shadow, position, size, style.corner_radius, ui);
+            let mut s = *shadow;
+            if focus_t > 0.01 {
+                s.color = s
+                    .color
+                    .lerp(style.focus_border_color.with_alpha(0.25), focus_t);
+                s.blur_radius += focus_t * 6.0;
+            }
+            draw_shadow(&s, position, size, style.corner_radius, ui);
         }
 
         ui.draw_rect(
@@ -433,7 +459,7 @@ impl Measurable for TextArea {
             size,
             style.fill,
             style.corner_radius,
-            style.border_width,
+            border_width,
             border_color,
             0.0,
             style.sharp,
@@ -499,7 +525,7 @@ impl Measurable for TextArea {
         for (i, line) in state.text().split('\n').enumerate() {
             if !line.is_empty() {
                 let line_position = [text_origin[0], text_origin[1] + i as f32 * line_height];
-                ui.draw_text(line, line_position, clip_rect);
+                ui.draw_text_colored(line, line_position, clip_rect, style.text_color);
             }
         }
 
