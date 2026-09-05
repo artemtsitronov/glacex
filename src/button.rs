@@ -1,5 +1,5 @@
 use crate::Fill;
-use crate::animation::animate_towards;
+use crate::animation::{Motion, animate_towards};
 use crate::color::Color;
 use crate::geometry::center_text_in;
 use crate::interaction::Interaction;
@@ -41,8 +41,9 @@ impl Default for ButtonStyle {
 
 /// Per-button animation state — persists between frames.
 pub struct ButtonState {
-    /// 0.0 = resting, 1.0 = fully hovered/pressed.
+    /// 0.0 = resting, 1.0 = fully hovered.
     pub hover_t: f32,
+    /// 0.0 = resting, 1.0 = fully pressed.
     pub press_t: f32,
 }
 
@@ -125,7 +126,7 @@ impl Measurable for Button {
         let interaction = Interaction::update(position, size, style.corner_radius, ui);
         self.interaction = interaction;
 
-        // Animate hover and press smoothly
+        // Animate hover and press smoothly using Framer / Linear motion constants
         let state_id = format!(
             "__btn_anim_{}_{}_{}",
             self.label, position[0] as i32, position[1] as i32
@@ -134,8 +135,8 @@ impl Measurable for Button {
 
         let hover_target = if interaction.hovered { 1.0f32 } else { 0.0 };
         let press_target = if interaction.pressed { 1.0f32 } else { 0.0 };
-        state.hover_t = animate_towards(state.hover_t, hover_target, dt, 0.055);
-        state.press_t = animate_towards(state.press_t, press_target, dt, 0.04);
+        state.hover_t = animate_towards(state.hover_t, hover_target, dt, Motion::SNAPPY);
+        state.press_t = animate_towards(state.press_t, press_target, dt, Motion::INSTANT);
         let hover_t = state.hover_t;
         let press_t = state.press_t;
 
@@ -153,28 +154,44 @@ impl Measurable for Button {
             style.fill
         };
 
+        // Smooth subtle border brightening on hover
+        let border_color = if hover_t > 0.01 {
+            style.border_color.lerp(Theme::BORDER_STRONG, hover_t)
+        } else {
+            style.border_color
+        };
+
+        // Micro-scale effect: subtle 1px press depth for tactile feel
+        let y_offset = press_t * 1.0;
+        let draw_position = [position[0], position[1] + y_offset];
+
         if let Some(shadow) = &style.shadow {
-            draw_shadow(shadow, position, size, style.corner_radius, ui);
+            // Shadow recedes slightly on press for tactile 3D feedback
+            let mut s = *shadow;
+            s.offset[1] -= press_t * 1.5;
+            s.blur_radius = (s.blur_radius - press_t * 3.0).max(1.0);
+            draw_shadow(&s, draw_position, size, style.corner_radius, ui);
         }
+
         ui.draw_rect(
-            position,
+            draw_position,
             size,
             color,
             style.corner_radius,
             style.border_width,
-            style.border_color,
+            border_color,
             0.0,
             style.sharp,
             0.0,
         );
 
         let text_width = ui.measure_text(&self.label);
-        let text_position = center_text_in(position, size, text_width, ui.line_height());
+        let text_position = center_text_in(draw_position, size, text_width, ui.line_height());
         let clip_rect = [
-            position[0],
-            position[1],
-            position[0] + size[0],
-            position[1] + size[1],
+            draw_position[0],
+            draw_position[1],
+            draw_position[0] + size[0],
+            draw_position[1] + size[1],
         ];
         ui.draw_text(&self.label, text_position, clip_rect);
 

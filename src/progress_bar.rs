@@ -1,8 +1,15 @@
+use crate::animation::{Motion, animate_towards};
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::theme::Theme;
 use crate::ui::Ui;
-use crate::widget::{Measurable, Widget};
+use crate::widget::{Measurable, StatefulWidget, Widget};
+
+#[derive(Default)]
+pub struct ProgressBarState {
+    pub animated_progress: f32,
+    pub initialized: bool,
+}
 
 #[derive(Debug, Clone)]
 pub struct ProgressBarStyle {
@@ -26,6 +33,7 @@ impl Default for ProgressBarStyle {
 }
 
 pub struct ProgressBar {
+    id: Option<String>,
     progress: f32,
     width: f32,
     height: f32,
@@ -35,11 +43,18 @@ pub struct ProgressBar {
 impl ProgressBar {
     pub fn new(progress: f32, width: f32) -> Self {
         ProgressBar {
+            id: None,
             progress: progress.clamp(0.0, 1.0),
             width,
             height: 8.0,
             style: None,
         }
+    }
+
+    /// Assigns a stable state ID for smooth animated progress transitions.
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = Some(id.into());
+        self
     }
 
     pub fn height(mut self, height: f32) -> Self {
@@ -73,6 +88,8 @@ impl Measurable for ProgressBar {
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
         let style = self.style.clone().unwrap_or_default();
+        let dt = ui.dt();
+
         // Draw track
         ui.draw_rect(
             position,
@@ -86,8 +103,22 @@ impl Measurable for ProgressBar {
             0.0,
         );
 
-        // Draw filled progress bar
-        let filled_width = (size[0] * self.progress).max(0.0);
+        // Smooth progress interpolation if ID is provided, or fallback to auto position-based ID
+        let id = self
+            .id
+            .clone()
+            .unwrap_or_else(|| format!("__prog_{}_{}", position[0] as i32, position[1] as i32));
+        let state = ui.widget_state::<ProgressBarState>(&id);
+        if !state.initialized {
+            state.animated_progress = self.progress;
+            state.initialized = true;
+        }
+        state.animated_progress =
+            animate_towards(state.animated_progress, self.progress, dt, Motion::FLUID);
+        let current_progress = state.animated_progress;
+
+        // Draw filled progress bar with fluid animated width
+        let filled_width = (size[0] * current_progress).max(0.0);
         if filled_width > 0.0 {
             ui.draw_rect(
                 position,
@@ -100,6 +131,21 @@ impl Measurable for ProgressBar {
                 false,
                 0.0,
             );
+        }
+    }
+}
+
+impl StatefulWidget for ProgressBar {
+    type State = ProgressBarState;
+
+    fn state_id(&self) -> &str {
+        self.id.as_deref().unwrap_or("__default_progressbar")
+    }
+
+    fn initial_state(&self) -> ProgressBarState {
+        ProgressBarState {
+            animated_progress: self.progress,
+            initialized: true,
         }
     }
 }

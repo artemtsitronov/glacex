@@ -1,4 +1,4 @@
-use crate::animation::animate_towards;
+use crate::animation::{Motion, animate_towards};
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::geometry::contains;
@@ -14,6 +14,8 @@ pub struct SliderState {
     pub dragging: bool,
     /// Animated hover glow on the thumb, 0.0..=1.0
     pub hover_t: f32,
+    /// Animated drag scale, 0.0..=1.0
+    pub drag_t: f32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -129,12 +131,10 @@ impl Measurable for Slider {
         }
 
         let range = (self.max - self.min).max(0.0001);
-        let track_width = (size[0] - style.thumb_size).max(1.0);
 
         if state.dragging {
-            let rel_x =
-                (mouse_pos[0] - (position[0] + style.thumb_size / 2.0)).clamp(0.0, track_width);
-            let normalized = rel_x / track_width;
+            let rel_x = (mouse_pos[0] - position[0]).clamp(0.0, size[0]);
+            let normalized = rel_x / size[0];
             let new_value = self.min + normalized * range;
             if (new_value - state.value).abs() > f32::EPSILON {
                 state.value = new_value;
@@ -144,17 +144,18 @@ impl Measurable for Slider {
             state.value = state.value.clamp(self.min, self.max);
         }
 
-        // Animate hover glow on thumb
-        let hover_target = if hovered || state.dragging {
-            1.0f32
-        } else {
-            0.0
-        };
-        state.hover_t = animate_towards(state.hover_t, hover_target, dt, 0.07);
+        // Animate hover glow on thumb with Motion::SNAPPY
+        let hover_target = if hovered { 1.0f32 } else { 0.0 };
+        state.hover_t = animate_towards(state.hover_t, hover_target, dt, Motion::SNAPPY);
+
+        // Animate dragging scale expansion with Motion::INSTANT
+        let drag_target = if state.dragging { 1.0f32 } else { 0.0 };
+        state.drag_t = animate_towards(state.drag_t, drag_target, dt, Motion::INSTANT);
 
         let value = state.value;
         let dragging = state.dragging;
         let hover_t = state.hover_t;
+        let drag_t = state.drag_t;
         ui.put_widget_state(&self.id, state);
 
         // Visual layout
@@ -175,7 +176,7 @@ impl Measurable for Slider {
         );
 
         let progress = ((value - self.min) / range).clamp(0.0, 1.0);
-        let filled_width = progress * track_width + style.thumb_size / 2.0;
+        let filled_width = progress * size[0];
 
         // Filled active track
         if filled_width > 0.0 {
@@ -192,23 +193,26 @@ impl Measurable for Slider {
             );
         }
 
-        // Thumb knob with animated hover glow ring
+        // Tactile thumb knob with interactive drag scale & glow halo
+        let thumb_base_size = style.thumb_size;
+        let thumb_current_size = thumb_base_size + drag_t * 2.0; // slight scale-up when dragged
         let thumb_center_x = position[0] + progress * size[0];
-        let thumb_x = thumb_center_x - style.thumb_size / 2.0;
-        let thumb_y = position[1] + (size[1] - style.thumb_size) / 2.0;
+        let thumb_x = thumb_center_x - thumb_current_size / 2.0;
+        let thumb_y = position[1] + (size[1] - thumb_current_size) / 2.0;
         let thumb_pos = [thumb_x, thumb_y];
-        let thumb_size = [style.thumb_size, style.thumb_size];
-        let thumb_radius = style.thumb_size / 2.0;
+        let thumb_size = [thumb_current_size, thumb_current_size];
+        let thumb_radius = thumb_current_size / 2.0;
 
-        // Soft glow halo on hover/drag
-        if hover_t > 0.01 {
-            let glow_size = style.thumb_size + 8.0 * hover_t;
-            let glow_offset = (glow_size - style.thumb_size) / 2.0;
+        // Soft glow halo on hover/drag (Stripe / Vercel grade)
+        let active_halo_t = hover_t.max(drag_t);
+        if active_halo_t > 0.01 {
+            let glow_size = thumb_current_size + 10.0 * active_halo_t;
+            let glow_offset = (glow_size - thumb_current_size) / 2.0;
             let glow_pos = [thumb_x - glow_offset, thumb_y - glow_offset];
             ui.draw_rect(
                 glow_pos,
                 [glow_size, glow_size],
-                Fill::Solid(Theme::ACTIVE.with_alpha(0.18 * hover_t)),
+                Fill::Solid(Theme::ACTIVE.with_alpha(0.22 * active_halo_t)),
                 glow_size / 2.0,
                 0.0,
                 Color::TRANSPARENT,
@@ -219,7 +223,10 @@ impl Measurable for Slider {
         }
 
         if let Some(shadow) = &style.shadow {
-            draw_shadow(shadow, thumb_pos, thumb_size, thumb_radius, ui);
+            let mut s = *shadow;
+            s.blur_radius += drag_t * 3.0;
+            s.offset[1] += drag_t * 1.0;
+            draw_shadow(&s, thumb_pos, thumb_size, thumb_radius, ui);
         }
 
         ui.draw_rect(

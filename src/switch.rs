@@ -7,12 +7,13 @@ use crate::ui::Ui;
 use crate::widget::{Measurable, StatefulWidget, Widget};
 use winit::window::CursorIcon;
 
-use crate::animation::animate_towards;
+use crate::animation::{Motion, animate_towards};
 
 #[derive(Default)]
 pub struct SwitchState {
     pub enabled: bool,
     pub anim_progress: f32,
+    pub hover_t: f32,
     pub initialized: bool,
 }
 
@@ -124,23 +125,33 @@ impl Measurable for Switch {
         }
         let enabled = state.enabled;
         let target_progress = if enabled { 1.0 } else { 0.0 };
-        state.anim_progress = animate_towards(state.anim_progress, target_progress, dt, 0.07);
-        let progress = state.anim_progress;
+        // Apple/Linear fluid switch animation curve
+        state.anim_progress =
+            animate_towards(state.anim_progress, target_progress, dt, Motion::FLUID);
+        let hover_target = if interaction.hovered { 1.0f32 } else { 0.0 };
+        state.hover_t = animate_towards(state.hover_t, hover_target, dt, Motion::SNAPPY);
 
-        let track_fill = if progress > 0.01 {
-            if let (Fill::Solid(off_col), Fill::Solid(on_col)) =
-                (&style.track_off_fill, &style.track_on_fill)
-            {
-                Fill::Solid(off_col.lerp(*on_col, progress))
-            } else if enabled {
-                style.track_on_fill
-            } else {
-                style.track_off_fill
-            }
-        } else if interaction.hovered {
-            Fill::Solid(Theme::HOVERED)
+        let progress = state.anim_progress;
+        let hover_t = state.hover_t;
+
+        // Smooth cross-fade between idle, hover, and active states
+        let track_fill = if let (Fill::Solid(off_col), Fill::Solid(on_col)) =
+            (&style.track_off_fill, &style.track_on_fill)
+        {
+            let idle_or_hover = off_col.lerp(Theme::HOVERED, hover_t);
+            Fill::Solid(idle_or_hover.lerp(*on_col, progress))
+        } else if enabled {
+            style.track_on_fill
         } else {
             style.track_off_fill
+        };
+
+        let border_color = if progress > 0.01 {
+            style.border_color.lerp(Theme::ACTIVE, progress * 0.5)
+        } else if hover_t > 0.01 {
+            style.border_color.lerp(Theme::BORDER_STRONG, hover_t)
+        } else {
+            style.border_color
         };
 
         if let Some(shadow) = &style.shadow {
@@ -154,13 +165,13 @@ impl Measurable for Switch {
             track_fill,
             style.corner_radius,
             style.border_width,
-            style.border_color,
+            border_color,
             0.0,
             false,
             0.0,
         );
 
-        // Draw sliding knob / thumb with smooth Apple/Linear spring-like glide
+        // Draw sliding knob / thumb with fluid glide and soft thumb shadow
         let padding = 2.0;
         let knob_size = size[1] - padding * 2.0;
         let min_x = position[0] + padding;
@@ -168,6 +179,20 @@ impl Measurable for Switch {
         let knob_x = min_x + (max_x - min_x) * progress;
         let knob_pos = [knob_x, position[1] + padding];
         let knob_radius = knob_size / 2.0;
+
+        // Micro thumb drop shadow for physical elevation
+        let thumb_shadow = ShadowStyle {
+            color: Color::rgba(0, 0, 0, 0.35),
+            blur_radius: 4.0,
+            offset: [0.0, 1.5],
+        };
+        draw_shadow(
+            &thumb_shadow,
+            knob_pos,
+            [knob_size, knob_size],
+            knob_radius,
+            ui,
+        );
 
         ui.draw_rect(
             knob_pos,
@@ -200,6 +225,7 @@ impl StatefulWidget for Switch {
         SwitchState {
             enabled: self.default_enabled,
             anim_progress: if self.default_enabled { 1.0 } else { 0.0 },
+            hover_t: 0.0,
             initialized: true,
         }
     }

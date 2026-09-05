@@ -7,7 +7,7 @@ use crate::ui::Ui;
 use crate::widget::{Measurable, Widget};
 use winit::window::CursorIcon;
 
-use crate::animation::animate_towards;
+use crate::animation::{Motion, animate_towards};
 
 #[derive(Debug, Clone, Copy)]
 pub struct RadioButtonResponse {
@@ -123,15 +123,20 @@ impl Measurable for RadioButton {
         }
         let selected = ui.is_selected(&self.group_id, &self.option_id);
 
-        // Per-radio animation state
+        // Per-radio animation state with Motion curves
         let anim_id = format!("__radio_anim_{}_{}", self.group_id, self.option_id);
         let anim = ui.widget_state::<RadioButtonAnimState>(&anim_id);
-        anim.dot_t = animate_towards(anim.dot_t, if selected { 1.0 } else { 0.0 }, dt, 0.06);
+        anim.dot_t = animate_towards(
+            anim.dot_t,
+            if selected { 1.0 } else { 0.0 },
+            dt,
+            Motion::FLUID,
+        );
         anim.hover_t = animate_towards(
             anim.hover_t,
             if interaction.hovered { 1.0 } else { 0.0 },
             dt,
-            0.055,
+            Motion::SNAPPY,
         );
         let dot_t = anim.dot_t;
         let hover_t = anim.hover_t;
@@ -140,14 +145,22 @@ impl Measurable for RadioButton {
         let fill = if let (Fill::Solid(idle), Fill::Solid(hov), Fill::Solid(sel)) =
             (&style.fill, &style.hover_fill, &style.selected_fill)
         {
-            let blended = idle.lerp(*hov, hover_t);
-            Fill::Solid(blended.lerp(*sel, dot_t))
+            let idle_or_hover = idle.lerp(*hov, hover_t);
+            Fill::Solid(idle_or_hover.lerp(*sel, dot_t))
         } else if selected {
             style.selected_fill
         } else if interaction.hovered {
             style.hover_fill
         } else {
             style.fill
+        };
+
+        let border_color = if dot_t > 0.01 {
+            style.border_color.lerp(Theme::ACTIVE, dot_t * 0.4)
+        } else if hover_t > 0.01 {
+            style.border_color.lerp(Theme::BORDER_STRONG, hover_t)
+        } else {
+            style.border_color
         };
 
         if let Some(shadow) = &style.shadow {
@@ -160,13 +173,13 @@ impl Measurable for RadioButton {
             fill,
             style.corner_radius,
             style.border_width,
-            style.border_color,
+            border_color,
             0.0,
             style.sharp,
             0.0,
         );
 
-        // Animated inner dot — scales from 0 to full size
+        // Animated inner dot — scales from 0 to full size with fluid motion
         if dot_t > 0.01 {
             let max_inset = 5.0;
             let inset = max_inset + (1.0 - dot_t) * max_inset;

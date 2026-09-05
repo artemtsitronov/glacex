@@ -59,19 +59,30 @@ Each rectangle submitted to the GPU contains:
 
 ## 3. Animation System (`src/animation.rs`)
 
-All widget transitions use frame-rate independent math — no hardcoded frame counts.
+All widget transitions use frame-rate independent math -- no hardcoded frame counts.
+
+### `Motion` -- Named Timing Constants
+`Motion` is a unit struct that exposes named half-life constants consumed by every animated widget:
+
+| Constant | Half-life | Use |
+|---|---|---|
+| `Motion::INSTANT` | 30ms | Press feedback, immediate state snaps |
+| `Motion::SNAPPY` | 45ms | Hover transitions, border highlights |
+| `Motion::FLUID` | 60ms | Knob slides, dot scaling, progress fill |
+| `Motion::GENTLE` | 90ms | Focus rings, glow shadows |
 
 ### `animate_towards(current, target, dt, half_life) -> f32`
 Exponential decay toward `target`. `half_life` is seconds to close half the gap.
-Used by every animated widget state (`hover_t`, `press_t`, `dot_t`, `anim_progress`).
+Used by every animated widget state (`hover_t`, `press_t`, `dot_t`, `anim_progress`, `drag_t`, `focus_t`).
 
 ### Easing Curves (`Ease`)
 Static easing functions for use in timed sequences:
-`EaseOutCubic`, `EaseInOutCubic`, `EaseOutExpo`, `EaseOutBack`, `EaseOutQuad`, `EaseInOutQuad`, `Linear`.
+`EaseOutCubic`, `EaseInOutCubic`, `EaseOutExpo`, `EaseOutBack`, `EaseOutQuad`, `EaseInOutQuad`, `EaseOutQuart`, `Linear`.
 
 ### `Spring`
 Physics-based spring simulation (`stiffness`, `damping`) using semi-implicit Euler integration.
-Use for overshooting, elastic, or bouncy effects beyond the built-in decay.
+Construct with `Spring::with_physics(initial, stiffness, damping)`. Check `spring.is_settled()` to skip updates when at rest.
+Default stiffness: 320, damping: 26.
 
 ### `lerp(a, b, t) -> f32`
 Standard linear interpolation helper.
@@ -79,6 +90,7 @@ Standard linear interpolation helper.
 ### `dt` on `Ui`
 `Ui::dt()` returns elapsed seconds since the previous frame (clamped to 1..=100ms).
 Widgets read `dt` once at the top of `arrange` before borrowing mutable state.
+
 
 ## 4. Widget Animation Pattern
 

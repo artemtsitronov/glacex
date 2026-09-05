@@ -1,3 +1,4 @@
+use crate::animation::{Motion, animate_towards};
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::geometry::contains;
@@ -78,6 +79,11 @@ impl TextInput {
     pub fn focused(&self, ui: &Ui) -> bool {
         ui.is_focused(self.focus_id)
     }
+
+    pub fn hovered(&self, ui: &mut Ui) -> bool {
+        let state = ui.widget_state::<TextEditState>(&self.id);
+        state.hovered
+    }
 }
 
 impl Widget for TextInput {
@@ -91,14 +97,15 @@ impl Widget for TextInput {
 
 impl Measurable for TextInput {
     fn measure(&mut self, ui: &mut Ui) -> [f32; 2] {
-        [self.width, ui.line_height() + 16.0]
+        let padding = 10.0;
+        [self.width, ui.line_height() + padding * 2.0]
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
         ui.register_focusable(self.focus_id);
 
         let style = self.style.clone().unwrap_or_default();
-
+        let dt = ui.dt();
         let padding = 10.0;
 
         let mouse_pos = ui.mouse_position();
@@ -162,14 +169,29 @@ impl Measurable for TextInput {
         let cursor_x = ui.measure_text(state.prefix());
         state.scroll_into_view(cursor_x, text_width);
 
-        let border_color = if focused {
-            style.focus_border_color
-        } else {
-            style.border_color
-        };
+        // Animate focus ring and hover transitions smoothly
+        let focus_target = if focused { 1.0f32 } else { 0.0 };
+        let hover_target = if hovered { 1.0f32 } else { 0.0 };
+        state.focus_t = animate_towards(state.focus_t, focus_target, dt, Motion::GENTLE);
+        state.hover_t = animate_towards(state.hover_t, hover_target, dt, Motion::SNAPPY);
+        let focus_t = state.focus_t;
+        let hover_t = state.hover_t;
 
+        // Dynamic border color blending
+        let base_or_hover = style.border_color.lerp(Theme::BORDER_STRONG, hover_t);
+        let border_color = base_or_hover.lerp(style.focus_border_color, focus_t);
+        let border_width = style.border_width + focus_t * 0.5;
+
+        // Elevated shadow with focus glow (shadcn/Vercel focus-visible ring)
         if let Some(shadow) = &style.shadow {
-            draw_shadow(shadow, position, size, style.corner_radius, ui);
+            let mut s = *shadow;
+            if focus_t > 0.01 {
+                s.color = s
+                    .color
+                    .lerp(style.focus_border_color.with_alpha(0.25), focus_t);
+                s.blur_radius += focus_t * 6.0;
+            }
+            draw_shadow(&s, position, size, style.corner_radius, ui);
         }
 
         ui.draw_rect(
@@ -177,7 +199,7 @@ impl Measurable for TextInput {
             size,
             style.fill,
             style.corner_radius,
-            style.border_width,
+            border_width,
             border_color,
             0.0,
             style.sharp,

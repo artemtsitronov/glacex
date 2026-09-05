@@ -123,7 +123,8 @@ impl Widget for DemoApp {
         let bandwidth_val = bandwidth_slider.state(ui).value;
         let mut bandwidth_progress_label =
             Label::new(format!("Allocated Capacity: {:.0}%", bandwidth_val));
-        let mut bandwidth_progress = ProgressBar::new(bandwidth_val / 100.0, 320.0);
+        let mut bandwidth_progress =
+            ProgressBar::new(bandwidth_val / 100.0, 320.0).id("bandwidth_progress");
 
         let mut region_label = Label::new("Deployment Region");
         let mut cluster_us = RadioButton::new("cluster_select", "us_east");
