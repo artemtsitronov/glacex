@@ -1,6 +1,6 @@
-//! Experimental GPU-rendered UI toolkit built with `wgpu`, `winit`, and `taffy`.
+//! GPU-rendered UI library built with `wgpu`, `winit`, and `taffy`.
 //!
-//! The crate exposes a small custom widget system centered around three core pieces:
+//! The crate exposes a custom widget system centered around three core pieces:
 //! - [`App`], which owns the native window and event loop
 //! - [`Ui`], which stores frame state, input state, and per-widget persistent state
 //! - [`Widget`], implemented by widgets that render themselves each frame
