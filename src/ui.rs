@@ -1,7 +1,6 @@
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::painter::Painter;
-use crate::theme::Theme;
 use crate::widget::{FocusId, Widget};
 use std::any::Any;
 use std::collections::{HashMap, HashSet};
@@ -58,8 +57,7 @@ pub struct Ui {
     mouse_middle_released: bool,
     mouse_middle_pressed_this_frame: bool,
     mouse_middle_released_this_frame: bool,
-    pending_tooltip: Option<(String, [f32; 2])>,
-    theme: Theme,
+    overlay_queue: Vec<Box<dyn FnOnce(&mut Ui)>>,
 }
 
 impl Ui {
@@ -67,7 +65,6 @@ impl Ui {
         Ui {
             painter: Painter::new(window.clone()).await,
             window,
-            theme: Theme::LIGHT,
             persistent_state: HashMap::new(),
             mouse_position: [0.0, 0.0],
             mouse_pressed: false,
@@ -110,8 +107,21 @@ impl Ui {
             mouse_middle_released: false,
             mouse_middle_pressed_this_frame: false,
             mouse_middle_released_this_frame: false,
-            pending_tooltip: None,
+            overlay_queue: Vec::new(),
         }
+    }
+
+    pub fn queue_overlay(&mut self, overlay: impl FnOnce(&mut Ui) + 'static) {
+        self.overlay_queue.push(Box::new(overlay));
+    }
+
+    pub fn flush_overlays(&mut self) {
+        let overlays = std::mem::take(&mut self.overlay_queue);
+        self.painter.begin_overlay_phase();
+        for overlay in overlays {
+            overlay(self);
+        }
+        self.painter.end_overlay_phase();
     }
 
     pub fn select(&mut self, group_id: &str, option_id: &str) {
@@ -307,6 +317,7 @@ impl Ui {
         self.focus_order.clear();
         self.clip_stack.clear();
         self.input_block_stack.clear();
+        self.overlay_queue.clear();
     }
 
     pub fn update_mouse_position(&mut self, x: f64, y: f64) {
@@ -420,14 +431,6 @@ impl Ui {
         self.cursor_icon
     }
 
-    pub fn show_tooltip(&mut self, text: impl Into<String>) {
-        self.pending_tooltip = Some((text.into(), self.mouse_position));
-    }
-
-    pub fn show_tooltip_at(&mut self, text: impl Into<String>, position: [f32; 2]) {
-        self.pending_tooltip = Some((text.into(), position));
-    }
-
     pub fn mouse_position(&self) -> [f32; 2] {
         self.mouse_position
     }
@@ -501,7 +504,6 @@ impl Ui {
             self.window.set_cursor(CursorIcon::Default);
         }
         self.cursor_icon_set_this_frame = false;
-        self.pending_tooltip = None;
     }
 
     pub fn line_height(&self) -> f32 {
@@ -514,17 +516,6 @@ impl Ui {
 
     pub fn set_bgcolor(&mut self, color: Color) {
         self.painter.set_bgcolor(color);
-    }
-
-    /// Returns the currently active theme.
-    pub fn theme(&self) -> &Theme {
-        &self.theme
-    }
-
-    /// Sets the active theme and updates the window clear color.
-    pub fn set_theme(&mut self, theme: Theme) {
-        self.set_bgcolor(theme.bg_canvas);
-        self.theme = theme;
     }
 
     pub fn window_size(&self) -> [f32; 2] {
@@ -565,56 +556,8 @@ impl Ui {
     }
 
     pub fn draw_text(&mut self, text: &str, position: [f32; 2], bounds: [f32; 4]) {
-        self.draw_text_colored(text, position, bounds, self.theme.text_primary);
-    }
-
-    pub fn draw_text_colored(
-        &mut self,
-        text: &str,
-        position: [f32; 2],
-        bounds: [f32; 4],
-        color: Color,
-    ) {
         let clipped = intersect_rects(bounds, self.current_clip());
-        self.painter
-            .draw_text_colored(text, position, clipped, color);
-    }
-
-    pub fn measure_text_styled(
-        &mut self,
-        text: &str,
-        font_size: f32,
-        line_height: f32,
-        weight: crate::painter::FontWeight,
-        is_mono: bool,
-    ) -> f32 {
-        self.painter
-            .measure_text_styled(text, font_size, line_height, weight, is_mono)
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    pub fn draw_text_styled(
-        &mut self,
-        text: &str,
-        position: [f32; 2],
-        bounds: [f32; 4],
-        color: Color,
-        font_size: f32,
-        line_height: f32,
-        weight: crate::painter::FontWeight,
-        is_mono: bool,
-    ) {
-        let clipped = intersect_rects(bounds, self.current_clip());
-        self.painter.draw_text_styled(
-            text,
-            position,
-            clipped,
-            color,
-            font_size,
-            line_height,
-            weight,
-            is_mono,
-        );
+        self.painter.draw_text(text, position, clipped);
     }
 
     pub fn add<W: Widget>(&mut self, widget: &mut W) -> W::Output {
@@ -622,84 +565,6 @@ impl Ui {
     }
 
     pub fn render(&mut self) {
-        if let Some((text, pos)) = self.pending_tooltip.take() {
-            // Measure with Geist 12px (caption scale) — same font used by Label::caption()
-            let text_width = self.painter.measure_text_styled(
-                &text,
-                12.0,
-                18.0,
-                crate::painter::FontWeight::Medium,
-                false,
-            );
-            let pad_x = 10.0;
-            let pad_y = 6.0;
-            let width = (text_width + pad_x * 2.0).max(60.0);
-            let height = 18.0 + pad_y * 2.0; // 18px line height + vertical padding
-
-            let window_size = self.painter.window_size();
-            // Offset tooltip 10px to the right and 20px below the cursor
-            let mut tooltip_pos = [pos[0] + 10.0, pos[1] + 20.0];
-            // Clamp to viewport with 6px margin
-            if tooltip_pos[0] + width > window_size[0] - 6.0 {
-                tooltip_pos[0] = (pos[0] - width - 8.0).max(6.0);
-            }
-            if tooltip_pos[1] + height > window_size[1] - 6.0 {
-                tooltip_pos[1] = (pos[1] - height - 10.0).max(6.0);
-            }
-
-            let full_clip = [0.0, 0.0, window_size[0], window_size[1]];
-
-            // Ambient shadow behind tooltip card (rendered on overlay pass)
-            self.painter.draw_overlay_rect(
-                [tooltip_pos[0] - 4.0, tooltip_pos[1] - 4.0],
-                [width + 8.0, height + 8.0],
-                Fill::Solid(Color {
-                    r: 0.0,
-                    g: 0.0,
-                    b: 0.0,
-                    a: if self.theme.is_dark { 0.55 } else { 0.12 },
-                }),
-                12.0,
-                0.0,
-                Color::TRANSPARENT,
-                14.0, // blur — soft ambient
-                0.0,
-                full_clip,
-                0.0,
-            );
-
-            // Tooltip surface card (rendered on overlay pass)
-            self.painter.draw_overlay_rect(
-                tooltip_pos,
-                [width, height],
-                Fill::Solid(self.theme.surface_elevated),
-                8.0,
-                1.0,
-                self.theme.border_strong,
-                0.0,
-                0.0,
-                full_clip,
-                0.0,
-            );
-
-            // Geist 12px Medium text (rendered on overlay pass)
-            self.painter.draw_text_styled(
-                &text,
-                [tooltip_pos[0] + pad_x, tooltip_pos[1] + pad_y],
-                [
-                    tooltip_pos[0] + pad_x,
-                    tooltip_pos[1],
-                    tooltip_pos[0] + width - pad_x,
-                    tooltip_pos[1] + height,
-                ],
-                self.theme.text_primary,
-                12.0,
-                18.0,
-                crate::painter::FontWeight::Medium,
-                false,
-            );
-        }
-
         self.painter.present();
     }
 

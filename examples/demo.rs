@@ -77,22 +77,39 @@ impl Widget for DemoApp {
         .secondary()
         .caption();
 
-        // --- Column 1: Compute & Dispatch Panel ---
-        let mut col1_title = Label::new("Compute & Dispatch").subheading();
-        let mut primary_action_btn = Button::new("Dispatch Task")
-            .tooltip("Submits high-priority worker task")
-            .primary();
-        let mut reset_counter_btn = Button::new("Reset Metrics")
-            .tooltip("Resets processed task counters")
-            .outline();
-        let mut danger_btn = Button::new("Purge Queue")
-            .tooltip("Clears worker cache")
-            .danger();
+        let mut primary_action_btn = Button::new("dispatch_task", "Dispatch Task")
+            .tooltip("Submits a high-priority background worker task")
+            .style(ButtonStyle {
+                fill: accent,
+                hover_fill: Fill::Solid(Theme::ACTIVE_HOVER),
+                pressed_fill: Fill::Solid(Theme::ACTIVE),
+                border_width: 1.0,
+                border_color: Color::WHITE.with_alpha(0.2),
+                corner_radius: 8.0,
+                shadow: Some(ShadowStyle {
+                    color: Theme::ACTIVE.with_alpha(0.35),
+                    blur_radius: 12.0,
+                    offset: [0.0, 3.0],
+                }),
+                sharp: false,
+            });
 
-        let mut api_title = Label::new("Endpoint Configuration").subheading();
-        let mut endpoint_label = Label::new("Ingress Gateway Host").secondary();
-        let mut endpoint_input = TextInput::new("endpoint_input", 350.0)
-            .placeholder("https://api.gateway.internal/v2/ingest")
+        let mut reset_counter_btn = Button::new("reset_monitor", "Reset Metrics")
+            .tooltip("Resets processed counters to default baseline")
+            .style(ButtonStyle {
+                fill: Fill::Solid(Theme::SURFACE_SUBTLE),
+                hover_fill: Fill::Solid(Theme::HOVERED),
+                pressed_fill: Fill::Solid(Theme::ACTIVE),
+                border_width: 1.0,
+                border_color: Theme::BORDER,
+                corner_radius: 8.0,
+                shadow: None,
+                sharp: false,
+            });
+
+        let mut api_title = Label::new("Endpoint Configuration");
+        let mut endpoint_label = Label::new("Ingress Gateway Host");
+        let mut endpoint_input = TextInput::new("endpoint_input", 320.0)
             .default_text("https://gateway.internal.net/v2/ingest");
 
         let mut payload_label = Label::new("Telemetry Metadata (JSON)").secondary();

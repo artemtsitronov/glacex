@@ -1,10 +1,9 @@
 use crate::color::Color;
 use crate::fill::{Fill, Gradient, GradientHandle, GradientKind, GradientStop};
 use crate::shapes::{QUAD_VERTICES, QuadVertex, RectInstance};
-use crate::theme::Theme;
 use glyphon::{
-    Attrs, Cache, Family, FontSystem, Metrics, Resolution, Shaping, SwashCache, TextArea,
-    TextAtlas, TextBounds, TextRenderer, Viewport, Weight,
+    Attrs, Cache, FontSystem, Metrics, Resolution, Shaping, SwashCache, TextArea, TextAtlas,
+    TextBounds, TextRenderer, Viewport,
 };
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -171,16 +170,19 @@ pub struct Painter {
     rect_instance_buffer: Buffer,
     rect_instance_capacity: usize,
     pending_rects: Vec<([f32; 4], RectInstance)>,
-    pending_overlay_rects: Vec<([f32; 4], RectInstance)>,
 
     font_system: FontSystem,
     swash_cache: SwashCache,
     viewport: Viewport,
     text_atlas: TextAtlas,
     text_renderer: TextRenderer,
+    overlay_text_renderer: TextRenderer,
     font_metrics: Metrics,
-    pending_labels: Vec<(glyphon::Buffer, [f32; 2], [f32; 4], Color)>,
-    pending_overlay_labels: Vec<(glyphon::Buffer, [f32; 2], [f32; 4], Color)>,
+    pending_labels: Vec<(glyphon::Buffer, [f32; 2], [f32; 4])>,
+
+    overlay_rects: Vec<([f32; 4], RectInstance)>,
+    overlay_labels: Vec<(glyphon::Buffer, [f32; 2], [f32; 4])>,
+    in_overlay_phase: bool,
 
     gradient_atlas: GradientAtlas,
     gradient_bind_group: BindGroup,
@@ -334,31 +336,18 @@ impl Painter {
             mapped_at_creation: false,
         });
 
-        let mut font_system = FontSystem::new();
-        font_system
-            .db_mut()
-            .load_font_data(include_bytes!("../assets/fonts/Geist-Regular.ttf").to_vec());
-        font_system
-            .db_mut()
-            .load_font_data(include_bytes!("../assets/fonts/Geist-Medium.ttf").to_vec());
-        font_system
-            .db_mut()
-            .load_font_data(include_bytes!("../assets/fonts/Geist-SemiBold.ttf").to_vec());
-        font_system
-            .db_mut()
-            .load_font_data(include_bytes!("../assets/fonts/Geist-Bold.ttf").to_vec());
-        font_system
-            .db_mut()
-            .load_font_data(include_bytes!("../assets/fonts/GeistMono-Regular.ttf").to_vec());
+        let font_system = FontSystem::new();
         let swash_cache = SwashCache::new();
         let cache = Cache::new(&device);
         let viewport = Viewport::new(&device, &cache);
         let mut text_atlas = TextAtlas::new(&device, &queue, &cache, surface_config.format);
         let text_renderer =
             TextRenderer::new(&mut text_atlas, &device, MultisampleState::default(), None);
+        let overlay_text_renderer =
+            TextRenderer::new(&mut text_atlas, &device, MultisampleState::default(), None);
 
         let font_metrics = Metrics {
-            font_size: 14.0,
+            font_size: 16.0,
             line_height: 20.0,
         };
 
@@ -374,26 +363,36 @@ impl Painter {
             rect_instance_buffer,
             rect_instance_capacity,
             pending_rects: vec![],
-            pending_overlay_rects: vec![],
             font_system,
             swash_cache,
             viewport,
             text_atlas,
             text_renderer,
+            overlay_text_renderer,
             font_metrics,
             pending_labels: vec![],
-            pending_overlay_labels: vec![],
             gradient_atlas,
             gradient_bind_group,
-            bgcolor: WgpuColor::WHITE,
+            overlay_rects: vec![],
+            overlay_labels: vec![],
+            in_overlay_phase: false,
+            bgcolor: WgpuColor::BLACK,
         }
+    }
+
+    pub fn begin_overlay_phase(&mut self) {
+        self.in_overlay_phase = true;
+    }
+
+    pub fn end_overlay_phase(&mut self) {
+        self.in_overlay_phase = false;
     }
 
     pub fn begin_frame(&mut self) {
         self.pending_rects.clear();
         self.pending_labels.clear();
-        self.pending_overlay_rects.clear();
-        self.pending_overlay_labels.clear();
+        self.overlay_rects.clear();
+        self.overlay_labels.clear();
     }
 
     pub fn window_size(&self) -> [f32; 2] {
@@ -402,64 +401,15 @@ impl Painter {
             self.surface_config.height as f32,
         ]
     }
-}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum FontWeight {
-    #[default]
-    Regular,
-    Medium,
-    SemiBold,
-    Bold,
-}
-
-impl FontWeight {
-    pub fn to_glyphon(self) -> Weight {
-        match self {
-            FontWeight::Regular => Weight::NORMAL,
-            FontWeight::Medium => Weight::MEDIUM,
-            FontWeight::SemiBold => Weight::SEMIBOLD,
-            FontWeight::Bold => Weight::BOLD,
-        }
-    }
-}
-
-impl Painter {
     pub fn line_height(&self) -> f32 {
         self.font_metrics.line_height
     }
 
     pub fn measure_text(&mut self, text: &str) -> f32 {
-        self.measure_text_styled(
-            text,
-            self.font_metrics.font_size,
-            self.font_metrics.line_height,
-            FontWeight::Regular,
-            false,
-        )
-    }
-
-    pub fn measure_text_styled(
-        &mut self,
-        text: &str,
-        font_size: f32,
-        line_height: f32,
-        weight: FontWeight,
-        is_mono: bool,
-    ) -> f32 {
-        let metrics = Metrics {
-            font_size,
-            line_height,
-        };
-        let mut buffer = glyphon::Buffer::new(&mut self.font_system, metrics);
-        buffer.set_size(Some(10000.0), Some(10000.0));
-        let family = if is_mono {
-            Family::Name("Geist Mono")
-        } else {
-            Family::Name("Geist")
-        };
-        let attrs = Attrs::new().family(family).weight(weight.to_glyphon());
-        buffer.set_text(text, &attrs, Shaping::Basic, None);
+        let mut buffer = glyphon::Buffer::new(&mut self.font_system, self.font_metrics);
+        buffer.set_size(Some(1000.0), Some(1000.0));
+        buffer.set_text(text, &Attrs::new(), Shaping::Basic, None);
         buffer.shape_until_scroll(&mut self.font_system, false);
 
         buffer
@@ -509,164 +459,44 @@ impl Painter {
             }
         };
 
-        self.pending_rects.push((
-            clip,
-            RectInstance {
-                position,
-                size,
-                fill_kind,
-                gradient_angle,
-                gradient_center,
-                gradient_row,
-                color,
-                corner_radius,
-                border_width,
-                border_color,
-                blur_radius,
-                sharp,
-                rotation,
-            },
-        ));
+        let instance = RectInstance {
+            position,
+            size,
+            fill_kind,
+            gradient_angle,
+            gradient_center,
+            gradient_row,
+            color,
+            corner_radius,
+            border_width,
+            border_color,
+            blur_radius,
+            sharp,
+            rotation,
+        };
+
+        if self.in_overlay_phase {
+            self.overlay_rects.push((clip, instance));
+        } else {
+            self.pending_rects.push((clip, instance));
+        }
     }
 
     pub fn draw_text(&mut self, text: &str, position: [f32; 2], bounds: [f32; 4]) {
-        self.draw_text_colored(text, position, bounds, Theme::TEXT_PRIMARY);
-    }
-
-    pub fn draw_text_colored(
-        &mut self,
-        text: &str,
-        position: [f32; 2],
-        bounds: [f32; 4],
-        color: Color,
-    ) {
-        self.draw_text_styled(
-            text,
-            position,
-            bounds,
-            color,
-            self.font_metrics.font_size,
-            self.font_metrics.line_height,
-            FontWeight::Regular,
-            false,
-        );
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    pub fn draw_text_styled(
-        &mut self,
-        text: &str,
-        position: [f32; 2],
-        bounds: [f32; 4],
-        color: Color,
-        font_size: f32,
-        line_height: f32,
-        weight: FontWeight,
-        is_mono: bool,
-    ) {
-        let metrics = Metrics {
-            font_size,
-            line_height,
-        };
-        let mut buffer = glyphon::Buffer::new(&mut self.font_system, metrics);
-        buffer.set_size(Some(10000.0), Some(10000.0));
-        let family = if is_mono {
-            Family::Name("Geist Mono")
-        } else {
-            Family::Name("Geist")
-        };
-        let attrs = Attrs::new().family(family).weight(weight.to_glyphon());
-        buffer.set_text(text, &attrs, Shaping::Basic, None);
+        let mut buffer = glyphon::Buffer::new(&mut self.font_system, self.font_metrics);
+        buffer.set_size(Some(1000.0), Some(1000.0));
+        buffer.set_text(text, &Attrs::new(), Shaping::Basic, None);
         buffer.shape_until_scroll(&mut self.font_system, false);
 
-        self.pending_labels.push((buffer, position, bounds, color));
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    pub fn draw_overlay_rect(
-        &mut self,
-        position: [f32; 2],
-        size: [f32; 2],
-        fill: Fill,
-        corner_radius: f32,
-        border_width: f32,
-        border_color: Color,
-        blur_radius: f32,
-        sharp: f32,
-        clip: [f32; 4],
-        rotation: f32,
-    ) {
-        let (fill_kind, color, gradient_angle, gradient_center, gradient_row) = match fill {
-            Fill::Solid(color) => (0.0, color, 0.0, [0.0, 0.0], 0.0),
-            Fill::Gradient(gradient) => {
-                let handle = self.gradient_atlas.bake_cached(&self.queue, &gradient);
-                let row = match handle {
-                    GradientHandle::Ramp { row } => row as f32,
-                    GradientHandle::Mesh { .. } => 0.0,
-                };
-                let (kind, param0, center) = match &gradient.kind {
-                    GradientKind::Linear { angle } => (1.0, *angle, [0.0, 0.0]),
-                    GradientKind::Radial { center, radius } => (2.0, *radius, *center),
-                    GradientKind::Conic { center } => (3.0, 0.0, *center),
-                    GradientKind::Mesh { .. } => (4.0, 0.0, [0.0, 0.0]),
-                };
-                (kind, Color::TRANSPARENT, param0, center, row)
-            }
-        };
-
-        self.pending_overlay_rects.push((
-            clip,
-            RectInstance {
-                position,
-                size,
-                fill_kind,
-                gradient_angle,
-                gradient_center,
-                gradient_row,
-                color,
-                corner_radius,
-                border_width,
-                border_color,
-                blur_radius,
-                sharp,
-                rotation,
-            },
-        ));
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    pub fn draw_overlay_text_styled(
-        &mut self,
-        text: &str,
-        position: [f32; 2],
-        bounds: [f32; 4],
-        color: Color,
-        font_size: f32,
-        line_height: f32,
-        weight: FontWeight,
-        is_mono: bool,
-    ) {
-        let metrics = Metrics {
-            font_size,
-            line_height,
-        };
-        let mut buffer = glyphon::Buffer::new(&mut self.font_system, metrics);
-        buffer.set_size(Some(10000.0), Some(10000.0));
-        let family = if is_mono {
-            Family::Name("Geist Mono")
+        if self.in_overlay_phase {
+            self.overlay_labels.push((buffer, position, bounds));
         } else {
-            Family::Name("Geist")
-        };
-        let attrs = Attrs::new().family(family).weight(weight.to_glyphon());
-        buffer.set_text(text, &attrs, Shaping::Basic, None);
-        buffer.shape_until_scroll(&mut self.font_system, false);
-
-        self.pending_overlay_labels
-            .push((buffer, position, bounds, color));
+            self.pending_labels.push((buffer, position, bounds));
+        }
     }
 
     pub fn present(&mut self) {
-        let total_rects = self.pending_rects.len() + self.pending_overlay_rects.len();
+        let total_rects = self.pending_rects.len() + self.overlay_rects.len();
         if total_rects > self.rect_instance_capacity {
             self.rect_instance_capacity = total_rects * 2;
             let placeholder = RectInstance {
@@ -691,9 +521,10 @@ impl Painter {
             });
         }
 
-        // Upload instances: base rects followed by overlay rects
         let mut instances: Vec<RectInstance> = self.pending_rects.iter().map(|(_, r)| *r).collect();
-        instances.extend(self.pending_overlay_rects.iter().map(|(_, r)| *r));
+        let overlay_start = instances.len();
+        instances.extend(self.overlay_rects.iter().map(|(_, r)| *r));
+
         self.queue.write_buffer(
             &self.rect_instance_buffer,
             0,
@@ -721,10 +552,52 @@ impl Painter {
             },
         );
 
+        let surface_w = self.surface_config.width;
+        let surface_h = self.surface_config.height;
+
+        let draw_rect_group = |render_pass: &mut wgpu::RenderPass<'_>,
+                               rects: &[([f32; 4], RectInstance)],
+                               base_index: usize| {
+            let mut range_start = 0usize;
+            while range_start < rects.len() {
+                let clip = rects[range_start].0;
+                let mut range_end = range_start + 1;
+                while range_end < rects.len() && rects[range_end].0 == clip {
+                    range_end += 1;
+                }
+
+                let x = clip[0].max(0.0) as u32;
+                let y = clip[1].max(0.0) as u32;
+                let right = (clip[2].max(0.0) as u32).min(surface_w);
+                let bottom = (clip[3].max(0.0) as u32).min(surface_h);
+
+                if right > x && bottom > y {
+                    render_pass.set_scissor_rect(x, y, right - x, bottom - y);
+                    render_pass.draw(
+                        0..QUAD_VERTICES.len() as u32,
+                        (base_index + range_start) as u32..(base_index + range_end) as u32,
+                    );
+                }
+                range_start = range_end;
+            }
+        };
+
+        let bind_rect_pipeline = |render_pass: &mut wgpu::RenderPass<'_>| {
+            render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.set_vertex_buffer(0, self.quad_vertex_buffer.slice(..));
+            render_pass.set_vertex_buffer(1, self.rect_instance_buffer.slice(..));
+            render_pass.set_bind_group(0, &self.bind_group, &[]);
+            render_pass.set_bind_group(1, &self.gradient_bind_group, &[]);
+        };
+
+        // Normal text prepared on self.text_renderer, overlay text on
+        // self.overlay_text_renderer — two separate instances sharing one
+        // TextAtlas, since glyphon's TextRenderer isn't safe to prepare()
+        // twice on the same instance within one frame.
         let text_areas = self
             .pending_labels
             .iter()
-            .map(|(buffer, position, bounds, color)| TextArea {
+            .map(|(buffer, position, bounds)| TextArea {
                 buffer,
                 left: position[0],
                 top: position[1],
@@ -735,12 +608,7 @@ impl Painter {
                     right: bounds[2] as i32,
                     bottom: bounds[3] as i32,
                 },
-                default_color: glyphon::Color::rgba(
-                    (color.r * 255.0).round().clamp(0.0, 255.0) as u8,
-                    (color.g * 255.0).round().clamp(0.0, 255.0) as u8,
-                    (color.b * 255.0).round().clamp(0.0, 255.0) as u8,
-                    (color.a * 255.0).round().clamp(0.0, 255.0) as u8,
-                ),
+                default_color: glyphon::Color::rgb(255, 255, 255),
                 custom_glyphs: &[],
             });
 
@@ -755,6 +623,36 @@ impl Painter {
                 &mut self.swash_cache,
             )
             .expect("failed to prepare text");
+
+        let overlay_text_areas = self
+            .overlay_labels
+            .iter()
+            .map(|(buffer, position, bounds)| TextArea {
+                buffer,
+                left: position[0],
+                top: position[1],
+                scale: 1.0,
+                bounds: TextBounds {
+                    left: bounds[0] as i32,
+                    top: bounds[1] as i32,
+                    right: bounds[2] as i32,
+                    bottom: bounds[3] as i32,
+                },
+                default_color: glyphon::Color::rgb(255, 255, 255),
+                custom_glyphs: &[],
+            });
+
+        self.overlay_text_renderer
+            .prepare(
+                &self.device,
+                &self.queue,
+                &mut self.font_system,
+                &mut self.text_atlas,
+                &self.viewport,
+                overlay_text_areas,
+                &mut self.swash_cache,
+            )
+            .expect("failed to prepare overlay text");
 
         {
             let mut render_pass = command_encoder.begin_render_pass(&RenderPassDescriptor {
@@ -774,88 +672,27 @@ impl Painter {
                 multiview_mask: None,
             });
 
-            render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_vertex_buffer(0, self.quad_vertex_buffer.slice(..));
-            render_pass.set_vertex_buffer(1, self.rect_instance_buffer.slice(..));
-            render_pass.set_bind_group(0, &self.bind_group, &[]);
-            render_pass.set_bind_group(1, &self.gradient_bind_group, &[]);
+            // --- Pass 1: normal rects ---
+            bind_rect_pipeline(&mut render_pass);
+            draw_rect_group(&mut render_pass, &self.pending_rects, 0);
+            render_pass.set_scissor_rect(0, 0, surface_w, surface_h);
 
-            // Group consecutive rects sharing the same clip rect into one
-            // draw call each, setting the scissor rect before every group.
-            // Submission order is preserved — only the *batching* changes,
-            // never the paint order.
-            let surface_w = self.surface_config.width;
-            let surface_h = self.surface_config.height;
-
-            let mut range_start = 0usize;
-            while range_start < self.pending_rects.len() {
-                let clip = self.pending_rects[range_start].0;
-                let mut range_end = range_start + 1;
-                while range_end < self.pending_rects.len()
-                    && self.pending_rects[range_end].0 == clip
-                {
-                    range_end += 1;
-                }
-
-                // Clip rect -> scissor rect, clamped into the surface bounds.
-                // wgpu panics on a scissor rect that extends past the render
-                // target or has zero/negative size, so both are guarded here.
-                let x = clip[0].max(0.0) as u32;
-                let y = clip[1].max(0.0) as u32;
-                let right = (clip[2].max(0.0) as u32).min(surface_w);
-                let bottom = (clip[3].max(0.0) as u32).min(surface_h);
-
-                if right > x && bottom > y {
-                    render_pass.set_scissor_rect(x, y, right - x, bottom - y);
-                    render_pass.draw(
-                        0..QUAD_VERTICES.len() as u32,
-                        range_start as u32..range_end as u32,
-                    );
-                }
-                // else: this group's clip rect is fully offscreen/degenerate
-                // (e.g. scrolled entirely out of view) — correctly skipped,
-                // not drawn at all.
-
-                range_start = range_end;
-            }
-
-            // Render base text
+            // --- Pass 2: normal text ---
             self.text_renderer
                 .render(&self.text_atlas, &self.viewport, &mut render_pass)
                 .expect("failed to render text");
 
-            // --- OVERLAY PASS (Tooltips, Popovers, Modals) ---
-            // Rendered strictly on top of all base geometry and base text
-            if !self.pending_overlay_rects.is_empty() {
-                let overlay_offset = self.pending_rects.len();
-                let mut range_start = 0usize;
-                while range_start < self.pending_overlay_rects.len() {
-                    let clip = self.pending_overlay_rects[range_start].0;
-                    let mut range_end = range_start + 1;
-                    while range_end < self.pending_overlay_rects.len()
-                        && self.pending_overlay_rects[range_end].0 == clip
-                    {
-                        range_end += 1;
-                    }
-
-                    let x = clip[0].max(0.0) as u32;
-                    let y = clip[1].max(0.0) as u32;
-                    let right = (clip[2].max(0.0) as u32).min(surface_w);
-                    let bottom = (clip[3].max(0.0) as u32).min(surface_h);
-
-                    if right > x && bottom > y {
-                        render_pass.set_scissor_rect(x, y, right - x, bottom - y);
-                        render_pass.draw(
-                            0..QUAD_VERTICES.len() as u32,
-                            (overlay_offset + range_start) as u32
-                                ..(overlay_offset + range_end) as u32,
-                        );
-                    }
-                    range_start = range_end;
-                }
-            }
-
+            // --- Pass 3: overlay rects ---
+            // Re-bind: glyphon's render() call above rebinds its own
+            // pipeline/buffers on this render pass, clobbering ours.
+            bind_rect_pipeline(&mut render_pass);
+            draw_rect_group(&mut render_pass, &self.overlay_rects, overlay_start);
             render_pass.set_scissor_rect(0, 0, surface_w, surface_h);
+
+            // --- Pass 4: overlay text ---
+            self.overlay_text_renderer
+                .render(&self.text_atlas, &self.viewport, &mut render_pass)
+                .expect("failed to render overlay text");
         }
 
         self.queue.submit(iter::once(command_encoder.finish()));

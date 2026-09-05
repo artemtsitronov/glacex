@@ -38,7 +38,7 @@ impl Widget for ColorDemo {
         let mut hex_input = TextInput::new("color_hex_input", 320.0);
 
         let mut preview_label = Label::new("Styled Preview");
-        let mut preview_btn = Button::new("Sample Button").style(ButtonStyle {
+        let mut preview_btn = Button::new("btn", "Sample Button").style(ButtonStyle {
             fill: Fill::Solid(parsed_color),
             hover_fill: Fill::Solid(parsed_color.lighten(0.15)),
             pressed_fill: Fill::Solid(parsed_color.darken(0.2)),
