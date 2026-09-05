@@ -10,8 +10,6 @@ pub struct TextEditState {
     last_activity: Instant,
     pub dragging: bool,
     pub hovered: bool,
-    pub focus_t: f32,
-    pub hover_t: f32,
 }
 
 impl Default for TextEditState {
@@ -24,8 +22,6 @@ impl Default for TextEditState {
             last_activity: Instant::now(),
             dragging: false,
             hovered: false,
-            focus_t: 0.0,
-            hover_t: 0.0,
         }
     }
 }

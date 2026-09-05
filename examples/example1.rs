@@ -42,10 +42,9 @@ impl Widget for ColorDemo {
             fill: Fill::Solid(parsed_color),
             hover_fill: Fill::Solid(parsed_color.lighten(0.15)),
             pressed_fill: Fill::Solid(parsed_color.darken(0.2)),
-            text_color: Color::WHITE,
             border_width: 1.0,
             border_color: Color::WHITE.with_alpha(0.2),
-            corner_radius: Theme::RADIUS_MD,
+            corner_radius: 8.0,
             shadow: Some(ShadowStyle {
                 color: parsed_color.with_alpha(0.35),
                 blur_radius: 16.0,

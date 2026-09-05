@@ -24,11 +24,9 @@ pub struct ScrollViewStyle {
 
 impl Default for ScrollViewStyle {
     fn default() -> Self {
-        // Neutral fallback — theme-aware defaults are applied in arrange() when
-        // no explicit style override has been set on the widget.
         ScrollViewStyle {
-            thumb_fill: Fill::Solid(Color::rgb(113, 113, 122).with_alpha(0.5)), // zinc-500 @ 50%
-            thumb_dragging_fill: Fill::Solid(Color::rgb(82, 82, 91).with_alpha(0.75)), // zinc-600 @ 75%
+            thumb_fill: Fill::Solid(Color::WHITE.with_alpha(0.3)),
+            thumb_dragging_fill: Fill::Solid(Color::WHITE.with_alpha(0.5)),
             thumb_corner_radius: ScrollConfig::default().thickness / 2.0,
         }
     }
@@ -88,25 +86,7 @@ impl<'a> Measurable for ScrollView<'a> {
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
-        // Resolve scrollbar style against the active theme when not overridden.
-        // On dark themes use subtle white-alpha; on light themes use zinc so the
-        // thumb is always visible against the background.
-        let style = self.style.clone().unwrap_or_else(|| {
-            let theme = *ui.theme();
-            if theme.is_dark {
-                ScrollViewStyle {
-                    thumb_fill: Fill::Solid(Color::WHITE.with_alpha(0.35)),
-                    thumb_dragging_fill: Fill::Solid(Color::WHITE.with_alpha(0.65)),
-                    thumb_corner_radius: ScrollConfig::default().thickness / 2.0,
-                }
-            } else {
-                ScrollViewStyle {
-                    thumb_fill: Fill::Solid(theme.text_secondary.with_alpha(0.60)),
-                    thumb_dragging_fill: Fill::Solid(theme.text_primary.with_alpha(0.85)),
-                    thumb_corner_radius: ScrollConfig::default().thickness / 2.0,
-                }
-            }
-        });
+        let style = self.style.clone().unwrap_or_default();
 
         let hovered = contains(position, size, 0.0, ui.mouse_position());
         let mut state = ui.take_widget_state_or(&self.id, self.initial_state());
@@ -246,13 +226,10 @@ impl<'a> Measurable for ScrollView<'a> {
             track_y,
         ];
 
-        let has_scroll_y = geometry_y.max_scroll > 0.0;
-        let has_scroll_x = geometry_x.max_scroll > 0.0;
-        let active_y = track_hovered_y || state.y.dragging || state.y.recently_active(&self.config);
-        let active_x = track_hovered_x || state.x.dragging || state.x.recently_active(&self.config);
-
-        let show_y = has_scroll_y;
-        let show_x = has_scroll_x;
+        let show_y = geometry_y.max_scroll > 0.0
+            && (track_hovered_y || state.y.dragging || state.y.recently_active(&self.config));
+        let show_x = geometry_x.max_scroll > 0.0
+            && (track_hovered_x || state.x.dragging || state.x.recently_active(&self.config));
 
         if show_y {
             ui.push_input_block([
@@ -292,7 +269,7 @@ impl<'a> Measurable for ScrollView<'a> {
         }
 
         if show_y {
-            let thumb_fill = if state.y.dragging || active_y {
+            let thumb_fill = if state.y.dragging {
                 style.thumb_dragging_fill.clone()
             } else {
                 style.thumb_fill.clone()
@@ -311,7 +288,7 @@ impl<'a> Measurable for ScrollView<'a> {
         }
 
         if show_x {
-            let thumb_fill = if state.x.dragging || active_x {
+            let thumb_fill = if state.x.dragging {
                 style.thumb_dragging_fill
             } else {
                 style.thumb_fill
