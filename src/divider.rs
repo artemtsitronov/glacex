@@ -45,6 +45,12 @@ impl Divider {
         self.color = color;
         self
     }
+
+    /// Sets the divider to an ultra-subtle hairline (`Theme::BORDER_FAINT`).
+    pub fn faint(mut self) -> Self {
+        self.color = Theme::BORDER_FAINT;
+        self
+    }
 }
 
 impl Widget for Divider {

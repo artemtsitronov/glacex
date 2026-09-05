@@ -38,13 +38,14 @@ impl Widget for ColorDemo {
         let mut hex_input = TextInput::new("color_hex_input", 320.0);
 
         let mut preview_label = Label::new("Styled Preview");
-        let mut preview_btn = Button::new("btn", "Sample Button").style(ButtonStyle {
+        let mut preview_btn = Button::new("Sample Button").style(ButtonStyle {
             fill: Fill::Solid(parsed_color),
             hover_fill: Fill::Solid(parsed_color.lighten(0.15)),
             pressed_fill: Fill::Solid(parsed_color.darken(0.2)),
+            text_color: Color::WHITE,
             border_width: 1.0,
             border_color: Color::WHITE.with_alpha(0.2),
-            corner_radius: 8.0,
+            corner_radius: Theme::RADIUS_MD,
             shadow: Some(ShadowStyle {
                 color: parsed_color.with_alpha(0.35),
                 blur_radius: 16.0,
