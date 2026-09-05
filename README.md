@@ -409,37 +409,64 @@ let sunset = Fill::Gradient(Gradient {
 
 Gradient modes supported: `GradientKind::Linear { angle }`, `Radial { center, radius }`, and `Conic { center }`.
 
-### Theme
+### Theme Engine & Design Tokens
 
-`Theme` provides a unified modern dark palette (inspired by Linear, Vercel, and Raycast):
+Glacex includes a complete runtime theming engine with **9 meticulously calibrated presets**. By default, Glacex boots into a pristine, luxurious **shadcn / Apple-grade white theme** (`Theme::LIGHT`), while also supporting instant switching to community favorites from r/unixporn.
 
-| Palette Constant | Hex / Visual | Purpose |
+```rust
+// Switch the entire application palette dynamically at runtime
+ui.set_theme(Theme::LIGHT);            // Default: Apple / shadcn pure white
+ui.set_theme(Theme::DARK);             // Linear / Vercel dark mode
+ui.set_theme(Theme::CATPPUCCIN_MOCHA); // Warm dark pastel
+ui.set_theme(Theme::CATPPUCCIN_LATTE); // Cozy light pastel
+ui.set_theme(Theme::TOKYO_NIGHT);      // Midnight cyberpunk
+ui.set_theme(Theme::GRUVBOX_DARK);     // Warm retro dark
+ui.set_theme(Theme::GRUVBOX_LIGHT);    // Warm retro light
+ui.set_theme(Theme::NORD);             // Arctic cool blue
+ui.set_theme(Theme::ROSE_PINE);        // Moody minimalist aesthetic
+```
+
+#### Built-in Theme Presets
+
+| Preset | Mode | Canvas | Accent | Vibe |
+|---|---|---|---|---|
+| `Theme::LIGHT` *(Default)* | Light | `#ffffff` | `#18181b` | Apple & shadcn/ui minimal luxury |
+| `Theme::DARK` | Dark | `#09090b` | `#4f46e5` | Linear & Vercel deep charcoal |
+| `Theme::CATPPUCCIN_MOCHA` | Dark | `#1e1e2e` | `#cba6f7` | Soothing pastel warmth |
+| `Theme::CATPPUCCIN_LATTE` | Light | `#eff1f5` | `#8839ef` | Soft, creamy daylight aesthetic |
+| `Theme::TOKYO_NIGHT` | Dark | `#1a1b26` | `#7aa2f7` | Cyberpunk neon midnight |
+| `Theme::GRUVBOX_DARK` | Dark | `#282828` | `#fe8019` | Retro warm groove |
+| `Theme::GRUVBOX_LIGHT` | Light | `#fbf1c7` | `#af3a03` | Paper-textured warm daylight |
+| `Theme::NORD` | Dark | `#2e3440` | `#88c0d0` | Arctic frost & cool slate |
+| `Theme::ROSE_PINE` | Dark | `#191724` | `#eb6f92` | Atmospheric vintage rose |
+
+#### Core Design Tokens
+
+| Token Field | Default (`LIGHT`) | Purpose |
 |---|---|---|
-| `Theme::BG_CANVAS` | `#09090b` | Deep root window background (Linear near-black) |
-| `Theme::SURFACE` | `#0f0f12` | Standard container / card surface |
-| `Theme::SURFACE_SUBTLE` | `#141418` | Inset containers, control tracks |
-| `Theme::SURFACE_ELEVATED` | `#1c1c22` | Floating modals, tooltips, popovers |
-| `Theme::IDLE` | `#18181c` | Resting control background |
-| `Theme::HOVERED` | `#232329` | Control hover surface |
-| `Theme::PRESSED` | `#2d2c36` | Tactile pressed control state |
-| `Theme::ACTIVE` | `#4f46e5` | Primary electric indigo accent |
-| `Theme::ACTIVE_HOVER` | `#6366f1` | Lighter hover state for active elements |
-| `Theme::BORDER_FAINT` | `rgba(255, 255, 255, 0.05)` | Structural dividers, sub-panels |
-| `Theme::BORDER` | `rgba(255, 255, 255, 0.08)` | Standard hairline borders |
-| `Theme::BORDER_STRONG` | `rgba(255, 255, 255, 0.16)` | Hover state border highlights |
-| `Theme::FOCUS_BORDER` | `#6366f1` | Vibrant focus ring outline |
-| `Theme::TEXT_PRIMARY` | `#f2f2f5` | High-contrast body text (off-white) |
-| `Theme::TEXT_SECONDARY` | `#a1a1aa` | Supporting labels and captions (Zinc 400) |
-| `Theme::TEXT_MUTED` | `#71717a` | Subdued metadata and timestamps (Zinc 500) |
-| `Theme::SUCCESS` | `#22c55e` | Semantic positive indicator (Emerald 500) |
-| `Theme::WARNING` | `#f59e0b` | Semantic caution indicator (Amber 500) |
-| `Theme::ERROR` | `#f43f5e` | Semantic destructive indicator (Rose 500) |
+| `bg_canvas` | `#ffffff` | Clean root window canvas |
+| `surface` | `#ffffff` | Standard elevated card/panel |
+| `surface_subtle` | `#f4f4f5` (Zinc 100) | Inset panels, control tracks |
+| `surface_elevated`| `#ffffff` | Modals, tooltips, dropdowns |
+| `idle` | `#f4f4f5` (Zinc 100) | Resting button/control fill |
+| `hovered` | `#e4e4e7` (Zinc 200) | Interactive hover state |
+| `pressed` | `#d4d4d8` (Zinc 300) | Tactile pressed state |
+| `active` | `#18181b` (Zinc 900) | High-contrast primary action |
+| `border_faint` | `rgba(0,0,0,0.04)` | Hairline internal dividers |
+| `border` | `rgba(0,0,0,0.08)` | Standard component border |
+| `border_strong` | `rgba(0,0,0,0.16)` | Focused / emphasized border |
+| `text_primary` | `#09090b` (Zinc 950) | High-contrast body typography |
+| `text_secondary`| `#71717a` (Zinc 500) | Subdued captions & descriptors |
+| `text_muted` | `#a1a1aa` (Zinc 400) | Micro metadata & placeholders |
+| `success` | `#16a34a` (Emerald 600)| Success status badge/progress |
+| `warning` | `#d97706` (Amber 600) | Warning status badge/progress |
+| `error` | `#e11d48` (Rose 600) | Error status badge/progress |
 
 ### Window Title and Background
 
 ```rust
 ui.set_title("Glacex Application");
-ui.set_bgcolor(Theme::BG_CANVAS);
+ui.set_theme(Theme::LIGHT); // Automatically synchronizes window background color
 ```
 
 ## How Rendering Works

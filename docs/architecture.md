@@ -128,18 +128,31 @@ Each `WindowEvent::RedrawRequested`:
 6. `ui.end_frame()` -- clears per-frame input buffers and flags.
 7. `window.request_redraw()` -- schedules the next frame immediately (uncapped, vsync-limited by the OS compositor).
 
-## 8. Design Token System & Surface Ladder (`src/theme.rs`)
+## 8. Design Token System & Themes (`src/theme.rs`)
 
-Glacex employs a 4-step dark-first surface ladder inspired by Linear and Vercel:
+Glacex features a runtime theming engine with **9 curated presets**, defaulted to a pristine Apple & shadcn-inspired **White / Light** aesthetic (`Theme::LIGHT`). Themes can be hot-swapped dynamically at runtime using `ui.set_theme(theme)`.
 
-- **Canvas (`Theme::BG_CANVAS`)**: `#09090b` root window background. Faint blue tint avoids halation.
-- **Surface (`Theme::SURFACE`)**: `#0f0f12` standard panel and card background.
-- **Subtle (`Theme::SURFACE_SUBTLE`)**: `#141418` grouped containers and control tracks.
-- **Elevated (`Theme::SURFACE_ELEVATED`)**: `#1c1c22` tooltips, popovers, and floating overlays.
+### Presets Available
+- `Theme::LIGHT` (Default): Pure white `#ffffff` canvas with zinc borders and charcoal primary accent.
+- `Theme::DARK`: Linear/Vercel-grade deep `#09090b` canvas with `#4f46e5` electric indigo accent.
+- `Theme::CATPPUCCIN_MOCHA`: Soothing dark pastel warmth.
+- `Theme::CATPPUCCIN_LATTE`: Soft daylight pastel aesthetic.
+- `Theme::TOKYO_NIGHT`: Cyberpunk neon midnight.
+- `Theme::GRUVBOX_DARK`: Warm retro groove charcoal and orange.
+- `Theme::GRUVBOX_LIGHT`: Paper-textured retro light daylight.
+- `Theme::NORD`: Arctic slate and frost blue.
+- `Theme::ROSE_PINE`: Moody vintage rose aesthetic.
+
+### Surface Elevation Hierarchy
+- **Canvas (`theme.bg_canvas`)**: Root window backdrop.
+- **Surface (`theme.surface`)**: Standard panel, card, and container background.
+- **Subtle (`theme.surface_subtle`)**: Grouped sub-containers, inputs, and control tracks.
+- **Elevated (`theme.surface_elevated`)**: Tooltips, popovers, and floating overlays.
 
 ### Two-Layer Shadow Architecture (`src/shadow.rs`)
 Depth is expressed through multi-layered shadows combining an ambient layer (wide, soft) with a key light layer (tight, crisp):
 - `Shadow::sm()` -- resting controls (buttons, inputs)
 - `Shadow::md()` -- cards and panels
 - `Shadow::lg()` -- elevated tooltips and overlays
+- `theme.shadow_sm()`, `theme.shadow_md()`, `theme.shadow_lg()` dynamically tailor blur and alpha to the current palette.
 

@@ -5,12 +5,27 @@ All notable changes to this project are documented in this file.
 ## [0.1.4]
 
 ### Added
+- Dynamic Theme Engine & 9 Built-in Presets (`src/theme.rs`):
+  - White-by-default Apple & shadcn-grade luxury aesthetic (`Theme::LIGHT`).
+  - 9 curated, pixel-perfect theme palettes:
+    - `Theme::LIGHT` (pure white canvas `#ffffff`, zinc borders, charcoal accent).
+    - `Theme::DARK` (deep linear near-black `#09090b`, electric indigo accent).
+    - `Theme::CATPPUCCIN_MOCHA` (soothing dark pastel warmth).
+    - `Theme::CATPPUCCIN_LATTE` (cozy daylight pastel warmth).
+    - `Theme::TOKYO_NIGHT` (cyberpunk neon midnight).
+    - `Theme::GRUVBOX_DARK` (retro warm groove charcoal and orange).
+    - `Theme::GRUVBOX_LIGHT` (warm retro light paper canvas).
+    - `Theme::NORD` (arctic cool frost slate).
+    - `Theme::ROSE_PINE` (moody vintage rose aesthetic).
+  - Dynamic palette switching via `Ui::set_theme(theme)` and query via `Ui::theme()`.
+  - Component style factories on `Theme`: `.button_style()`, `.primary_button_style()`, `.outline_button_style()`, `.ghost_button_style()`, `.danger_button_style()`, `.card_style()`, `.card_subtle_style()`, `.card_elevated_style()`, `.checkbox_style()`, `.switch_style()`, `.slider_style()`, `.input_style()`, `.text_area_style()`.
+  - Dedicated `examples/themes.rs` demonstration showcasing all 9 palettes.
 - Complete design token system in `src/theme.rs`:
-  - 4-step dark-first surface ladder (`BG_CANVAS` #09090b, `SURFACE` #0f0f12, `SURFACE_SUBTLE` #141418, `SURFACE_ELEVATED` #1c1c22) inspired by Linear and Vercel.
-  - Distinct `Theme::PRESSED` (#2d2c36) control state between hover and active.
-  - Semi-transparent border tokens (`BORDER_FAINT` 5% alpha, `BORDER` 8% alpha, `BORDER_STRONG` 16% alpha).
-  - Typography color hierarchy (`TEXT_PRIMARY` off-white #f2f2f5, `TEXT_SECONDARY` Zinc 400, `TEXT_MUTED` Zinc 500).
-  - Semantic status colors (`SUCCESS` Emerald 500, `WARNING` Amber 500, `ERROR` Rose 500).
+  - 4-step surface ladder (`bg_canvas`, `surface`, `surface_subtle`, `surface_elevated`).
+  - Distinct `pressed` control state between hover and active.
+  - Semi-transparent border tokens (`border_faint`, `border`, `border_strong`, `focus_border`).
+  - Typography color hierarchy (`text_primary`, `text_secondary`, `text_muted`).
+  - Semantic status colors (`success`, `warning`, `error`).
   - 4px base grid spacing constants and shadcn-aligned corner radius scale (`RADIUS_XS` through `RADIUS_LG`).
 - Multi-layer shadow system in `src/shadow.rs`:
   - Ambient (wide, soft) + key light (tight, crisp) two-layer architecture.
@@ -21,7 +36,7 @@ All notable changes to this project are documented in this file.
 - `Button` component enhancements:
   - Style variants: `.primary()`, `.outline()`, `.ghost()`, `.danger()`.
   - Tactile 1px press depth offset and shadow compression for physical elevation.
-  - Smooth border brightening to `Theme::BORDER_STRONG` on hover.
+  - Smooth border brightening to `theme.border_strong` on hover.
 - `Label` typography hierarchy:
   - `.color(Color)`, `.secondary()`, `.muted()`, and `.accent()` builder methods.
 - `Badge` component enhancements:

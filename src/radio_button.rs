@@ -108,7 +108,17 @@ impl Measurable for RadioButton {
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) -> RadioButtonResponse {
-        let style = self.style.clone().unwrap_or_default();
+        let theme = *ui.theme();
+        let style = self.style.clone().unwrap_or(RadioButtonStyle {
+            fill: Fill::Solid(theme.idle),
+            hover_fill: Fill::Solid(theme.hovered),
+            selected_fill: Fill::Solid(theme.active),
+            border_width: 1.0,
+            border_color: theme.border,
+            corner_radius: 9.0,
+            shadow: Some(theme.shadow_sm()[0]),
+            sharp: false,
+        });
         let dt = ui.dt();
 
         let interaction = Interaction::update(position, size, style.corner_radius, ui);
@@ -156,9 +166,9 @@ impl Measurable for RadioButton {
         };
 
         let border_color = if dot_t > 0.01 {
-            style.border_color.lerp(Theme::ACTIVE, dot_t * 0.4)
+            style.border_color.lerp(theme.active, dot_t * 0.4)
         } else if hover_t > 0.01 {
-            style.border_color.lerp(Theme::BORDER_STRONG, hover_t)
+            style.border_color.lerp(theme.border_strong, hover_t)
         } else {
             style.border_color
         };

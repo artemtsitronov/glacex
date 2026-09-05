@@ -128,9 +128,20 @@ impl Default for ButtonState {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ButtonVariant {
+    #[default]
+    Default,
+    Primary,
+    Outline,
+    Ghost,
+    Danger,
+}
+
 pub struct Button {
     label: String,
     interaction: Interaction,
+    variant: ButtonVariant,
     style: Option<ButtonStyle>,
     tooltip: Option<String>,
 }
@@ -140,6 +151,7 @@ impl Button {
         Button {
             label: label.into(),
             interaction: Interaction::default(),
+            variant: ButtonVariant::Default,
             style: None,
             tooltip: None,
         }
@@ -156,25 +168,25 @@ impl Button {
 
     /// Applies the primary accent CTA style.
     pub fn primary(mut self) -> Self {
-        self.style = Some(ButtonStyle::primary());
+        self.variant = ButtonVariant::Primary;
         self
     }
 
     /// Applies the outline style.
     pub fn outline(mut self) -> Self {
-        self.style = Some(ButtonStyle::outline());
+        self.variant = ButtonVariant::Outline;
         self
     }
 
     /// Applies the ghost / flat style.
     pub fn ghost(mut self) -> Self {
-        self.style = Some(ButtonStyle::ghost());
+        self.variant = ButtonVariant::Ghost;
         self
     }
 
     /// Applies the danger / destructive style.
     pub fn danger(mut self) -> Self {
-        self.style = Some(ButtonStyle::danger());
+        self.variant = ButtonVariant::Danger;
         self
     }
 
@@ -207,16 +219,26 @@ impl Widget for Button {
 
 impl Measurable for Button {
     fn measure(&mut self, ui: &mut Ui) -> [f32; 2] {
-        let padding = [14.0, 9.0];
-        let text_width = ui.measure_text(&self.label);
-        [
-            text_width + padding[0] * 2.0,
-            ui.line_height() + padding[1] * 2.0,
-        ]
+        let padding = [14.0, 8.0];
+        let text_width = ui.measure_text_styled(
+            &self.label,
+            14.0,
+            20.0,
+            crate::painter::FontWeight::Medium,
+            false,
+        );
+        [text_width + padding[0] * 2.0, 36.0]
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) -> ButtonResponse {
-        let style = self.style.clone().unwrap_or_default();
+        let theme = *ui.theme();
+        let style = self.style.clone().unwrap_or_else(|| match self.variant {
+            ButtonVariant::Default => theme.button_style(),
+            ButtonVariant::Primary => theme.primary_button_style(),
+            ButtonVariant::Outline => theme.outline_button_style(),
+            ButtonVariant::Ghost => theme.ghost_button_style(),
+            ButtonVariant::Danger => theme.danger_button_style(),
+        });
         let dt = ui.dt();
 
         let interaction = Interaction::update(position, size, style.corner_radius, ui);
@@ -252,7 +274,7 @@ impl Measurable for Button {
 
         // Smooth subtle border brightening on hover
         let border_color = if hover_t > 0.01 {
-            style.border_color.lerp(Theme::BORDER_STRONG, hover_t)
+            style.border_color.lerp(theme.border_strong, hover_t)
         } else {
             style.border_color
         };
@@ -281,15 +303,30 @@ impl Measurable for Button {
             0.0,
         );
 
-        let text_width = ui.measure_text(&self.label);
-        let text_position = center_text_in(draw_position, size, text_width, ui.line_height());
+        let text_width = ui.measure_text_styled(
+            &self.label,
+            14.0,
+            20.0,
+            crate::painter::FontWeight::Medium,
+            false,
+        );
+        let text_position = center_text_in(draw_position, size, text_width, 20.0);
         let clip_rect = [
             draw_position[0],
             draw_position[1],
             draw_position[0] + size[0],
             draw_position[1] + size[1],
         ];
-        ui.draw_text_colored(&self.label, text_position, clip_rect, style.text_color);
+        ui.draw_text_styled(
+            &self.label,
+            text_position,
+            clip_rect,
+            style.text_color,
+            14.0,
+            20.0,
+            crate::painter::FontWeight::Medium,
+            false,
+        );
 
         if interaction.hovered {
             ui.set_cursor_icon(CursorIcon::Pointer);

@@ -104,7 +104,8 @@ impl Measurable for Switch {
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) -> SwitchResponse {
-        let style = self.style.clone().unwrap_or_default();
+        let theme = *ui.theme();
+        let style = self.style.clone().unwrap_or_else(|| theme.switch_style());
         let interaction = Interaction::update(position, size, style.corner_radius, ui);
         self.interaction = interaction;
 
@@ -138,7 +139,7 @@ impl Measurable for Switch {
         let track_fill = if let (Fill::Solid(off_col), Fill::Solid(on_col)) =
             (&style.track_off_fill, &style.track_on_fill)
         {
-            let idle_or_hover = off_col.lerp(Theme::HOVERED, hover_t);
+            let idle_or_hover = off_col.lerp(theme.hovered, hover_t);
             Fill::Solid(idle_or_hover.lerp(*on_col, progress))
         } else if enabled {
             style.track_on_fill
@@ -147,9 +148,9 @@ impl Measurable for Switch {
         };
 
         let border_color = if progress > 0.01 {
-            style.border_color.lerp(Theme::ACTIVE, progress * 0.5)
+            style.border_color.lerp(theme.active, progress * 0.5)
         } else if hover_t > 0.01 {
-            style.border_color.lerp(Theme::BORDER_STRONG, hover_t)
+            style.border_color.lerp(theme.border_strong, hover_t)
         } else {
             style.border_color
         };

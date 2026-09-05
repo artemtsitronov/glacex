@@ -62,8 +62,17 @@ impl CardStyle {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CardVariant {
+    #[default]
+    Default,
+    Subtle,
+    Elevated,
+}
+
 pub struct Card<'a> {
     child: Box<dyn AnyWidget + 'a>,
+    variant: CardVariant,
     style: Option<CardStyle>,
 }
 
@@ -71,6 +80,7 @@ impl<'a> Card<'a> {
     pub fn new(child: &'a mut impl Measurable) -> Self {
         Card {
             child: Box::new(child),
+            variant: CardVariant::Default,
             style: None,
         }
     }
@@ -86,14 +96,25 @@ impl<'a> Card<'a> {
 
     /// Applies the subtle sub-panel style.
     pub fn subtle(mut self) -> Self {
-        self.style = Some(CardStyle::subtle());
+        self.variant = CardVariant::Subtle;
         self
     }
 
     /// Applies the elevated floating card style.
     pub fn elevated(mut self) -> Self {
-        self.style = Some(CardStyle::elevated());
+        self.variant = CardVariant::Elevated;
         self
+    }
+
+    fn resolved_style(&self, theme: &Theme) -> CardStyle {
+        if let Some(s) = &self.style {
+            return s.clone();
+        }
+        match self.variant {
+            CardVariant::Default => theme.card_style(),
+            CardVariant::Subtle => theme.card_subtle_style(),
+            CardVariant::Elevated => theme.card_elevated_style(),
+        }
     }
 }
 
@@ -108,7 +129,7 @@ impl<'a> Widget for Card<'a> {
 
 impl<'a> Measurable for Card<'a> {
     fn measure(&mut self, ui: &mut Ui) -> [f32; 2] {
-        let style = self.style.clone().unwrap_or_default();
+        let style = self.resolved_style(ui.theme());
         let inner_size = self.child.measure(ui);
         [
             inner_size[0] + style.padding[0] * 2.0,
@@ -117,7 +138,7 @@ impl<'a> Measurable for Card<'a> {
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
-        let style = self.style.clone().unwrap_or_default();
+        let style = self.resolved_style(ui.theme());
         if let Some(shadow) = &style.shadow {
             draw_shadow(shadow, position, size, style.corner_radius, ui);
         }
@@ -125,7 +146,7 @@ impl<'a> Measurable for Card<'a> {
         ui.draw_rect(
             position,
             size,
-            style.fill.clone(),
+            style.fill,
             style.corner_radius,
             style.border_width,
             style.border_color,

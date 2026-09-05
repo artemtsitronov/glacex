@@ -3,8 +3,8 @@ use crate::fill::{Fill, Gradient, GradientHandle, GradientKind, GradientStop};
 use crate::shapes::{QUAD_VERTICES, QuadVertex, RectInstance};
 use crate::theme::Theme;
 use glyphon::{
-    Attrs, Cache, FontSystem, Metrics, Resolution, Shaping, SwashCache, TextArea, TextAtlas,
-    TextBounds, TextRenderer, Viewport,
+    Attrs, Cache, Family, FontSystem, Metrics, Resolution, Shaping, SwashCache, TextArea,
+    TextAtlas, TextBounds, TextRenderer, Viewport, Weight,
 };
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -332,7 +332,22 @@ impl Painter {
             mapped_at_creation: false,
         });
 
-        let font_system = FontSystem::new();
+        let mut font_system = FontSystem::new();
+        font_system
+            .db_mut()
+            .load_font_data(include_bytes!("../assets/fonts/Geist-Regular.ttf").to_vec());
+        font_system
+            .db_mut()
+            .load_font_data(include_bytes!("../assets/fonts/Geist-Medium.ttf").to_vec());
+        font_system
+            .db_mut()
+            .load_font_data(include_bytes!("../assets/fonts/Geist-SemiBold.ttf").to_vec());
+        font_system
+            .db_mut()
+            .load_font_data(include_bytes!("../assets/fonts/Geist-Bold.ttf").to_vec());
+        font_system
+            .db_mut()
+            .load_font_data(include_bytes!("../assets/fonts/GeistMono-Regular.ttf").to_vec());
         let swash_cache = SwashCache::new();
         let cache = Cache::new(&device);
         let viewport = Viewport::new(&device, &cache);
@@ -341,7 +356,7 @@ impl Painter {
             TextRenderer::new(&mut text_atlas, &device, MultisampleState::default(), None);
 
         let font_metrics = Metrics {
-            font_size: 16.0,
+            font_size: 14.0,
             line_height: 20.0,
         };
 
@@ -366,7 +381,7 @@ impl Painter {
             pending_labels: vec![],
             gradient_atlas,
             gradient_bind_group,
-            bgcolor: WgpuColor::BLACK,
+            bgcolor: WgpuColor::WHITE,
         }
     }
 
@@ -381,15 +396,64 @@ impl Painter {
             self.surface_config.height as f32,
         ]
     }
+}
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum FontWeight {
+    #[default]
+    Regular,
+    Medium,
+    SemiBold,
+    Bold,
+}
+
+impl FontWeight {
+    pub fn to_glyphon(self) -> Weight {
+        match self {
+            FontWeight::Regular => Weight::NORMAL,
+            FontWeight::Medium => Weight::MEDIUM,
+            FontWeight::SemiBold => Weight::SEMIBOLD,
+            FontWeight::Bold => Weight::BOLD,
+        }
+    }
+}
+
+impl Painter {
     pub fn line_height(&self) -> f32 {
         self.font_metrics.line_height
     }
 
     pub fn measure_text(&mut self, text: &str) -> f32 {
-        let mut buffer = glyphon::Buffer::new(&mut self.font_system, self.font_metrics);
-        buffer.set_size(Some(1000.0), Some(1000.0));
-        buffer.set_text(text, &Attrs::new(), Shaping::Basic, None);
+        self.measure_text_styled(
+            text,
+            self.font_metrics.font_size,
+            self.font_metrics.line_height,
+            FontWeight::Regular,
+            false,
+        )
+    }
+
+    pub fn measure_text_styled(
+        &mut self,
+        text: &str,
+        font_size: f32,
+        line_height: f32,
+        weight: FontWeight,
+        is_mono: bool,
+    ) -> f32 {
+        let metrics = Metrics {
+            font_size,
+            line_height,
+        };
+        let mut buffer = glyphon::Buffer::new(&mut self.font_system, metrics);
+        buffer.set_size(Some(10000.0), Some(10000.0));
+        let family = if is_mono {
+            Family::Name("Geist Mono")
+        } else {
+            Family::Name("Geist")
+        };
+        let attrs = Attrs::new().family(family).weight(weight.to_glyphon());
+        buffer.set_text(text, &attrs, Shaping::Basic, None);
         buffer.shape_until_scroll(&mut self.font_system, false);
 
         buffer
@@ -470,9 +534,43 @@ impl Painter {
         bounds: [f32; 4],
         color: Color,
     ) {
-        let mut buffer = glyphon::Buffer::new(&mut self.font_system, self.font_metrics);
-        buffer.set_size(Some(1000.0), Some(1000.0));
-        buffer.set_text(text, &Attrs::new(), Shaping::Basic, None);
+        self.draw_text_styled(
+            text,
+            position,
+            bounds,
+            color,
+            self.font_metrics.font_size,
+            self.font_metrics.line_height,
+            FontWeight::Regular,
+            false,
+        );
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn draw_text_styled(
+        &mut self,
+        text: &str,
+        position: [f32; 2],
+        bounds: [f32; 4],
+        color: Color,
+        font_size: f32,
+        line_height: f32,
+        weight: FontWeight,
+        is_mono: bool,
+    ) {
+        let metrics = Metrics {
+            font_size,
+            line_height,
+        };
+        let mut buffer = glyphon::Buffer::new(&mut self.font_system, metrics);
+        buffer.set_size(Some(10000.0), Some(10000.0));
+        let family = if is_mono {
+            Family::Name("Geist Mono")
+        } else {
+            Family::Name("Geist")
+        };
+        let attrs = Attrs::new().family(family).weight(weight.to_glyphon());
+        buffer.set_text(text, &attrs, Shaping::Basic, None);
         buffer.shape_until_scroll(&mut self.font_system, false);
 
         self.pending_labels.push((buffer, position, bounds, color));

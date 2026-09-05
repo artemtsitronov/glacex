@@ -105,7 +105,8 @@ impl Measurable for Slider {
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) -> SliderResponse {
-        let style = self.style.clone().unwrap_or_default();
+        let theme = *ui.theme();
+        let style = self.style.clone().unwrap_or_else(|| theme.slider_style());
         let dt = ui.dt();
         let mouse_pos = ui.mouse_position();
         let mouse_pressed = ui.mouse_pressed();
@@ -212,7 +213,7 @@ impl Measurable for Slider {
             ui.draw_rect(
                 glow_pos,
                 [glow_size, glow_size],
-                Fill::Solid(Theme::ACTIVE.with_alpha(0.22 * active_halo_t)),
+                Fill::Solid(theme.active.with_alpha(0.22 * active_halo_t)),
                 glow_size / 2.0,
                 0.0,
                 Color::TRANSPARENT,
@@ -235,7 +236,7 @@ impl Measurable for Slider {
             style.thumb_fill,
             thumb_radius,
             1.0,
-            Theme::BORDER,
+            theme.border,
             0.0,
             false,
             0.0,

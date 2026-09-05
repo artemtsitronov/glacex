@@ -171,7 +171,8 @@ impl Measurable for Checkbox {
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) -> CheckboxResponse {
-        let style = self.style.clone().unwrap_or_default();
+        let theme = *ui.theme();
+        let style = self.style.clone().unwrap_or_else(|| theme.checkbox_style());
         let dt = ui.dt();
 
         let interaction = Interaction::update(position, size, style.corner_radius, ui);
@@ -205,7 +206,7 @@ impl Measurable for Checkbox {
         let fill = if let (Fill::Solid(idle_col), Fill::Solid(chk_col)) =
             (&style.fill, &style.checked_fill)
         {
-            let idle_or_hover = idle_col.lerp(Theme::HOVERED, hover_t);
+            let idle_or_hover = idle_col.lerp(theme.hovered, hover_t);
             Fill::Solid(idle_or_hover.lerp(*chk_col, anim_t))
         } else if checked {
             style.checked_fill
@@ -215,9 +216,9 @@ impl Measurable for Checkbox {
 
         // Smooth subtle border transition
         let border_color = if anim_t > 0.01 {
-            style.border_color.lerp(Theme::ACTIVE, anim_t * 0.4)
+            style.border_color.lerp(theme.active, anim_t * 0.4)
         } else if hover_t > 0.01 {
-            style.border_color.lerp(Theme::BORDER_STRONG, hover_t)
+            style.border_color.lerp(theme.border_strong, hover_t)
         } else {
             style.border_color
         };

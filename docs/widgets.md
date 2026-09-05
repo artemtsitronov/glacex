@@ -119,24 +119,42 @@ Separation rule for dividing layout sections.
 ## 3. Displays
 
 ### Label
-Typography text with semantic hierarchy and color customization.
+Typography text powered by authentic bundled Geist & Geist Mono fonts with semantic hierarchy, scale, and weight customization.
 - **Constructor**: `Label::new("Text")` or `Label::new(format!("Count: {n}"))`
-- **Builder methods**:
-  - `.color(Color)` -- explicit text color
-  - `.secondary()` -- supporting text in `Theme::TEXT_SECONDARY`
-  - `.muted()` -- subdued/dim text in `Theme::TEXT_MUTED`
-  - `.accent()` -- primary indigo accent in `Theme::ACTIVE`
+- **Variants**:
+  - `.primary()` -- high-contrast body text in `Theme.text_primary`
+  - `.secondary()` -- supporting caption in `Theme.text_secondary`
+  - `.muted()` -- subdued/dim text in `Theme.text_muted`
+  - `.accent()` -- primary action accent in `Theme.active`
+  - `.success()` -- emerald success text in `Theme.success`
+  - `.warning()` -- amber warning text in `Theme.warning`
+  - `.error()` -- rose error text in `Theme.error`
+  - `.color(Color)` -- explicit custom text color
+- **Typography Sizing & Weights**:
+  - `.size(px)` -- custom font size in pixels (line height automatically scaled)
+  - `.caption()` -- 12px micro metadata
+  - `.subheading()` -- 16px section subtitle
+  - `.heading()` -- 18px card / section title
+  - `.title()` -- 22px display header
+  - `.metric()` -- 28px bold KPI metric display (shadcn stat cards)
+  - `.medium()` -- 500 font weight
+  - `.semibold()` -- 600 font weight
+  - `.bold()` -- 700 font weight
+  - `.mono()` -- switches font to Geist Mono
 
 ### Badge
-Compact semantic status pill with role-tinted surfaces and high-contrast typography.
+Compact semantic status pill with role-tinted surfaces, 6px pill radius, and Geist Medium typography.
 - **Constructor**: `Badge::new("ACTIVE")`
-- **Variants**: `BadgeVariant::Default`, `Outline`, `Success`, `Warning`, `Error`
-  - `Success`: Emerald 500 text and border with 12% alpha surface
-  - `Warning`: Amber 500 text and border with 12% alpha surface
-  - `Error`: Rose 500 text and border with 12% alpha surface
+- **Variants**:
+  - `Badge::new("...").default()` -- neutral dark / active badge
+  - `Badge::new("...").secondary()` -- zinc subtle background with secondary text
+  - `Badge::new("...").outline()` -- transparent fill with crisp border
+  - `Badge::new("...").success()` -- emerald text and border with 12% alpha surface
+  - `Badge::new("...").warning()` -- amber text and border with 12% alpha surface
+  - `Badge::new("...").error()` -- rose text and border with 12% alpha surface
 
 ### ProgressBar
-Filled percentage track with smooth animated fill.
+Filled percentage track with sleek 6px height and smooth animated fill.
 - **Constructor**: `ProgressBar::new(ratio, width)` where `ratio` is `0.0..=1.0`
 - **Builder methods**:
   - `.id("stable_id")` -- required to enable smooth fill animation across frames

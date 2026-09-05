@@ -32,11 +32,21 @@ impl Default for ProgressBarStyle {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ProgressBarVariant {
+    #[default]
+    Default,
+    Success,
+    Warning,
+    Error,
+}
+
 pub struct ProgressBar {
     id: Option<String>,
     progress: f32,
     width: f32,
     height: f32,
+    variant: ProgressBarVariant,
     style: Option<ProgressBarStyle>,
 }
 
@@ -46,7 +56,8 @@ impl ProgressBar {
             id: None,
             progress: progress.clamp(0.0, 1.0),
             width,
-            height: 8.0,
+            height: 6.0,
+            variant: ProgressBarVariant::Default,
             style: None,
         }
     }
@@ -73,25 +84,19 @@ impl ProgressBar {
 
     /// Colors the progress bar with the semantic success color (Emerald).
     pub fn success(mut self) -> Self {
-        let mut s = self.style.take().unwrap_or_default();
-        s.progress_fill = Fill::Solid(Theme::SUCCESS);
-        self.style = Some(s);
+        self.variant = ProgressBarVariant::Success;
         self
     }
 
     /// Colors the progress bar with the semantic warning color (Amber).
     pub fn warning(mut self) -> Self {
-        let mut s = self.style.take().unwrap_or_default();
-        s.progress_fill = Fill::Solid(Theme::WARNING);
-        self.style = Some(s);
+        self.variant = ProgressBarVariant::Warning;
         self
     }
 
     /// Colors the progress bar with the semantic error color (Rose).
     pub fn error(mut self) -> Self {
-        let mut s = self.style.take().unwrap_or_default();
-        s.progress_fill = Fill::Solid(Theme::ERROR);
-        self.style = Some(s);
+        self.variant = ProgressBarVariant::Error;
         self
     }
 }
@@ -111,7 +116,22 @@ impl Measurable for ProgressBar {
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
-        let style = self.style.clone().unwrap_or_default();
+        let theme = *ui.theme();
+        let style = self.style.clone().unwrap_or_else(|| {
+            let progress_fill = match self.variant {
+                ProgressBarVariant::Default => theme.active,
+                ProgressBarVariant::Success => theme.success,
+                ProgressBarVariant::Warning => theme.warning,
+                ProgressBarVariant::Error => theme.error,
+            };
+            ProgressBarStyle {
+                track_fill: Fill::Solid(theme.surface_subtle),
+                progress_fill: Fill::Solid(progress_fill),
+                border_width: 1.0,
+                border_color: theme.border,
+                corner_radius: 4.0,
+            }
+        });
         let dt = ui.dt();
 
         // Draw track

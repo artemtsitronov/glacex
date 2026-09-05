@@ -59,6 +59,7 @@ pub struct Ui {
     mouse_middle_pressed_this_frame: bool,
     mouse_middle_released_this_frame: bool,
     pending_tooltip: Option<(String, [f32; 2])>,
+    theme: Theme,
 }
 
 impl Ui {
@@ -66,6 +67,7 @@ impl Ui {
         Ui {
             painter: Painter::new(window.clone()).await,
             window,
+            theme: Theme::LIGHT,
             persistent_state: HashMap::new(),
             mouse_position: [0.0, 0.0],
             mouse_pressed: false,
@@ -514,6 +516,17 @@ impl Ui {
         self.painter.set_bgcolor(color);
     }
 
+    /// Returns the currently active theme.
+    pub fn theme(&self) -> &Theme {
+        &self.theme
+    }
+
+    /// Sets the active theme and updates the window clear color.
+    pub fn set_theme(&mut self, theme: Theme) {
+        self.set_bgcolor(theme.bg_canvas);
+        self.theme = theme;
+    }
+
     pub fn window_size(&self) -> [f32; 2] {
         self.painter.window_size()
     }
@@ -552,7 +565,7 @@ impl Ui {
     }
 
     pub fn draw_text(&mut self, text: &str, position: [f32; 2], bounds: [f32; 4]) {
-        self.draw_text_colored(text, position, bounds, Theme::TEXT_PRIMARY);
+        self.draw_text_colored(text, position, bounds, self.theme.text_primary);
     }
 
     pub fn draw_text_colored(
@@ -565,6 +578,43 @@ impl Ui {
         let clipped = intersect_rects(bounds, self.current_clip());
         self.painter
             .draw_text_colored(text, position, clipped, color);
+    }
+
+    pub fn measure_text_styled(
+        &mut self,
+        text: &str,
+        font_size: f32,
+        line_height: f32,
+        weight: crate::painter::FontWeight,
+        is_mono: bool,
+    ) -> f32 {
+        self.painter
+            .measure_text_styled(text, font_size, line_height, weight, is_mono)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn draw_text_styled(
+        &mut self,
+        text: &str,
+        position: [f32; 2],
+        bounds: [f32; 4],
+        color: Color,
+        font_size: f32,
+        line_height: f32,
+        weight: crate::painter::FontWeight,
+        is_mono: bool,
+    ) {
+        let clipped = intersect_rects(bounds, self.current_clip());
+        self.painter.draw_text_styled(
+            text,
+            position,
+            clipped,
+            color,
+            font_size,
+            line_height,
+            weight,
+            is_mono,
+        );
     }
 
     pub fn add<W: Widget>(&mut self, widget: &mut W) -> W::Output {
@@ -592,17 +642,17 @@ impl Ui {
             self.painter.draw_rect(
                 tooltip_pos,
                 [width, height],
-                Fill::Solid(Theme::SURFACE_ELEVATED),
+                Fill::Solid(self.theme.surface_elevated),
                 6.0,
                 1.0,
-                Theme::BORDER_STRONG,
+                self.theme.border_strong,
                 8.0,
                 0.0,
                 full_clip,
                 0.0,
             );
 
-            self.painter.draw_text(
+            self.painter.draw_text_colored(
                 &text,
                 [tooltip_pos[0] + pad_x, tooltip_pos[1] + pad_y],
                 [
@@ -611,6 +661,7 @@ impl Ui {
                     tooltip_pos[0] + width,
                     tooltip_pos[1] + height,
                 ],
+                self.theme.text_primary,
             );
         }
 

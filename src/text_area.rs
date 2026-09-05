@@ -173,7 +173,11 @@ impl Measurable for TextArea {
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
         ui.register_focusable(self.focus_id);
 
-        let style = self.style.clone().unwrap_or_default();
+        let theme = *ui.theme();
+        let style = self
+            .style
+            .clone()
+            .unwrap_or_else(|| theme.text_area_style());
 
         let padding = 10.0;
         let config = ScrollConfig::default();
@@ -433,7 +437,7 @@ impl Measurable for TextArea {
         let hover_t = state.hover_t;
 
         // Dynamic border color and width blending
-        let base_or_hover = style.border_color.lerp(Theme::BORDER_STRONG, hover_t);
+        let base_or_hover = style.border_color.lerp(theme.border_strong, hover_t);
         let border_color = base_or_hover.lerp(style.focus_border_color, focus_t);
         let border_width = style.border_width + focus_t * 0.5;
 
