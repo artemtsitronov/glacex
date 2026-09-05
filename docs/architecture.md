@@ -59,34 +59,19 @@ Each rectangle submitted to the GPU contains:
 
 ## 3. Animation System (`src/animation.rs`)
 
-All widget transitions use frame-rate independent math -- no hardcoded frame counts.
-
-### `Motion` -- Named Timing Constants
-`Motion` is a unit struct that exposes named half-life constants consumed by every animated widget:
-
-| Constant | Half-life | Use |
-|---|---|---|
-| `Motion::MICRO` | 16ms | Single-frame color snaps |
-| `Motion::INSTANT` | 30ms | Press feedback, immediate state snaps |
-| `Motion::SNAPPY` | 45ms | Hover transitions, border highlights |
-| `Motion::FLUID` | 60ms | Knob slides, dot scaling, progress fill |
-| `Motion::GENTLE` | 90ms | Focus rings, glow shadows |
+All widget transitions use frame-rate independent math — no hardcoded frame counts.
 
 ### `animate_towards(current, target, dt, half_life) -> f32`
 Exponential decay toward `target`. `half_life` is seconds to close half the gap.
-Used by every animated widget state (`hover_t`, `press_t`, `dot_t`, `anim_progress`, `drag_t`, `focus_t`).
+Used by every animated widget state (`hover_t`, `press_t`, `dot_t`, `anim_progress`).
 
 ### Easing Curves (`Ease`)
 Static easing functions for use in timed sequences:
-`EaseOutCubic`, `EaseInOutCubic`, `EaseOutExpo`, `EaseOutBack`, `EaseOutQuad`, `EaseInOutQuad`, `EaseOutQuart`, `Linear`.
+`EaseOutCubic`, `EaseInOutCubic`, `EaseOutExpo`, `EaseOutBack`, `EaseOutQuad`, `EaseInOutQuad`, `Linear`.
 
 ### `Spring`
 Physics-based spring simulation (`stiffness`, `damping`) using semi-implicit Euler integration.
-Construct with `Spring::with_physics(initial, stiffness, damping)`. Check `spring.is_settled()` to skip updates when at rest.
-Presets:
-- `Motion::standard_spring()` (400 stiffness, 25 damping): Framer Motion standard UI preset.
-- `Motion::snappy_spring()` (450 stiffness, 32 damping): Fast with zero overshoot.
-- `Motion::fluid_spring()` (300 stiffness, 26 damping): Apple fluid control feel.
+Use for overshooting, elastic, or bouncy effects beyond the built-in decay.
 
 ### `lerp(a, b, t) -> f32`
 Standard linear interpolation helper.
@@ -94,7 +79,6 @@ Standard linear interpolation helper.
 ### `dt` on `Ui`
 `Ui::dt()` returns elapsed seconds since the previous frame (clamped to 1..=100ms).
 Widgets read `dt` once at the top of `arrange` before borrowing mutable state.
-
 
 ## 4. Widget Animation Pattern
 
@@ -120,39 +104,10 @@ Gradient fills bake onto a dedicated GPU ramp texture atlas:
 ## 7. Frame Lifecycle (`src/lib.rs`)
 
 Each `WindowEvent::RedrawRequested`:
-1. `ui.begin_frame()` -- clears clip stack, focus registers, computes `dt`.
+1. `ui.begin_frame()` — clears clip stack, focus registers, computes `dt`.
 2. `App::update` callback runs (optional, for app-level state changes).
-3. `root_widget.ui(ui)` -- measures, lays out, animates, and queues all draw calls.
+3. `root_widget.ui(ui)` — measures, lays out, animates, and queues all draw calls.
 4. Tab navigation and floating tooltip compositing resolve.
-5. `ui.render()` -- flushes `Painter`, submits GPU command buffer, presents surface.
-6. `ui.end_frame()` -- clears per-frame input buffers and flags.
-7. `window.request_redraw()` -- schedules the next frame immediately (uncapped, vsync-limited by the OS compositor).
-
-## 8. Design Token System & Themes (`src/theme.rs`)
-
-Glacex features a runtime theming engine with **9 curated presets**, defaulted to a pristine Apple & shadcn-inspired **White / Light** aesthetic (`Theme::LIGHT`). Themes can be hot-swapped dynamically at runtime using `ui.set_theme(theme)`.
-
-### Presets Available
-- `Theme::LIGHT` (Default): Pure white `#ffffff` canvas with zinc borders and charcoal primary accent.
-- `Theme::DARK`: Linear/Vercel-grade deep `#09090b` canvas with `#4f46e5` electric indigo accent.
-- `Theme::CATPPUCCIN_MOCHA`: Soothing dark pastel warmth.
-- `Theme::CATPPUCCIN_LATTE`: Soft daylight pastel aesthetic.
-- `Theme::TOKYO_NIGHT`: Cyberpunk neon midnight.
-- `Theme::GRUVBOX_DARK`: Warm retro groove charcoal and orange.
-- `Theme::GRUVBOX_LIGHT`: Paper-textured retro light daylight.
-- `Theme::NORD`: Arctic slate and frost blue.
-- `Theme::ROSE_PINE`: Moody vintage rose aesthetic.
-
-### Surface Elevation Hierarchy
-- **Canvas (`theme.bg_canvas`)**: Root window backdrop.
-- **Surface (`theme.surface`)**: Standard panel, card, and container background.
-- **Subtle (`theme.surface_subtle`)**: Grouped sub-containers, inputs, and control tracks.
-- **Elevated (`theme.surface_elevated`)**: Tooltips, popovers, and floating overlays.
-
-### Two-Layer Shadow Architecture (`src/shadow.rs`)
-Depth is expressed through multi-layered shadows combining an ambient layer (wide, soft) with a key light layer (tight, crisp):
-- `Shadow::sm()` -- resting controls (buttons, inputs)
-- `Shadow::md()` -- cards and panels
-- `Shadow::lg()` -- elevated tooltips and overlays
-- `theme.shadow_sm()`, `theme.shadow_md()`, `theme.shadow_lg()` dynamically tailor blur and alpha to the current palette.
-
+5. `ui.render()` — flushes `Painter`, submits GPU command buffer, presents surface.
+6. `ui.end_frame()` — clears per-frame input buffers and flags.
+7. `window.request_redraw()` — schedules the next frame immediately (uncapped, vsync-limited by the OS compositor).

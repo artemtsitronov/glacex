@@ -7,15 +7,13 @@ use crate::ui::Ui;
 use crate::widget::{Measurable, StatefulWidget, Widget};
 use winit::window::CursorIcon;
 
-use crate::animation::{Motion, animate_towards};
+use crate::animation::animate_towards;
 
 #[derive(Default)]
 pub struct SwitchState {
     pub enabled: bool,
     pub anim_progress: f32,
-    pub hover_t: f32,
     pub initialized: bool,
-    pub prev_progress: f32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -105,8 +103,7 @@ impl Measurable for Switch {
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) -> SwitchResponse {
-        let theme = *ui.theme();
-        let style = self.style.clone().unwrap_or_else(|| theme.switch_style());
+        let style = self.style.clone().unwrap_or_default();
         let interaction = Interaction::update(position, size, style.corner_radius, ui);
         self.interaction = interaction;
 
@@ -115,51 +112,35 @@ impl Measurable for Switch {
         }
 
         let dt = ui.dt();
-        let (enabled, progress, hover_t, knob_velocity) = {
-            let state = ui.widget_state_or::<SwitchState>(&self.id, self.initial_state());
+        let state = ui.widget_state_or::<SwitchState>(&self.id, self.initial_state());
 
-            if !state.initialized {
-                state.anim_progress = if state.enabled { 1.0 } else { 0.0 };
-                state.initialized = true;
-                state.prev_progress = state.anim_progress;
+        if !state.initialized {
+            state.anim_progress = if state.enabled { 1.0 } else { 0.0 };
+            state.initialized = true;
+        }
+
+        if interaction.clicked {
+            state.enabled = !state.enabled;
+        }
+        let enabled = state.enabled;
+        let target_progress = if enabled { 1.0 } else { 0.0 };
+        state.anim_progress = animate_towards(state.anim_progress, target_progress, dt, 0.07);
+        let progress = state.anim_progress;
+
+        let track_fill = if progress > 0.01 {
+            if let (Fill::Solid(off_col), Fill::Solid(on_col)) =
+                (&style.track_off_fill, &style.track_on_fill)
+            {
+                Fill::Solid(off_col.lerp(*on_col, progress))
+            } else if enabled {
+                style.track_on_fill
+            } else {
+                style.track_off_fill
             }
-
-            if interaction.clicked {
-                state.enabled = !state.enabled;
-            }
-            let enabled = state.enabled;
-            let target_progress = if enabled { 1.0 } else { 0.0 };
-            // Apple/Linear fluid switch animation curve
-            state.anim_progress =
-                animate_towards(state.anim_progress, target_progress, dt, Motion::FLUID);
-            let hover_target = if interaction.hovered { 1.0f32 } else { 0.0 };
-            state.hover_t = animate_towards(state.hover_t, hover_target, dt, Motion::SNAPPY);
-
-            let progress = state.anim_progress;
-            let velocity = (progress - state.prev_progress).abs();
-            state.prev_progress = progress;
-
-            (enabled, progress, state.hover_t, velocity)
-        };
-
-        // Smooth cross-fade between idle, hover, and active states
-        let track_fill = if let (Fill::Solid(off_col), Fill::Solid(on_col)) =
-            (&style.track_off_fill, &style.track_on_fill)
-        {
-            let idle_or_hover = off_col.lerp(theme.hovered, hover_t);
-            Fill::Solid(idle_or_hover.lerp(*on_col, progress))
-        } else if enabled {
-            style.track_on_fill
+        } else if interaction.hovered {
+            Fill::Solid(Theme::HOVERED)
         } else {
             style.track_off_fill
-        };
-
-        let border_color = if progress > 0.01 {
-            style.border_color.lerp(theme.active, progress * 0.5)
-        } else if hover_t > 0.01 {
-            style.border_color.lerp(theme.border_strong, hover_t)
-        } else {
-            style.border_color
         };
 
         if let Some(shadow) = &style.shadow {
@@ -173,13 +154,13 @@ impl Measurable for Switch {
             track_fill,
             style.corner_radius,
             style.border_width,
-            border_color,
+            style.border_color,
             0.0,
             false,
             0.0,
         );
 
-        // Draw sliding knob / thumb with fluid glide and soft thumb shadow
+        // Draw sliding knob / thumb with smooth Apple/Linear spring-like glide
         let padding = 2.0;
         let knob_size = size[1] - padding * 2.0;
         let min_x = position[0] + padding;
@@ -187,41 +168,6 @@ impl Measurable for Switch {
         let knob_x = min_x + (max_x - min_x) * progress;
         let knob_pos = [knob_x, position[1] + padding];
         let knob_radius = knob_size / 2.0;
-
-        // Subtle motion trail on knob during active sliding
-        if knob_velocity > 0.005 {
-            let stretch_w = knob_size + knob_velocity * 12.0;
-            let stretch_x = if progress > 0.5 {
-                knob_x - (stretch_w - knob_size)
-            } else {
-                knob_x
-            };
-            ui.draw_rect(
-                [stretch_x, position[1] + padding],
-                [stretch_w, knob_size],
-                Fill::Solid(Color::WHITE.with_alpha(0.20)),
-                knob_radius,
-                0.0,
-                Color::TRANSPARENT,
-                3.0,
-                false,
-                0.0,
-            );
-        }
-
-        // Micro thumb drop shadow for physical elevation
-        let thumb_shadow = ShadowStyle {
-            color: Color::rgba(0, 0, 0, 0.35),
-            blur_radius: 4.0,
-            offset: [0.0, 1.5],
-        };
-        draw_shadow(
-            &thumb_shadow,
-            knob_pos,
-            [knob_size, knob_size],
-            knob_radius,
-            ui,
-        );
 
         ui.draw_rect(
             knob_pos,
@@ -254,9 +200,7 @@ impl StatefulWidget for Switch {
         SwitchState {
             enabled: self.default_enabled,
             anim_progress: if self.default_enabled { 1.0 } else { 0.0 },
-            hover_t: 0.0,
             initialized: true,
-            prev_progress: if self.default_enabled { 1.0 } else { 0.0 },
         }
     }
 }

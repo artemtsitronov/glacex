@@ -1,4 +1,3 @@
-use crate::animation::{Motion, animate_towards};
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::geometry::contains;
@@ -12,8 +11,6 @@ use winit::window::CursorIcon;
 #[derive(Debug, Clone)]
 pub struct TextInputStyle {
     pub fill: Fill,
-    pub text_color: Color,
-    pub placeholder_color: Color,
     pub border_width: f32,
     pub border_color: Color,
     pub focus_border_color: Color,
@@ -28,18 +25,16 @@ impl Default for TextInputStyle {
     fn default() -> Self {
         TextInputStyle {
             fill: Fill::Solid(Theme::SURFACE),
-            text_color: Theme::TEXT_PRIMARY,
-            placeholder_color: Theme::TEXT_MUTED,
             border_width: 1.0,
             border_color: Theme::BORDER,
             focus_border_color: Theme::FOCUS_BORDER,
-            corner_radius: Theme::RADIUS_MD,
+            corner_radius: 8.0,
             selection_color: Theme::SELECTION,
-            cursor_color: Theme::ACTIVE,
+            cursor_color: Color::WHITE,
             shadow: Some(ShadowStyle {
                 color: Theme::SURFACE_SHADOW,
-                blur_radius: 8.0,
-                offset: [0.0, 1.0],
+                blur_radius: 10.0,
+                offset: [0.0, 0.0],
             }),
             sharp: false,
         }
@@ -52,7 +47,6 @@ pub struct TextInput {
     width: f32,
     style: Option<TextInputStyle>,
     default_text: String,
-    placeholder: Option<String>,
 }
 
 impl TextInput {
@@ -64,13 +58,7 @@ impl TextInput {
             width,
             style: None,
             default_text: String::new(),
-            placeholder: None,
         }
-    }
-
-    pub fn placeholder(mut self, placeholder: impl Into<String>) -> Self {
-        self.placeholder = Some(placeholder.into());
-        self
     }
 
     pub fn style(mut self, style: TextInputStyle) -> Self {
@@ -90,11 +78,6 @@ impl TextInput {
     pub fn focused(&self, ui: &Ui) -> bool {
         ui.is_focused(self.focus_id)
     }
-
-    pub fn hovered(&self, ui: &mut Ui) -> bool {
-        let state = ui.widget_state::<TextEditState>(&self.id);
-        state.hovered
-    }
 }
 
 impl Widget for TextInput {
@@ -108,16 +91,14 @@ impl Widget for TextInput {
 
 impl Measurable for TextInput {
     fn measure(&mut self, ui: &mut Ui) -> [f32; 2] {
-        let padding = 10.0;
-        [self.width, ui.line_height() + padding * 2.0]
+        [self.width, ui.line_height() + 16.0]
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
         ui.register_focusable(self.focus_id);
 
-        let theme = *ui.theme();
-        let style = self.style.clone().unwrap_or_else(|| theme.input_style());
-        let dt = ui.dt();
+        let style = self.style.clone().unwrap_or_default();
+
         let padding = 10.0;
 
         let mouse_pos = ui.mouse_position();
@@ -181,29 +162,14 @@ impl Measurable for TextInput {
         let cursor_x = ui.measure_text(state.prefix());
         state.scroll_into_view(cursor_x, text_width);
 
-        // Animate focus ring and hover transitions smoothly
-        let focus_target = if focused { 1.0f32 } else { 0.0 };
-        let hover_target = if hovered { 1.0f32 } else { 0.0 };
-        state.focus_t = animate_towards(state.focus_t, focus_target, dt, Motion::GENTLE);
-        state.hover_t = animate_towards(state.hover_t, hover_target, dt, Motion::SNAPPY);
-        let focus_t = state.focus_t;
-        let hover_t = state.hover_t;
+        let border_color = if focused {
+            style.focus_border_color
+        } else {
+            style.border_color
+        };
 
-        // Dynamic border color blending
-        let base_or_hover = style.border_color.lerp(theme.border_strong, hover_t);
-        let border_color = base_or_hover.lerp(style.focus_border_color, focus_t);
-        let border_width = style.border_width + focus_t * 0.5;
-
-        // Elevated shadow with focus glow (shadcn/Vercel focus-visible ring)
         if let Some(shadow) = &style.shadow {
-            let mut s = *shadow;
-            if focus_t > 0.01 {
-                s.color = s
-                    .color
-                    .lerp(style.focus_border_color.with_alpha(0.25), focus_t);
-                s.blur_radius += focus_t * 6.0;
-            }
-            draw_shadow(&s, position, size, style.corner_radius, ui);
+            draw_shadow(shadow, position, size, style.corner_radius, ui);
         }
 
         ui.draw_rect(
@@ -211,7 +177,7 @@ impl Measurable for TextInput {
             size,
             style.fill,
             style.corner_radius,
-            border_width,
+            style.border_width,
             border_color,
             0.0,
             style.sharp,
@@ -247,23 +213,11 @@ impl Measurable for TextInput {
             position[0] + size[0] - padding,
             position[1] + size[1],
         ];
-        if state.text().is_empty() {
-            if let Some(placeholder) = &self.placeholder {
-                ui.draw_text_colored(
-                    placeholder,
-                    [text_position[0], text_position[1]],
-                    clip_rect,
-                    style.placeholder_color,
-                );
-            }
-        } else {
-            ui.draw_text_colored(
-                state.text(),
-                [text_position[0] - state.scroll_offset(), text_position[1]],
-                clip_rect,
-                style.text_color,
-            );
-        }
+        ui.draw_text(
+            state.text(),
+            [text_position[0] - state.scroll_offset(), text_position[1]],
+            clip_rect,
+        );
 
         if focused {
             let idle_seconds = state.last_activity().elapsed().as_secs_f32();

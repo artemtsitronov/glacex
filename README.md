@@ -75,7 +75,7 @@ There is no retained widget tree, no XML/HTML markup, and no hidden reactivity e
 - **Flexbox Layout**: Declarative `row![]` and `column![]` macros backed by `taffy` 0.13 with alignment, gap spacing, and automatic child arrangement.
 - **Rich Interaction Model**: Hover/press/click tracking, secondary/middle mouse buttons, Tab/Shift+Tab focus traversal, double/triple-click word/line selection, clipboard integration via `arboard`, and cursor blinking.
 - **Persistent State Tracking**: Stateless syntax with stateful continuity: widget state is keyed by stable IDs (`Ui::widget_state`, `take_widget_state`, `put_widget_state`).
-- **Physics & Easing Motion Engine**: Frame-rate independent exponential decay (`animate_towards`), standard easing curves (`Ease`), and `Spring` simulations. Named half-life constants via `Motion::INSTANT` (30ms), `Motion::SNAPPY` (45ms), `Motion::FLUID` (60ms), and `Motion::GENTLE` (90ms) provide a shared motion language across all widgets for tactile, Apple/Vercel-quality transitions.
+- **Physics & Easing Motion Engine**: Frame-rate independent exponential decay (`animate_towards`), standard easing curves (`Ease`), and `Spring` simulations for smooth interactive feedback on buttons, toggles, checkboxes, and sliders.
 - **Precision Scrolling**: Draggable, momentum-free, auto-hiding scrollbars shared across `ScrollView` and `TextArea`.
 
 ## Requirements
@@ -98,7 +98,7 @@ Or specify it manually inside your `Cargo.toml`:
 
 ```toml
 [dependencies]
-glacex = "0.1.4"
+glacex = "0.1.1"
 ```
 
 ### From GitHub (Latest Development)
@@ -409,64 +409,27 @@ let sunset = Fill::Gradient(Gradient {
 
 Gradient modes supported: `GradientKind::Linear { angle }`, `Radial { center, radius }`, and `Conic { center }`.
 
-### Theme Engine & Design Tokens
+### Theme
 
-Glacex includes a complete runtime theming engine with **9 meticulously calibrated presets**. By default, Glacex boots into a pristine, luxurious **shadcn / Apple-grade white theme** (`Theme::LIGHT`), while also supporting instant switching to community favorites from r/unixporn.
+`Theme` provides a unified modern dark palette (inspired by Linear, Vercel, and Raycast):
 
-```rust
-// Switch the entire application palette dynamically at runtime
-ui.set_theme(Theme::LIGHT);            // Default: Apple / shadcn pure white
-ui.set_theme(Theme::DARK);             // Linear / Vercel dark mode
-ui.set_theme(Theme::CATPPUCCIN_MOCHA); // Warm dark pastel
-ui.set_theme(Theme::CATPPUCCIN_LATTE); // Cozy light pastel
-ui.set_theme(Theme::TOKYO_NIGHT);      // Midnight cyberpunk
-ui.set_theme(Theme::GRUVBOX_DARK);     // Warm retro dark
-ui.set_theme(Theme::GRUVBOX_LIGHT);    // Warm retro light
-ui.set_theme(Theme::NORD);             // Arctic cool blue
-ui.set_theme(Theme::ROSE_PINE);        // Moody minimalist aesthetic
-```
-
-#### Built-in Theme Presets
-
-| Preset | Mode | Canvas | Accent | Vibe |
-|---|---|---|---|---|
-| `Theme::LIGHT` *(Default)* | Light | `#ffffff` | `#18181b` | Apple & shadcn/ui minimal luxury |
-| `Theme::DARK` | Dark | `#09090b` | `#4f46e5` | Linear & Vercel deep charcoal |
-| `Theme::CATPPUCCIN_MOCHA` | Dark | `#1e1e2e` | `#cba6f7` | Soothing pastel warmth |
-| `Theme::CATPPUCCIN_LATTE` | Light | `#eff1f5` | `#8839ef` | Soft, creamy daylight aesthetic |
-| `Theme::TOKYO_NIGHT` | Dark | `#1a1b26` | `#7aa2f7` | Cyberpunk neon midnight |
-| `Theme::GRUVBOX_DARK` | Dark | `#282828` | `#fe8019` | Retro warm groove |
-| `Theme::GRUVBOX_LIGHT` | Light | `#fbf1c7` | `#af3a03` | Paper-textured warm daylight |
-| `Theme::NORD` | Dark | `#2e3440` | `#88c0d0` | Arctic frost & cool slate |
-| `Theme::ROSE_PINE` | Dark | `#191724` | `#eb6f92` | Atmospheric vintage rose |
-
-#### Core Design Tokens
-
-| Token Field | Default (`LIGHT`) | Purpose |
+| Palette Constant | Hex / Visual | Purpose |
 |---|---|---|
-| `bg_canvas` | `#ffffff` | Clean root window canvas |
-| `surface` | `#ffffff` | Standard elevated card/panel |
-| `surface_subtle` | `#f4f4f5` (Zinc 100) | Inset panels, control tracks |
-| `surface_elevated`| `#ffffff` | Modals, tooltips, dropdowns |
-| `idle` | `#f4f4f5` (Zinc 100) | Resting button/control fill |
-| `hovered` | `#e4e4e7` (Zinc 200) | Interactive hover state |
-| `pressed` | `#d4d4d8` (Zinc 300) | Tactile pressed state |
-| `active` | `#18181b` (Zinc 900) | High-contrast primary action |
-| `border_faint` | `rgba(0,0,0,0.04)` | Hairline internal dividers |
-| `border` | `rgba(0,0,0,0.08)` | Standard component border |
-| `border_strong` | `rgba(0,0,0,0.16)` | Focused / emphasized border |
-| `text_primary` | `#09090b` (Zinc 950) | High-contrast body typography |
-| `text_secondary`| `#71717a` (Zinc 500) | Subdued captions & descriptors |
-| `text_muted` | `#a1a1aa` (Zinc 400) | Micro metadata & placeholders |
-| `success` | `#16a34a` (Emerald 600)| Success status badge/progress |
-| `warning` | `#d97706` (Amber 600) | Warning status badge/progress |
-| `error` | `#e11d48` (Rose 600) | Error status badge/progress |
+| `Theme::BG_CANVAS` | `#09090b` | Deep root window background |
+| `Theme::SURFACE` | `#121216` | Standard container / card surface |
+| `Theme::SURFACE_SUBTLE` | `#18181b` | Secondary control surface |
+| `Theme::SURFACE_ELEVATED` | `#202026` | Floating modals, tooltips |
+| `Theme::IDLE` | `#1c1c21` | Idle button background |
+| `Theme::HOVERED` | `#27272d` | Control hover surface |
+| `Theme::ACTIVE` | `#4f46e5` | Primary electric indigo accent |
+| `Theme::BORDER` | `rgba(255, 255, 255, 0.08)` | Subtle hairline borders |
+| `Theme::FOCUS_BORDER` | `#6366f1` | Vibrant focus ring outline |
 
 ### Window Title and Background
 
 ```rust
 ui.set_title("Glacex Application");
-ui.set_theme(Theme::LIGHT); // Automatically synchronizes window background color
+ui.set_bgcolor(Theme::BG_CANVAS);
 ```
 
 ## How Rendering Works
@@ -505,7 +468,7 @@ glacex/
 ├── examples/             # Runnable demo examples
 ├── src/
 │   ├── lib.rs            # App runner and window lifecycle
-│   ├── animation.rs      # Motion constants, physics springs, easings, frame-rate independent animations
+│   ├── animation.rs      # Physics springs, easings, frame-rate independent animations
 │   ├── ui.rs             # Ui per-frame state, focus, clipping, drawing
 │   ├── widget.rs         # Widget and Measurable traits
 │   ├── layout.rs         # row! and column! macros (Taffy flexbox)

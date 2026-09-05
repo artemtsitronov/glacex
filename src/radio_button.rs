@@ -7,7 +7,7 @@ use crate::ui::Ui;
 use crate::widget::{Measurable, Widget};
 use winit::window::CursorIcon;
 
-use crate::animation::{Motion, animate_towards};
+use crate::animation::animate_towards;
 
 #[derive(Debug, Clone, Copy)]
 pub struct RadioButtonResponse {
@@ -108,17 +108,7 @@ impl Measurable for RadioButton {
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) -> RadioButtonResponse {
-        let theme = *ui.theme();
-        let style = self.style.clone().unwrap_or(RadioButtonStyle {
-            fill: Fill::Solid(theme.idle),
-            hover_fill: Fill::Solid(theme.hovered),
-            selected_fill: Fill::Solid(theme.active),
-            border_width: 1.0,
-            border_color: theme.border,
-            corner_radius: 9.0,
-            shadow: Some(theme.shadow_sm()[0]),
-            sharp: false,
-        });
+        let style = self.style.clone().unwrap_or_default();
         let dt = ui.dt();
 
         let interaction = Interaction::update(position, size, style.corner_radius, ui);
@@ -133,20 +123,15 @@ impl Measurable for RadioButton {
         }
         let selected = ui.is_selected(&self.group_id, &self.option_id);
 
-        // Per-radio animation state with Motion curves
+        // Per-radio animation state
         let anim_id = format!("__radio_anim_{}_{}", self.group_id, self.option_id);
         let anim = ui.widget_state::<RadioButtonAnimState>(&anim_id);
-        anim.dot_t = animate_towards(
-            anim.dot_t,
-            if selected { 1.0 } else { 0.0 },
-            dt,
-            Motion::FLUID,
-        );
+        anim.dot_t = animate_towards(anim.dot_t, if selected { 1.0 } else { 0.0 }, dt, 0.06);
         anim.hover_t = animate_towards(
             anim.hover_t,
             if interaction.hovered { 1.0 } else { 0.0 },
             dt,
-            Motion::SNAPPY,
+            0.055,
         );
         let dot_t = anim.dot_t;
         let hover_t = anim.hover_t;
@@ -155,22 +140,14 @@ impl Measurable for RadioButton {
         let fill = if let (Fill::Solid(idle), Fill::Solid(hov), Fill::Solid(sel)) =
             (&style.fill, &style.hover_fill, &style.selected_fill)
         {
-            let idle_or_hover = idle.lerp(*hov, hover_t);
-            Fill::Solid(idle_or_hover.lerp(*sel, dot_t))
+            let blended = idle.lerp(*hov, hover_t);
+            Fill::Solid(blended.lerp(*sel, dot_t))
         } else if selected {
             style.selected_fill
         } else if interaction.hovered {
             style.hover_fill
         } else {
             style.fill
-        };
-
-        let border_color = if dot_t > 0.01 {
-            style.border_color.lerp(theme.active, dot_t * 0.4)
-        } else if hover_t > 0.01 {
-            style.border_color.lerp(theme.border_strong, hover_t)
-        } else {
-            style.border_color
         };
 
         if let Some(shadow) = &style.shadow {
@@ -183,13 +160,13 @@ impl Measurable for RadioButton {
             fill,
             style.corner_radius,
             style.border_width,
-            border_color,
+            style.border_color,
             0.0,
             style.sharp,
             0.0,
         );
 
-        // Animated inner dot — scales from 0 to full size with fluid motion
+        // Animated inner dot — scales from 0 to full size
         if dot_t > 0.01 {
             let max_inset = 5.0;
             let inset = max_inset + (1.0 - dot_t) * max_inset;
