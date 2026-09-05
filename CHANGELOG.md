@@ -57,11 +57,21 @@ All notable changes to this project are documented in this file.
   - Physics spring presets: `standard_spring` (Framer 400/25), `snappy_spring` (450/32), `fluid_spring` (Apple 300/26).
   - `EaseOutQuart` easing curve and `Spring::is_settled()` rest check.
 
-### Changed
-- Refactored `examples/demo.rs` to showcase the unified design system, typography hierarchy, button variants, and subtle dividers.
-- Button press depth tuned to 1px with smooth cubic easing.
-- Slider hover halo expanded to 10px with active drag scale feedback (+2px thumb).
-- Switch knob given micro drop shadow for physical elevation over track.
+- Bundled Authentic Geist & Geist Mono Fonts (`assets/fonts/`, `src/painter.rs`):
+  - Bundled official Vercel Geist TTFs (`Geist-Regular.ttf`, `Geist-Medium.ttf`, `Geist-SemiBold.ttf`, `Geist-Bold.ttf`, `GeistMono-Regular.ttf`) embedded via `include_bytes!`.
+  - Configured explicit `include` in `Cargo.toml` so fonts are included for users in downstream applications as well as crates.io package archives.
+  - Multi-weight typography engine supporting `FontWeight::Regular`, `Medium`, `SemiBold`, and `Bold`.
+  - Monospace switching with `.mono()` helper on `Label`.
+  - Standardized font metrics: 14px font size with 20px line height (shadcn standard).
+- Full Dynamic Theme Reactivity:
+  - Eliminated static color caching on widget variants: `ButtonVariant`, `BadgeVariant`, `CardVariant`, `ProgressBarVariant`, and `LabelVariant` dynamically resolve colors against active `ui.theme()` in every `arrange()` pass.
+  - Theme-aware scrollbars in `ScrollView` and `TextArea`: dynamic thumb and dragging fills ensure scrollbars are crisp and visible across both dark and light modes.
+  - Added `.padding()` builder on `Card` to allow custom spacing without blowing away dynamic theme colors.
+- shadcn-Grade Floating Tooltip Engine:
+  - Redesigned with authentic Geist Medium 12px caption typography, 8px corner radius, theme-aware elevated surface, crisp border stroke, and 14px soft drop shadow.
+- Refactored `examples/demo.rs`:
+  - Authentic shadcn/ui KPI stat card layout with large metric numbers (`$1,250.00`, `1,234`, `45,678`, `4.5%`), trending growth indicator pills, and subtitle captions matching modern SaaS dashboards.
+  - Two-column configuration panels with switches, sliders, inputs, and Geist Mono diagnostic logs.
 
 ## [0.1.2]
 

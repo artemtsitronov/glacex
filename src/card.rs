@@ -74,6 +74,7 @@ pub struct Card<'a> {
     child: Box<dyn AnyWidget + 'a>,
     variant: CardVariant,
     style: Option<CardStyle>,
+    custom_padding: Option<[f32; 2]>,
 }
 
 impl<'a> Card<'a> {
@@ -82,6 +83,7 @@ impl<'a> Card<'a> {
             child: Box::new(child),
             variant: CardVariant::Default,
             style: None,
+            custom_padding: None,
         }
     }
 
@@ -92,6 +94,11 @@ impl<'a> Card<'a> {
 
     pub fn set_style(&mut self, style: Option<CardStyle>) {
         self.style = style;
+    }
+
+    pub fn padding(mut self, padding: [f32; 2]) -> Self {
+        self.custom_padding = Some(padding);
+        self
     }
 
     /// Applies the subtle sub-panel style.
@@ -107,14 +114,19 @@ impl<'a> Card<'a> {
     }
 
     fn resolved_style(&self, theme: &Theme) -> CardStyle {
-        if let Some(s) = &self.style {
-            return s.clone();
+        let mut base = if let Some(s) = &self.style {
+            s.clone()
+        } else {
+            match self.variant {
+                CardVariant::Default => theme.card_style(),
+                CardVariant::Subtle => theme.card_subtle_style(),
+                CardVariant::Elevated => theme.card_elevated_style(),
+            }
+        };
+        if let Some(p) = self.custom_padding {
+            base.padding = p;
         }
-        match self.variant {
-            CardVariant::Default => theme.card_style(),
-            CardVariant::Subtle => theme.card_subtle_style(),
-            CardVariant::Elevated => theme.card_elevated_style(),
-        }
+        base
     }
 }
 

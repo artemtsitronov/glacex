@@ -1,7 +1,7 @@
 use glacex::{
-    Alignment, App, Badge, BadgeVariant, Button, Card, CardStyle, Checkbox, Divider, Label,
-    ProgressBar, RadioButton, Slider, StatefulWidget, Switch, TextArea, TextInput, Theme, Ui,
-    Widget, column, row,
+    Alignment, App, Badge, BadgeVariant, Button, Card, Checkbox, Divider, Label, ProgressBar,
+    RadioButton, Slider, StatefulWidget, Switch, TextArea, TextInput, Theme, Ui, Widget, column,
+    row,
 };
 
 struct ThemesApp {
@@ -160,15 +160,8 @@ impl Widget for ThemesApp {
             .spacing(10.0)
             .align(Alignment::Start);
 
-            let mut left_card = Card::new(&mut left_content).style(CardStyle {
-                padding: [18.0, 18.0],
-                ..Default::default()
-            });
-
-            let mut right_card = Card::new(&mut right_content).style(CardStyle {
-                padding: [18.0, 18.0],
-                ..Default::default()
-            });
+            let mut left_card = Card::new(&mut left_content).padding([18.0, 18.0]);
+            let mut right_card = Card::new(&mut right_content).padding([18.0, 18.0]);
 
             let mut cards_row = row![&mut left_card, &mut right_card]
                 .spacing(16.0)

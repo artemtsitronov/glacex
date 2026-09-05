@@ -46,8 +46,10 @@ impl Default for TextAreaStyle {
             corner_radius: Theme::RADIUS_MD,
             selection_color: Theme::SELECTION,
             cursor_color: Theme::ACTIVE,
-            thumb_fill: Fill::Solid(Color::WHITE.with_alpha(0.25)),
-            thumb_dragging_fill: Fill::Solid(Color::WHITE.with_alpha(0.45)),
+            // Neutral zinc fallback — the real thumb colors are resolved
+            // per-theme in arrange() against the live theme palette.
+            thumb_fill: Fill::Solid(Color::rgb(113, 113, 122).with_alpha(0.45)),
+            thumb_dragging_fill: Fill::Solid(Color::rgb(82, 82, 91).with_alpha(0.75)),
             shadow: Some(ShadowStyle {
                 color: Theme::SURFACE_SHADOW,
                 blur_radius: 8.0,

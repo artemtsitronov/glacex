@@ -623,45 +623,80 @@ impl Ui {
 
     pub fn render(&mut self) {
         if let Some((text, pos)) = self.pending_tooltip.take() {
-            let text_width = self.measure_text(&text);
-            let pad_x = 8.0;
-            let pad_y = 5.0;
-            let width = text_width + pad_x * 2.0;
-            let height = self.line_height() + pad_y * 2.0;
+            // Measure with Geist 12px (caption scale) — same font used by Label::caption()
+            let text_width = self.painter.measure_text_styled(
+                &text,
+                12.0,
+                18.0,
+                crate::painter::FontWeight::Medium,
+                false,
+            );
+            let pad_x = 10.0;
+            let pad_y = 6.0;
+            let width = (text_width + pad_x * 2.0).max(60.0);
+            let height = 18.0 + pad_y * 2.0; // 18px line height + vertical padding
 
             let window_size = self.painter.window_size();
-            let mut tooltip_pos = [pos[0] + 12.0, pos[1] + 18.0];
-            if tooltip_pos[0] + width > window_size[0] {
-                tooltip_pos[0] = (window_size[0] - width - 4.0).max(0.0);
+            // Offset tooltip 10px to the right and 20px below the cursor
+            let mut tooltip_pos = [pos[0] + 10.0, pos[1] + 20.0];
+            // Clamp to viewport with 6px margin
+            if tooltip_pos[0] + width > window_size[0] - 6.0 {
+                tooltip_pos[0] = (pos[0] - width - 8.0).max(6.0);
             }
-            if tooltip_pos[1] + height > window_size[1] {
-                tooltip_pos[1] = (pos[1] - height - 6.0).max(0.0);
+            if tooltip_pos[1] + height > window_size[1] - 6.0 {
+                tooltip_pos[1] = (pos[1] - height - 10.0).max(6.0);
             }
 
             let full_clip = [0.0, 0.0, window_size[0], window_size[1]];
+
+            // Ambient shadow behind tooltip card
             self.painter.draw_rect(
-                tooltip_pos,
-                [width, height],
-                Fill::Solid(self.theme.surface_elevated),
-                6.0,
-                1.0,
-                self.theme.border_strong,
-                8.0,
+                [tooltip_pos[0] - 4.0, tooltip_pos[1] - 4.0],
+                [width + 8.0, height + 8.0],
+                Fill::Solid(Color {
+                    r: 0.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: if self.theme.is_dark { 0.45 } else { 0.10 },
+                }),
+                12.0,
+                0.0,
+                Color::TRANSPARENT,
+                14.0, // blur — soft ambient
                 0.0,
                 full_clip,
                 0.0,
             );
 
-            self.painter.draw_text_colored(
+            // Tooltip surface card
+            self.painter.draw_rect(
+                tooltip_pos,
+                [width, height],
+                Fill::Solid(self.theme.surface_elevated),
+                8.0,
+                1.0,
+                self.theme.border_strong,
+                0.0,
+                0.0,
+                full_clip,
+                0.0,
+            );
+
+            // Geist 12px Medium text
+            self.painter.draw_text_styled(
                 &text,
                 [tooltip_pos[0] + pad_x, tooltip_pos[1] + pad_y],
                 [
-                    tooltip_pos[0],
+                    tooltip_pos[0] + pad_x,
                     tooltip_pos[1],
-                    tooltip_pos[0] + width,
+                    tooltip_pos[0] + width - pad_x,
                     tooltip_pos[1] + height,
                 ],
                 self.theme.text_primary,
+                12.0,
+                18.0,
+                crate::painter::FontWeight::Medium,
+                false,
             );
         }
 

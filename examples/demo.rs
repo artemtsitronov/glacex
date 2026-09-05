@@ -49,27 +49,34 @@ impl Widget for DemoApp {
         )
         .muted();
 
-        // --- Stat Cards Row (shadcn metrics) ---
-        let mut stat1_title = Label::new("Total Revenue").secondary();
-        let mut stat1_badge = Badge::new("+12.5%").variant(BadgeVariant::Success);
+        // --- Stat Cards Row (shadcn metrics matching screenshot) ---
         let mut stat1_metric = Label::new("$1,250.00").metric();
-        let mut stat1_sub = Label::new("Trending up this month").caption();
+        let mut stat1_title = Label::new("Trending up this month ↗").medium();
+        let mut stat1_sub = Label::new("Visitors for the last 6 months")
+            .secondary()
+            .caption();
 
-        let mut stat2_title = Label::new("Dispatched Tasks").secondary();
-        let mut stat2_badge = Badge::new("+4.5%").variant(BadgeVariant::Success);
-        let mut stat2_metric = Label::new(format!("{}", self.events_count)).metric();
-        let mut stat2_sub = Label::new("Active worker pipeline").caption();
+        let mut stat2_metric = Label::new(format!("{:#}", self.events_count)).metric();
+        let mut stat2_title = Label::new("Down 20% this period ↘").medium();
+        let mut stat2_sub = Label::new("Acquisition needs attention")
+            .secondary()
+            .caption();
 
-        let mut stat3_title = Label::new("Allocated Capacity").secondary();
-        let mut stat3_badge = Badge::new("OPTIMAL").variant(BadgeVariant::Secondary);
-        let mut stat3_metric = Label::new("80%").metric();
-        let mut stat3_sub = Label::new("Wire throughput").caption();
+        let mut stat3_metric = Label::new("45,678").metric();
+        let mut stat3_title = Label::new("Strong user retention ↗").medium();
+        let mut stat3_sub = Label::new("Engagement exceeds targets")
+            .secondary()
+            .caption();
 
-        let mut stat4_title = Label::new("Active Region").secondary();
-        let mut stat4_badge =
-            Badge::new(if is_eu { "EU-WEST" } else { "US-EAST" }).variant(BadgeVariant::Outline);
-        let mut stat4_metric = Label::new(if is_eu { "Frankfurt" } else { "N. Virginia" }).title();
-        let mut stat4_sub = Label::new("mTLS v1.3 encrypted").caption();
+        let mut stat4_metric = Label::new("4.5%").metric();
+        let mut stat4_title = Label::new("Steady performance increase ↗").medium();
+        let mut stat4_sub = Label::new(if is_eu {
+            "Meets Frankfurt growth projections"
+        } else {
+            "Meets growth projections"
+        })
+        .secondary()
+        .caption();
 
         // --- Column 1: Compute & Dispatch Panel ---
         let mut col1_title = Label::new("Compute & Dispatch").subheading();
@@ -170,38 +177,26 @@ impl Widget for DemoApp {
         let mut divider_mid = Divider::horizontal(804.0).faint();
 
         {
-            // Stat cards assembly
-            let mut stat1_head = row![&mut stat1_title, &mut stat1_badge]
-                .spacing(28.0)
-                .align(Alignment::Center);
-            let mut stat1_col = column![&mut stat1_head, &mut stat1_metric, &mut stat1_sub]
-                .spacing(4.0)
+            // Stat cards assembly (matching shadcn screenshot: Large bold number, then trending up, then subtitle)
+            let mut stat1_col = column![&mut stat1_metric, &mut stat1_title, &mut stat1_sub]
+                .spacing(6.0)
                 .align(Alignment::Start);
-            let mut stat1_card = Card::new(&mut stat1_col);
+            let mut stat1_card = Card::new(&mut stat1_col).padding([22.0, 18.0]);
 
-            let mut stat2_head = row![&mut stat2_title, &mut stat2_badge]
-                .spacing(20.0)
-                .align(Alignment::Center);
-            let mut stat2_col = column![&mut stat2_head, &mut stat2_metric, &mut stat2_sub]
-                .spacing(4.0)
+            let mut stat2_col = column![&mut stat2_metric, &mut stat2_title, &mut stat2_sub]
+                .spacing(6.0)
                 .align(Alignment::Start);
-            let mut stat2_card = Card::new(&mut stat2_col);
+            let mut stat2_card = Card::new(&mut stat2_col).padding([22.0, 18.0]);
 
-            let mut stat3_head = row![&mut stat3_title, &mut stat3_badge]
-                .spacing(20.0)
-                .align(Alignment::Center);
-            let mut stat3_col = column![&mut stat3_head, &mut stat3_metric, &mut stat3_sub]
-                .spacing(4.0)
+            let mut stat3_col = column![&mut stat3_metric, &mut stat3_title, &mut stat3_sub]
+                .spacing(6.0)
                 .align(Alignment::Start);
-            let mut stat3_card = Card::new(&mut stat3_col);
+            let mut stat3_card = Card::new(&mut stat3_col).padding([22.0, 18.0]);
 
-            let mut stat4_head = row![&mut stat4_title, &mut stat4_badge]
-                .spacing(28.0)
-                .align(Alignment::Center);
-            let mut stat4_col = column![&mut stat4_head, &mut stat4_metric, &mut stat4_sub]
-                .spacing(4.0)
+            let mut stat4_col = column![&mut stat4_metric, &mut stat4_title, &mut stat4_sub]
+                .spacing(6.0)
                 .align(Alignment::Start);
-            let mut stat4_card = Card::new(&mut stat4_col);
+            let mut stat4_card = Card::new(&mut stat4_col).padding([22.0, 18.0]);
 
             let mut stats_row = row![
                 &mut stat1_card,
@@ -209,7 +204,7 @@ impl Widget for DemoApp {
                 &mut stat3_card,
                 &mut stat4_card
             ]
-            .spacing(12.0)
+            .spacing(14.0)
             .align(Alignment::Start);
 
             // Left card content
