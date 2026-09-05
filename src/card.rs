@@ -21,12 +21,42 @@ impl Default for CardStyle {
             fill: Fill::Solid(Theme::SURFACE),
             border_width: 1.0,
             border_color: Theme::BORDER,
-            corner_radius: 12.0,
-            padding: [16.0, 16.0],
+            corner_radius: Theme::RADIUS_LG,
+            padding: [Theme::SPACE_4, Theme::SPACE_4],
             shadow: Some(ShadowStyle {
                 color: Theme::SURFACE_SHADOW,
-                blur_radius: 14.0,
-                offset: [0.0, 4.0],
+                blur_radius: 12.0,
+                offset: [0.0, 3.0],
+            }),
+        }
+    }
+}
+
+impl CardStyle {
+    /// Inset subtle card surface (Linear sub-panel style).
+    pub fn subtle() -> Self {
+        CardStyle {
+            fill: Fill::Solid(Theme::SURFACE_SUBTLE),
+            border_width: 1.0,
+            border_color: Theme::BORDER_FAINT,
+            corner_radius: Theme::RADIUS_MD,
+            padding: [Theme::SPACE_3, Theme::SPACE_3],
+            shadow: None,
+        }
+    }
+
+    /// Elevated surface with prominent depth for floating cards/modals.
+    pub fn elevated() -> Self {
+        CardStyle {
+            fill: Fill::Solid(Theme::SURFACE_ELEVATED),
+            border_width: 1.0,
+            border_color: Theme::BORDER_STRONG,
+            corner_radius: Theme::RADIUS_LG,
+            padding: [Theme::SPACE_4, Theme::SPACE_4],
+            shadow: Some(ShadowStyle {
+                color: Theme::SHADOW_KEY,
+                blur_radius: 18.0,
+                offset: [0.0, 6.0],
             }),
         }
     }
@@ -52,6 +82,18 @@ impl<'a> Card<'a> {
 
     pub fn set_style(&mut self, style: Option<CardStyle>) {
         self.style = style;
+    }
+
+    /// Applies the subtle sub-panel style.
+    pub fn subtle(mut self) -> Self {
+        self.style = Some(CardStyle::subtle());
+        self
+    }
+
+    /// Applies the elevated floating card style.
+    pub fn elevated(mut self) -> Self {
+        self.style = Some(CardStyle::elevated());
+        self
     }
 }
 

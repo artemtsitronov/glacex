@@ -12,6 +12,8 @@ use winit::window::CursorIcon;
 #[derive(Debug, Clone)]
 pub struct TextInputStyle {
     pub fill: Fill,
+    pub text_color: Color,
+    pub placeholder_color: Color,
     pub border_width: f32,
     pub border_color: Color,
     pub focus_border_color: Color,
@@ -26,16 +28,18 @@ impl Default for TextInputStyle {
     fn default() -> Self {
         TextInputStyle {
             fill: Fill::Solid(Theme::SURFACE),
+            text_color: Theme::TEXT_PRIMARY,
+            placeholder_color: Theme::TEXT_MUTED,
             border_width: 1.0,
             border_color: Theme::BORDER,
             focus_border_color: Theme::FOCUS_BORDER,
-            corner_radius: 8.0,
+            corner_radius: Theme::RADIUS_MD,
             selection_color: Theme::SELECTION,
-            cursor_color: Color::WHITE,
+            cursor_color: Theme::ACTIVE,
             shadow: Some(ShadowStyle {
                 color: Theme::SURFACE_SHADOW,
-                blur_radius: 10.0,
-                offset: [0.0, 0.0],
+                blur_radius: 8.0,
+                offset: [0.0, 1.0],
             }),
             sharp: false,
         }
@@ -48,6 +52,7 @@ pub struct TextInput {
     width: f32,
     style: Option<TextInputStyle>,
     default_text: String,
+    placeholder: Option<String>,
 }
 
 impl TextInput {
@@ -59,7 +64,13 @@ impl TextInput {
             width,
             style: None,
             default_text: String::new(),
+            placeholder: None,
         }
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<String>) -> Self {
+        self.placeholder = Some(placeholder.into());
+        self
     }
 
     pub fn style(mut self, style: TextInputStyle) -> Self {
@@ -235,11 +246,23 @@ impl Measurable for TextInput {
             position[0] + size[0] - padding,
             position[1] + size[1],
         ];
-        ui.draw_text(
-            state.text(),
-            [text_position[0] - state.scroll_offset(), text_position[1]],
-            clip_rect,
-        );
+        if state.text().is_empty() {
+            if let Some(placeholder) = &self.placeholder {
+                ui.draw_text_colored(
+                    placeholder,
+                    [text_position[0], text_position[1]],
+                    clip_rect,
+                    style.placeholder_color,
+                );
+            }
+        } else {
+            ui.draw_text_colored(
+                state.text(),
+                [text_position[0] - state.scroll_offset(), text_position[1]],
+                clip_rect,
+                style.text_color,
+            );
+        }
 
         if focused {
             let idle_seconds = state.last_activity().elapsed().as_secs_f32();

@@ -22,6 +22,7 @@ struct TextAreaExtra {
 #[derive(Debug, Clone)]
 pub struct TextAreaStyle {
     pub fill: Fill,
+    pub text_color: Color,
     pub border_width: f32,
     pub border_color: Color,
     pub focus_border_color: Color,
@@ -38,15 +39,20 @@ impl Default for TextAreaStyle {
     fn default() -> Self {
         TextAreaStyle {
             fill: Fill::Solid(Theme::SURFACE),
+            text_color: Theme::TEXT_PRIMARY,
             border_width: 1.0,
             border_color: Theme::BORDER,
             focus_border_color: Theme::FOCUS_BORDER,
-            corner_radius: 8.0,
+            corner_radius: Theme::RADIUS_MD,
             selection_color: Theme::SELECTION,
-            cursor_color: Color::WHITE,
-            thumb_fill: Fill::Solid(Color::WHITE.with_alpha(0.3)),
-            thumb_dragging_fill: Fill::Solid(Color::WHITE.with_alpha(0.5)),
-            shadow: None,
+            cursor_color: Theme::ACTIVE,
+            thumb_fill: Fill::Solid(Color::WHITE.with_alpha(0.25)),
+            thumb_dragging_fill: Fill::Solid(Color::WHITE.with_alpha(0.45)),
+            shadow: Some(ShadowStyle {
+                color: Theme::SURFACE_SHADOW,
+                blur_radius: 8.0,
+                offset: [0.0, 1.0],
+            }),
             sharp: false,
         }
     }
@@ -513,7 +519,7 @@ impl Measurable for TextArea {
         for (i, line) in state.text().split('\n').enumerate() {
             if !line.is_empty() {
                 let line_position = [text_origin[0], text_origin[1] + i as f32 * line_height];
-                ui.draw_text(line, line_position, clip_rect);
+                ui.draw_text_colored(line, line_position, clip_rect, style.text_color);
             }
         }
 

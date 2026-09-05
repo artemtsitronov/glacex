@@ -552,8 +552,19 @@ impl Ui {
     }
 
     pub fn draw_text(&mut self, text: &str, position: [f32; 2], bounds: [f32; 4]) {
+        self.draw_text_colored(text, position, bounds, Theme::TEXT_PRIMARY);
+    }
+
+    pub fn draw_text_colored(
+        &mut self,
+        text: &str,
+        position: [f32; 2],
+        bounds: [f32; 4],
+        color: Color,
+    ) {
         let clipped = intersect_rects(bounds, self.current_clip());
-        self.painter.draw_text(text, position, clipped);
+        self.painter
+            .draw_text_colored(text, position, clipped, color);
     }
 
     pub fn add<W: Widget>(&mut self, widget: &mut W) -> W::Output {

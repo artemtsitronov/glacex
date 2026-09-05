@@ -55,11 +55,13 @@ impl Widget for DemoApp {
         let mut status_badge = Badge::new("ONLINE").variant(BadgeVariant::Success);
         let mut subtitle = Label::new(
             "GPU-rendered immediate-mode UI in Rust. wgpu SDF quads, taffy flexbox, glyphon text.",
-        );
+        )
+        .muted();
 
         // Column 1: Action Controls & Metrics
         let mut col1_title = Label::new("Compute & Dispatch");
-        let mut counter_stat = Label::new(format!("Dispatched Tasks: {}", self.events_count));
+        let mut counter_stat =
+            Label::new(format!("Dispatched Tasks: {}", self.events_count)).secondary();
 
         let mut primary_action_btn = Button::new("Dispatch Task")
             .tooltip("Submits a high-priority background worker task")
@@ -67,9 +69,10 @@ impl Widget for DemoApp {
                 fill: accent,
                 hover_fill: Fill::Solid(Theme::ACTIVE_HOVER),
                 pressed_fill: Fill::Solid(Theme::ACTIVE),
+                text_color: Color::WHITE,
                 border_width: 1.0,
                 border_color: Color::WHITE.with_alpha(0.2),
-                corner_radius: 8.0,
+                corner_radius: Theme::RADIUS_MD,
                 shadow: Some(ShadowStyle {
                     color: Theme::ACTIVE.with_alpha(0.35),
                     blur_radius: 12.0,
@@ -80,23 +83,14 @@ impl Widget for DemoApp {
 
         let mut reset_counter_btn = Button::new("Reset Metrics")
             .tooltip("Resets processed counters to default baseline")
-            .style(ButtonStyle {
-                fill: Fill::Solid(Theme::SURFACE_SUBTLE),
-                hover_fill: Fill::Solid(Theme::HOVERED),
-                pressed_fill: Fill::Solid(Theme::ACTIVE),
-                border_width: 1.0,
-                border_color: Theme::BORDER,
-                corner_radius: 8.0,
-                shadow: None,
-                sharp: false,
-            });
+            .outline();
 
         let mut api_title = Label::new("Endpoint Configuration");
-        let mut endpoint_label = Label::new("Ingress Gateway Host");
+        let mut endpoint_label = Label::new("Ingress Gateway Host").secondary();
         let mut endpoint_input = TextInput::new("endpoint_input", 320.0)
             .default_text("https://gateway.internal.net/v2/ingest");
 
-        let mut payload_label = Label::new("Telemetry Metadata (JSON)");
+        let mut payload_label = Label::new("Telemetry Metadata (JSON)").secondary();
         let mut payload_area = TextArea::new("payload_json", 320.0, 110.0).default_text(
             "{\n  \"service\": \"analytics-worker\",\n  \"sample_rate\": 1.0,\n  \"batch_size\": 256,\n  \"compression\": \"zstd\"\n}",
         );
@@ -117,16 +111,16 @@ impl Widget for DemoApp {
         let mut compression_check = Checkbox::new("payload_compression").default_checked(true);
         let mut compression_label = Label::new("Enable Wire Compression");
 
-        let mut slider_caption = Label::new("Bandwidth Allotment");
+        let mut slider_caption = Label::new("Bandwidth Allotment").secondary();
         let mut bandwidth_slider =
             Slider::new("bandwidth_slider", 0.0, 100.0, 320.0).default_value(80.0);
         let bandwidth_val = bandwidth_slider.state(ui).value;
         let mut bandwidth_progress_label =
-            Label::new(format!("Allocated Capacity: {:.0}%", bandwidth_val));
+            Label::new(format!("Allocated Capacity: {:.0}%", bandwidth_val)).secondary();
         let mut bandwidth_progress =
             ProgressBar::new(bandwidth_val / 100.0, 320.0).id("bandwidth_progress");
 
-        let mut region_label = Label::new("Deployment Region");
+        let mut region_label = Label::new("Deployment Region").secondary();
         let mut cluster_us = RadioButton::new("cluster_select", "us_east");
         let mut cluster_us_label = Label::new("US-East (Primary Region)");
         let mut cluster_eu = RadioButton::new("cluster_select", "eu_west");
@@ -135,18 +129,22 @@ impl Widget for DemoApp {
         // Activity & Diagnostics Log View
         let mut activity_title = Label::new("System Diagnostic Logs");
         let mut log_line_1 =
-            Label::new("[09:24:01] [wgpu] Initialized swapchain surface on primary GPU adapter");
+            Label::new("[09:24:01] [wgpu] Initialized swapchain surface on primary GPU adapter")
+                .muted();
         let mut log_line_2 =
-            Label::new("[09:24:02] [layout] Computed Taffy flexbox dimensions for 36 nodes");
+            Label::new("[09:24:02] [layout] Computed Taffy flexbox dimensions for 36 nodes")
+                .muted();
         let mut log_line_3 = Label::new(
             "[09:24:03] [pipeline] Warmed SDF quad shaders (anti-aliased rounded rects)",
-        );
+        )
+        .muted();
         let mut log_line_4 =
-            Label::new("[09:24:04] [text] Glyphon glyph cache mapped 4 font faces");
+            Label::new("[09:24:04] [text] Glyphon glyph cache mapped 4 font faces").muted();
         let mut log_line_5 =
-            Label::new("[09:24:05] [network] Connected to telemetry backend: ping 1.2ms");
+            Label::new("[09:24:05] [network] Connected to telemetry backend: ping 1.2ms").muted();
         let mut log_line_6 =
-            Label::new("[09:24:06] [animation] Smooth eased transitions active on all controls");
+            Label::new("[09:24:06] [animation] Smooth eased transitions active on all controls")
+                .muted();
 
         let mut log_col = column![
             &mut log_line_1,
@@ -162,8 +160,8 @@ impl Widget for DemoApp {
         let mut log_scroll_view =
             ScrollView::new("log_scroll_container", [712.0, 110.0], &mut log_col);
 
-        let mut divider_top = Divider::horizontal(748.0);
-        let mut divider_mid = Divider::horizontal(748.0);
+        let mut divider_top = Divider::horizontal(748.0).faint();
+        let mut divider_mid = Divider::horizontal(748.0).faint();
 
         {
             let mut btn_row = row![&mut primary_action_btn, &mut reset_counter_btn].spacing(10.0);

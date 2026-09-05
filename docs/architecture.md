@@ -66,6 +66,7 @@ All widget transitions use frame-rate independent math -- no hardcoded frame cou
 
 | Constant | Half-life | Use |
 |---|---|---|
+| `Motion::MICRO` | 16ms | Single-frame color snaps |
 | `Motion::INSTANT` | 30ms | Press feedback, immediate state snaps |
 | `Motion::SNAPPY` | 45ms | Hover transitions, border highlights |
 | `Motion::FLUID` | 60ms | Knob slides, dot scaling, progress fill |
@@ -82,7 +83,10 @@ Static easing functions for use in timed sequences:
 ### `Spring`
 Physics-based spring simulation (`stiffness`, `damping`) using semi-implicit Euler integration.
 Construct with `Spring::with_physics(initial, stiffness, damping)`. Check `spring.is_settled()` to skip updates when at rest.
-Default stiffness: 320, damping: 26.
+Presets:
+- `Motion::standard_spring()` (400 stiffness, 25 damping): Framer Motion standard UI preset.
+- `Motion::snappy_spring()` (450 stiffness, 32 damping): Fast with zero overshoot.
+- `Motion::fluid_spring()` (300 stiffness, 26 damping): Apple fluid control feel.
 
 ### `lerp(a, b, t) -> f32`
 Standard linear interpolation helper.
@@ -116,10 +120,26 @@ Gradient fills bake onto a dedicated GPU ramp texture atlas:
 ## 7. Frame Lifecycle (`src/lib.rs`)
 
 Each `WindowEvent::RedrawRequested`:
-1. `ui.begin_frame()` — clears clip stack, focus registers, computes `dt`.
+1. `ui.begin_frame()` -- clears clip stack, focus registers, computes `dt`.
 2. `App::update` callback runs (optional, for app-level state changes).
-3. `root_widget.ui(ui)` — measures, lays out, animates, and queues all draw calls.
+3. `root_widget.ui(ui)` -- measures, lays out, animates, and queues all draw calls.
 4. Tab navigation and floating tooltip compositing resolve.
-5. `ui.render()` — flushes `Painter`, submits GPU command buffer, presents surface.
-6. `ui.end_frame()` — clears per-frame input buffers and flags.
-7. `window.request_redraw()` — schedules the next frame immediately (uncapped, vsync-limited by the OS compositor).
+5. `ui.render()` -- flushes `Painter`, submits GPU command buffer, presents surface.
+6. `ui.end_frame()` -- clears per-frame input buffers and flags.
+7. `window.request_redraw()` -- schedules the next frame immediately (uncapped, vsync-limited by the OS compositor).
+
+## 8. Design Token System & Surface Ladder (`src/theme.rs`)
+
+Glacex employs a 4-step dark-first surface ladder inspired by Linear and Vercel:
+
+- **Canvas (`Theme::BG_CANVAS`)**: `#09090b` root window background. Faint blue tint avoids halation.
+- **Surface (`Theme::SURFACE`)**: `#0f0f12` standard panel and card background.
+- **Subtle (`Theme::SURFACE_SUBTLE`)**: `#141418` grouped containers and control tracks.
+- **Elevated (`Theme::SURFACE_ELEVATED`)**: `#1c1c22` tooltips, popovers, and floating overlays.
+
+### Two-Layer Shadow Architecture (`src/shadow.rs`)
+Depth is expressed through multi-layered shadows combining an ambient layer (wide, soft) with a key light layer (tight, crisp):
+- `Shadow::sm()` -- resting controls (buttons, inputs)
+- `Shadow::md()` -- cards and panels
+- `Shadow::lg()` -- elevated tooltips and overlays
+

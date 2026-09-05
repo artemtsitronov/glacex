@@ -70,6 +70,30 @@ impl ProgressBar {
     pub fn set_style(&mut self, style: Option<ProgressBarStyle>) {
         self.style = style;
     }
+
+    /// Colors the progress bar with the semantic success color (Emerald).
+    pub fn success(mut self) -> Self {
+        let mut s = self.style.take().unwrap_or_default();
+        s.progress_fill = Fill::Solid(Theme::SUCCESS);
+        self.style = Some(s);
+        self
+    }
+
+    /// Colors the progress bar with the semantic warning color (Amber).
+    pub fn warning(mut self) -> Self {
+        let mut s = self.style.take().unwrap_or_default();
+        s.progress_fill = Fill::Solid(Theme::WARNING);
+        self.style = Some(s);
+        self
+    }
+
+    /// Colors the progress bar with the semantic error color (Rose).
+    pub fn error(mut self) -> Self {
+        let mut s = self.style.take().unwrap_or_default();
+        s.progress_fill = Fill::Solid(Theme::ERROR);
+        self.style = Some(s);
+        self
+    }
 }
 
 impl Widget for ProgressBar {

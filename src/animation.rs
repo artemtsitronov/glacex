@@ -55,18 +55,35 @@ impl Ease {
 }
 
 /// Standard design system motion constants (half-life in seconds).
+///
+/// Half-life is the time to close half the remaining gap between current and target.
+/// All values are frame-rate independent via exponential decay.
 pub struct Motion;
 
 impl Motion {
-    /// Ultra-responsive transition for micro-interactions like button press (30ms).
+    /// Single-frame micro snap for imperceptible but frame-precise color transitions (16ms).
+    pub const MICRO: f32 = 0.016;
+    /// Ultra-responsive feedback for button press and immediate state changes (30ms).
     pub const INSTANT: f32 = 0.030;
-    /// Snappy hover transition for controls, tabs, and buttons (45ms).
+    /// Snappy hover and border highlight transitions for controls (45ms).
     pub const SNAPPY: f32 = 0.045;
     /// Smooth fluid glide for switches, sliders, and toggles (60ms).
     pub const FLUID: f32 = 0.060;
-    /// Gentle transition for focus rings, container reveals, and overlays (90ms).
+    /// Gentle easing for focus rings, glow shadows, and overlays (90ms).
     pub const GENTLE: f32 = 0.090;
-    /// Physics spring preset matching Framer Motion's snappy toggle configuration.
+
+    /// Standard UI spring matching Framer Motion's recommended interactive preset.
+    /// stiffness: 400, damping: 25 -- firm, responsive, no overshoot.
+    pub fn standard_spring() -> Spring {
+        Spring {
+            stiffness: 400.0,
+            damping: 25.0,
+            ..Default::default()
+        }
+    }
+
+    /// Snappy spring for toggles, tabs, and active-state knob transitions.
+    /// stiffness: 450, damping: 32 -- fast settle, zero overshoot.
     pub fn snappy_spring() -> Spring {
         Spring {
             stiffness: 450.0,
@@ -74,7 +91,9 @@ impl Motion {
             ..Default::default()
         }
     }
-    /// Physics spring preset matching Apple's fluid interactive controls.
+
+    /// Fluid spring matching Apple's interactive control feel.
+    /// stiffness: 300, damping: 26 -- soft, physical, slightly cushioned.
     pub fn fluid_spring() -> Spring {
         Spring {
             stiffness: 300.0,

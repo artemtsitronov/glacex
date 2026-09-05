@@ -415,15 +415,25 @@ Gradient modes supported: `GradientKind::Linear { angle }`, `Radial { center, ra
 
 | Palette Constant | Hex / Visual | Purpose |
 |---|---|---|
-| `Theme::BG_CANVAS` | `#09090b` | Deep root window background |
-| `Theme::SURFACE` | `#121216` | Standard container / card surface |
-| `Theme::SURFACE_SUBTLE` | `#18181b` | Secondary control surface |
-| `Theme::SURFACE_ELEVATED` | `#202026` | Floating modals, tooltips |
-| `Theme::IDLE` | `#1c1c21` | Idle button background |
-| `Theme::HOVERED` | `#27272d` | Control hover surface |
+| `Theme::BG_CANVAS` | `#09090b` | Deep root window background (Linear near-black) |
+| `Theme::SURFACE` | `#0f0f12` | Standard container / card surface |
+| `Theme::SURFACE_SUBTLE` | `#141418` | Inset containers, control tracks |
+| `Theme::SURFACE_ELEVATED` | `#1c1c22` | Floating modals, tooltips, popovers |
+| `Theme::IDLE` | `#18181c` | Resting control background |
+| `Theme::HOVERED` | `#232329` | Control hover surface |
+| `Theme::PRESSED` | `#2d2c36` | Tactile pressed control state |
 | `Theme::ACTIVE` | `#4f46e5` | Primary electric indigo accent |
-| `Theme::BORDER` | `rgba(255, 255, 255, 0.08)` | Subtle hairline borders |
+| `Theme::ACTIVE_HOVER` | `#6366f1` | Lighter hover state for active elements |
+| `Theme::BORDER_FAINT` | `rgba(255, 255, 255, 0.05)` | Structural dividers, sub-panels |
+| `Theme::BORDER` | `rgba(255, 255, 255, 0.08)` | Standard hairline borders |
+| `Theme::BORDER_STRONG` | `rgba(255, 255, 255, 0.16)` | Hover state border highlights |
 | `Theme::FOCUS_BORDER` | `#6366f1` | Vibrant focus ring outline |
+| `Theme::TEXT_PRIMARY` | `#f2f2f5` | High-contrast body text (off-white) |
+| `Theme::TEXT_SECONDARY` | `#a1a1aa` | Supporting labels and captions (Zinc 400) |
+| `Theme::TEXT_MUTED` | `#71717a` | Subdued metadata and timestamps (Zinc 500) |
+| `Theme::SUCCESS` | `#22c55e` | Semantic positive indicator (Emerald 500) |
+| `Theme::WARNING` | `#f59e0b` | Semantic caution indicator (Amber 500) |
+| `Theme::ERROR` | `#f43f5e` | Semantic destructive indicator (Rose 500) |
 
 ### Window Title and Background
 

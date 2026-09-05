@@ -5,21 +5,48 @@ All notable changes to this project are documented in this file.
 ## [0.1.4]
 
 ### Added
-- `Motion` struct in `src/animation.rs` with named half-life timing constants: `INSTANT` (30ms), `SNAPPY` (45ms), `FLUID` (60ms), `GENTLE` (90ms). Provides a shared motion language across all widgets.
-- `EaseOutQuart` easing curve.
-- `Spring::with_physics(initial, stiffness, damping)` constructor and `Spring::is_settled()` check.
-- `ProgressBar` now supports smooth animated fill via `ProgressBarState` and the `StatefulWidget` trait. Assign a stable `.id("...")` to enable fill interpolation across frames.
-- `Button` tactile press depth: 1px Y offset and shadow compression on press for physical elevation feedback. Border brightens on hover via `Theme::BORDER_STRONG`.
-- `Checkbox` progressive stroke animation: left leg draws from 0 to 35%, right leg from 30 to 100%, with slight overlap for a fluid feel.
-- `Switch` micro thumb shadow, 3-way idle/hover/active track color blend, and border transition toward `Theme::ACTIVE` when enabled.
-- `Slider` thumb scale-up (+2px) on drag for tactile feedback. Hover glow halo expands to 10px radius. Shadow grows during drag.
-- `TextInput` and `TextArea` animated focus ring: border width grows 0.5px on focus, focus glow shadow color and blur radius animate in/out via `Motion::GENTLE` (90ms).
-- `RadioButton` border transitions on hover and selection, using `Motion::FLUID` for the dot and `Motion::SNAPPY` for hover.
+- Complete design token system in `src/theme.rs`:
+  - 4-step dark-first surface ladder (`BG_CANVAS` #09090b, `SURFACE` #0f0f12, `SURFACE_SUBTLE` #141418, `SURFACE_ELEVATED` #1c1c22) inspired by Linear and Vercel.
+  - Distinct `Theme::PRESSED` (#2d2c36) control state between hover and active.
+  - Semi-transparent border tokens (`BORDER_FAINT` 5% alpha, `BORDER` 8% alpha, `BORDER_STRONG` 16% alpha).
+  - Typography color hierarchy (`TEXT_PRIMARY` off-white #f2f2f5, `TEXT_SECONDARY` Zinc 400, `TEXT_MUTED` Zinc 500).
+  - Semantic status colors (`SUCCESS` Emerald 500, `WARNING` Amber 500, `ERROR` Rose 500).
+  - 4px base grid spacing constants and shadcn-aligned corner radius scale (`RADIUS_XS` through `RADIUS_LG`).
+- Multi-layer shadow system in `src/shadow.rs`:
+  - Ambient (wide, soft) + key light (tight, crisp) two-layer architecture.
+  - Named elevation presets: `Shadow::sm()`, `Shadow::md()`, `Shadow::lg()`, and `draw_shadow_layers`.
+- Text color rendering pipeline:
+  - `Ui::draw_text_colored` and `Painter::draw_text_colored` for custom per-widget text colors.
+  - Sub-pixel typography rendering with custom alpha blending in `glyphon`.
+- `Button` component enhancements:
+  - Style variants: `.primary()`, `.outline()`, `.ghost()`, `.danger()`.
+  - Tactile 1px press depth offset and shadow compression for physical elevation.
+  - Smooth border brightening to `Theme::BORDER_STRONG` on hover.
+- `Label` typography hierarchy:
+  - `.color(Color)`, `.secondary()`, `.muted()`, and `.accent()` builder methods.
+- `Badge` component enhancements:
+  - Role-tinted surfaces (12% alpha fill, 32% alpha border) with matching high-contrast text colors for `Success`, `Warning`, and `Error`.
+- `TextInput` and `TextArea` component enhancements:
+  - Animated focus-visible ring via `Motion::GENTLE` (border grows 0.5px, glow shadow blur expands 6px).
+  - Placeholder support on `TextInput` (`.placeholder("...")`) rendered in `Theme::TEXT_MUTED`.
+  - Configurable `text_color` and `placeholder_color`.
+- `ProgressBar` component enhancements:
+  - Smooth animated fill via `ProgressBarState` and `StatefulWidget` trait with stable `.id("...")`.
+  - Semantic status variants: `.success()`, `.warning()`, `.error()`.
+- `Card` component enhancements:
+  - Style variants: `.subtle()` (inset sub-panel) and `.elevated()` (floating modal/card).
+- `Divider` component enhancements:
+  - `.faint()` convenience builder for ultra-subtle hairline separators (`Theme::BORDER_FAINT`).
+- `Motion` design system in `src/animation.rs`:
+  - Named timing constants: `MICRO` (16ms), `INSTANT` (30ms), `SNAPPY` (45ms), `FLUID` (60ms), `GENTLE` (90ms).
+  - Physics spring presets: `standard_spring` (Framer 400/25), `snappy_spring` (450/32), `fluid_spring` (Apple 300/26).
+  - `EaseOutQuart` easing curve and `Spring::is_settled()` rest check.
 
 ### Changed
-- Default spring stiffness tuned to 320/26 (from 280/24) for a snappier out-of-the-box feel.
-- `Switch` hover state now uses `hover_t` for a distinct idle/hover/active three-way blend.
-- `Slider` active halo glow radius increased to 10px on hover (was 8px).
+- Refactored `examples/demo.rs` to showcase the unified design system, typography hierarchy, button variants, and subtle dividers.
+- Button press depth tuned to 1px with smooth cubic easing.
+- Slider hover halo expanded to 10px with active drag scale feedback (+2px thumb).
+- Switch knob given micro drop shadow for physical elevation over track.
 
 ## [0.1.2]
 

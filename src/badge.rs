@@ -17,6 +17,7 @@ pub enum BadgeVariant {
 #[derive(Debug, Clone)]
 pub struct BadgeStyle {
     pub fill: Fill,
+    pub text_color: Color,
     pub border_width: f32,
     pub border_color: Color,
     pub corner_radius: f32,
@@ -27,10 +28,11 @@ impl Default for BadgeStyle {
     fn default() -> Self {
         BadgeStyle {
             fill: Fill::Solid(Theme::SURFACE_SUBTLE),
+            text_color: Theme::TEXT_SECONDARY,
             border_width: 1.0,
             border_color: Theme::BORDER,
-            corner_radius: 10.0,
-            padding: [8.0, 3.0],
+            corner_radius: Theme::RADIUS_SM,
+            padding: [Theme::SPACE_2, 3.0],
         }
     }
 }
@@ -54,22 +56,27 @@ impl Badge {
             BadgeVariant::Default => {
                 style.fill = Fill::Solid(Theme::SURFACE_SUBTLE);
                 style.border_color = Theme::BORDER;
+                style.text_color = Theme::TEXT_SECONDARY;
             }
             BadgeVariant::Outline => {
                 style.fill = Fill::Solid(Color::TRANSPARENT);
                 style.border_color = Theme::BORDER_STRONG;
+                style.text_color = Theme::TEXT_PRIMARY;
             }
             BadgeVariant::Success => {
-                style.fill = Fill::Solid(Theme::SUCCESS.with_alpha(0.18));
-                style.border_color = Theme::SUCCESS.with_alpha(0.4);
+                style.fill = Fill::Solid(Theme::SUCCESS.with_alpha(0.12));
+                style.border_color = Theme::SUCCESS.with_alpha(0.32);
+                style.text_color = Theme::SUCCESS;
             }
             BadgeVariant::Warning => {
-                style.fill = Fill::Solid(Theme::WARNING.with_alpha(0.18));
-                style.border_color = Theme::WARNING.with_alpha(0.4);
+                style.fill = Fill::Solid(Theme::WARNING.with_alpha(0.12));
+                style.border_color = Theme::WARNING.with_alpha(0.32);
+                style.text_color = Theme::WARNING;
             }
             BadgeVariant::Error => {
-                style.fill = Fill::Solid(Theme::ERROR.with_alpha(0.18));
-                style.border_color = Theme::ERROR.with_alpha(0.4);
+                style.fill = Fill::Solid(Theme::ERROR.with_alpha(0.12));
+                style.border_color = Theme::ERROR.with_alpha(0.32);
+                style.text_color = Theme::ERROR;
             }
         }
         self.style = Some(style);
@@ -128,6 +135,6 @@ impl Measurable for Badge {
             position[0] + size[0],
             position[1] + size[1],
         ];
-        ui.draw_text(&self.text, text_pos, clip_rect);
+        ui.draw_text_colored(&self.text, text_pos, clip_rect, style.text_color);
     }
 }

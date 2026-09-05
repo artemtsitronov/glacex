@@ -1,6 +1,7 @@
 use crate::color::Color;
 use crate::fill::{Fill, Gradient, GradientHandle, GradientKind, GradientStop};
 use crate::shapes::{QUAD_VERTICES, QuadVertex, RectInstance};
+use crate::theme::Theme;
 use glyphon::{
     Attrs, Cache, FontSystem, Metrics, Resolution, Shaping, SwashCache, TextArea, TextAtlas,
     TextBounds, TextRenderer, Viewport,
@@ -177,7 +178,7 @@ pub struct Painter {
     text_atlas: TextAtlas,
     text_renderer: TextRenderer,
     font_metrics: Metrics,
-    pending_labels: Vec<(glyphon::Buffer, [f32; 2], [f32; 4])>,
+    pending_labels: Vec<(glyphon::Buffer, [f32; 2], [f32; 4], Color)>,
 
     gradient_atlas: GradientAtlas,
     gradient_bind_group: BindGroup,
@@ -459,12 +460,22 @@ impl Painter {
     }
 
     pub fn draw_text(&mut self, text: &str, position: [f32; 2], bounds: [f32; 4]) {
+        self.draw_text_colored(text, position, bounds, Theme::TEXT_PRIMARY);
+    }
+
+    pub fn draw_text_colored(
+        &mut self,
+        text: &str,
+        position: [f32; 2],
+        bounds: [f32; 4],
+        color: Color,
+    ) {
         let mut buffer = glyphon::Buffer::new(&mut self.font_system, self.font_metrics);
         buffer.set_size(Some(1000.0), Some(1000.0));
         buffer.set_text(text, &Attrs::new(), Shaping::Basic, None);
         buffer.shape_until_scroll(&mut self.font_system, false);
 
-        self.pending_labels.push((buffer, position, bounds));
+        self.pending_labels.push((buffer, position, bounds, color));
     }
 
     pub fn present(&mut self) {
@@ -525,7 +536,7 @@ impl Painter {
         let text_areas = self
             .pending_labels
             .iter()
-            .map(|(buffer, position, bounds)| TextArea {
+            .map(|(buffer, position, bounds, color)| TextArea {
                 buffer,
                 left: position[0],
                 top: position[1],
@@ -536,7 +547,12 @@ impl Painter {
                     right: bounds[2] as i32,
                     bottom: bounds[3] as i32,
                 },
-                default_color: glyphon::Color::rgb(255, 255, 255),
+                default_color: glyphon::Color::rgba(
+                    (color.r * 255.0).round().clamp(0.0, 255.0) as u8,
+                    (color.g * 255.0).round().clamp(0.0, 255.0) as u8,
+                    (color.b * 255.0).round().clamp(0.0, 255.0) as u8,
+                    (color.a * 255.0).round().clamp(0.0, 255.0) as u8,
+                ),
                 custom_glyphs: &[],
             });
 

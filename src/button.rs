@@ -17,6 +17,7 @@ pub struct ButtonStyle {
     pub fill: Fill,
     pub hover_fill: Fill,
     pub pressed_fill: Fill,
+    pub text_color: Color,
     pub border_width: f32,
     pub border_color: Color,
     pub corner_radius: f32,
@@ -29,17 +30,88 @@ impl Default for ButtonStyle {
         ButtonStyle {
             fill: Fill::Solid(Theme::IDLE),
             hover_fill: Fill::Solid(Theme::HOVERED),
-            pressed_fill: Fill::Solid(Theme::ACTIVE),
+            pressed_fill: Fill::Solid(Theme::PRESSED),
+            text_color: Theme::TEXT_PRIMARY,
             border_width: 1.0,
             border_color: Theme::BORDER,
-            corner_radius: 8.0,
+            corner_radius: Theme::RADIUS_MD,
             shadow: Some(ShadowStyle::default()),
             sharp: false,
         }
     }
 }
 
-/// Per-button animation state — persists between frames.
+impl ButtonStyle {
+    /// Primary accent button (Linear / Vercel CTA style).
+    pub fn primary() -> Self {
+        ButtonStyle {
+            fill: Fill::Solid(Theme::ACTIVE),
+            hover_fill: Fill::Solid(Theme::ACTIVE_HOVER),
+            pressed_fill: Fill::Solid(Theme::ACTIVE.darken(0.12)),
+            text_color: Color::WHITE,
+            border_width: 1.0,
+            border_color: Color::WHITE.with_alpha(0.18),
+            corner_radius: Theme::RADIUS_MD,
+            shadow: Some(ShadowStyle {
+                color: Theme::ACTIVE.with_alpha(0.35),
+                blur_radius: 8.0,
+                offset: [0.0, 2.0],
+            }),
+            sharp: false,
+        }
+    }
+
+    /// Outline button with transparent surface and prominent border.
+    pub fn outline() -> Self {
+        ButtonStyle {
+            fill: Fill::Solid(Color::TRANSPARENT),
+            hover_fill: Fill::Solid(Theme::SURFACE_SUBTLE),
+            pressed_fill: Fill::Solid(Theme::HOVERED),
+            text_color: Theme::TEXT_PRIMARY,
+            border_width: 1.0,
+            border_color: Theme::BORDER_STRONG,
+            corner_radius: Theme::RADIUS_MD,
+            shadow: None,
+            sharp: false,
+        }
+    }
+
+    /// Ghost / flat button without background or border until hovered.
+    pub fn ghost() -> Self {
+        ButtonStyle {
+            fill: Fill::Solid(Color::TRANSPARENT),
+            hover_fill: Fill::Solid(Theme::SURFACE_SUBTLE),
+            pressed_fill: Fill::Solid(Theme::HOVERED),
+            text_color: Theme::TEXT_SECONDARY,
+            border_width: 0.0,
+            border_color: Color::TRANSPARENT,
+            corner_radius: Theme::RADIUS_MD,
+            shadow: None,
+            sharp: false,
+        }
+    }
+
+    /// Destructive / danger button for high-consequence actions.
+    pub fn danger() -> Self {
+        ButtonStyle {
+            fill: Fill::Solid(Theme::ERROR.with_alpha(0.14)),
+            hover_fill: Fill::Solid(Theme::ERROR.with_alpha(0.24)),
+            pressed_fill: Fill::Solid(Theme::ERROR.with_alpha(0.36)),
+            text_color: Theme::ERROR,
+            border_width: 1.0,
+            border_color: Theme::ERROR.with_alpha(0.35),
+            corner_radius: Theme::RADIUS_MD,
+            shadow: Some(ShadowStyle {
+                color: Theme::ERROR.with_alpha(0.25),
+                blur_radius: 6.0,
+                offset: [0.0, 1.0],
+            }),
+            sharp: false,
+        }
+    }
+}
+
+/// Per-button animation state -- persists between frames.
 pub struct ButtonState {
     /// 0.0 = resting, 1.0 = fully hovered.
     pub hover_t: f32,
@@ -82,6 +154,30 @@ impl Button {
         self.style = style;
     }
 
+    /// Applies the primary accent CTA style.
+    pub fn primary(mut self) -> Self {
+        self.style = Some(ButtonStyle::primary());
+        self
+    }
+
+    /// Applies the outline style.
+    pub fn outline(mut self) -> Self {
+        self.style = Some(ButtonStyle::outline());
+        self
+    }
+
+    /// Applies the ghost / flat style.
+    pub fn ghost(mut self) -> Self {
+        self.style = Some(ButtonStyle::ghost());
+        self
+    }
+
+    /// Applies the danger / destructive style.
+    pub fn danger(mut self) -> Self {
+        self.style = Some(ButtonStyle::danger());
+        self
+    }
+
     pub fn tooltip(mut self, tooltip: impl Into<String>) -> Self {
         self.tooltip = Some(tooltip.into());
         self
@@ -111,7 +207,7 @@ impl Widget for Button {
 
 impl Measurable for Button {
     fn measure(&mut self, ui: &mut Ui) -> [f32; 2] {
-        let padding = [16.0, 12.0];
+        let padding = [14.0, 9.0];
         let text_width = ui.measure_text(&self.label);
         [
             text_width + padding[0] * 2.0,
@@ -166,10 +262,10 @@ impl Measurable for Button {
         let draw_position = [position[0], position[1] + y_offset];
 
         if let Some(shadow) = &style.shadow {
-            // Shadow recedes slightly on press for tactile 3D feedback
+            // Shadow recedes slightly on press for tactile physical feedback
             let mut s = *shadow;
-            s.offset[1] -= press_t * 1.5;
-            s.blur_radius = (s.blur_radius - press_t * 3.0).max(1.0);
+            s.offset[1] -= press_t * 1.0;
+            s.blur_radius = (s.blur_radius - press_t * 2.0).max(1.0);
             draw_shadow(&s, draw_position, size, style.corner_radius, ui);
         }
 
@@ -193,7 +289,7 @@ impl Measurable for Button {
             draw_position[0] + size[0],
             draw_position[1] + size[1],
         ];
-        ui.draw_text(&self.label, text_position, clip_rect);
+        ui.draw_text_colored(&self.label, text_position, clip_rect, style.text_color);
 
         if interaction.hovered {
             ui.set_cursor_icon(CursorIcon::Pointer);

@@ -5,16 +5,20 @@ API reference for all widgets provided by `glacex`.
 ## 1. Controls
 
 ### Button
-Interactive push button. Hover and press states animate smoothly via `ButtonState`.
+Interactive push button with smooth hover/press physics and tactile elevation feedback.
 - **Constructor**: `Button::new("Label")`
 - **Builder methods**:
-  - `.style(ButtonStyle)` -- customize fill, hover fill, pressed fill, border, shadow
+  - `.style(ButtonStyle)` -- customize fill, hover fill, pressed fill, text color, border, shadow
+  - `.primary()` -- electric indigo CTA style (`Theme::ACTIVE`)
+  - `.outline()` -- transparent fill with prominent border (`Theme::BORDER_STRONG`)
+  - `.ghost()` -- borderless flat button highlighting on hover
+  - `.danger()` -- destructive action style (`Theme::ERROR`)
   - `.tooltip("text")` -- floating tooltip on hover
 - **Queries**:
   - `btn.clicked() -> bool`
   - `btn.hovered() -> bool`
   - `btn.pressed() -> bool`
-- **Animation**: `ButtonState` stores `hover_t` and `press_t` (0.0..=1.0), animated with `Motion::SNAPPY` (hover) and `Motion::INSTANT` (press). On press, the button shifts 1px down and the shadow blur shrinks to simulate physical elevation. Border brightens to `Theme::BORDER_STRONG` on hover.
+- **Animation**: `ButtonState` stores `hover_t` and `press_t` (0.0..=1.0), animated with `Motion::SNAPPY` (hover, 45ms) and `Motion::INSTANT` (press, 30ms). On press, the button shifts 1px down and the shadow blur compresses to simulate physical elevation. Border brightens to `Theme::BORDER_STRONG` on hover.
 
 ### Checkbox
 Boolean toggle with an animated diagonal tick that draws stroke-by-stroke when checked.
@@ -56,11 +60,15 @@ Continuous numerical range control. Thumb shows a soft glow halo on hover and dr
 - **Animation**: `SliderState` stores `hover_t` (`Motion::SNAPPY`) and `drag_t` (`Motion::INSTANT`). The thumb scales up 2px while dragging. The hover glow halo expands to 10px radius and the drop shadow grows during drag for tactile elevation feedback.
 
 ### TextInput
-Single-line text field.
+Single-line text field with selection, cursor animation, and placeholder text.
 - Supports click and drag selection, double-click word select, triple-click select all
 - Clipboard shortcuts: `Ctrl+C`, `Ctrl+V`, `Ctrl+A`, `Ctrl+X`
 - Cursor blink and auto-scrolling
 - **Constructor**: `TextInput::new("input_id", width)`
+- **Builder methods**:
+  - `.placeholder("Enter text...")` -- placeholder shown in `Theme::TEXT_MUTED` when empty
+  - `.default_text("...")` -- initial text value
+  - `.style(TextInputStyle)` -- customize fill, text color, placeholder color, borders, shadows
 - **State access**:
   ```rust
   let state = ui.widget_state::<TextEditState>("input_id");
@@ -70,7 +78,7 @@ Single-line text field.
 - **Animation**: `TextEditState` stores `focus_t` and `hover_t`. Focus ring animates in via `Motion::GENTLE` (90ms): border width grows 0.5px, glow shadow blur expands 6px, and glow color fades in. Hover border highlights via `Motion::SNAPPY`.
 
 ### TextArea
-Multi-line editor.
+Multi-line editor with vertical scrolling and focus-visible glow ring.
 - Vertical scrolling with interactive scrollbar
 - Arrow key navigation with column memory
 - Enter for line breaks, text selection and clipboard operations
@@ -84,7 +92,10 @@ Multi-line editor.
 ### Card
 Elevated surface with rounded corners, configurable padding, border, and soft drop shadow.
 - **Constructor**: `Card::new(&mut child_widget)`
-- **Style**: `CardStyle` (`padding`, `corner_radius`, `fill`, `border_width`, `border_color`, `shadow`)
+- **Builder methods**:
+  - `.subtle()` -- inset surface (`Theme::SURFACE_SUBTLE`) with faint hairline border
+  - `.elevated()` -- floating card (`Theme::SURFACE_ELEVATED`) with deep shadow
+  - `.style(CardStyle)` -- custom fill, border, corner radius, padding, and shadow
 
 ### ScrollView
 Dual-axis scrolling container with draggable scrollbars.
@@ -98,23 +109,38 @@ Explicit fixed-size wrapper around a child widget.
 Separation rule for dividing layout sections.
 - **Horizontal**: `Divider::horizontal(width)`
 - **Vertical**: `Divider::vertical(height)`
+- **Builder methods**:
+  - `.faint()` -- sets the border to ultra-subtle hairline (`Theme::BORDER_FAINT`)
+  - `.thickness(px)` -- custom stroke thickness
+  - `.color(Color)` -- custom stroke color
 
 ---
 
 ## 3. Displays
 
 ### Label
-Plain or dynamic text.
+Typography text with semantic hierarchy and color customization.
 - **Constructor**: `Label::new("Text")` or `Label::new(format!("Count: {n}"))`
+- **Builder methods**:
+  - `.color(Color)` -- explicit text color
+  - `.secondary()` -- supporting text in `Theme::TEXT_SECONDARY`
+  - `.muted()` -- subdued/dim text in `Theme::TEXT_MUTED`
+  - `.accent()` -- primary indigo accent in `Theme::ACTIVE`
 
 ### Badge
-Compact semantic status pill.
+Compact semantic status pill with role-tinted surfaces and high-contrast typography.
 - **Constructor**: `Badge::new("ACTIVE")`
 - **Variants**: `BadgeVariant::Default`, `Outline`, `Success`, `Warning`, `Error`
+  - `Success`: Emerald 500 text and border with 12% alpha surface
+  - `Warning`: Amber 500 text and border with 12% alpha surface
+  - `Error`: Rose 500 text and border with 12% alpha surface
 
 ### ProgressBar
 Filled percentage track with smooth animated fill.
 - **Constructor**: `ProgressBar::new(ratio, width)` where `ratio` is `0.0..=1.0`
-- **Builder methods**: `.id("stable_id")` -- required to enable smooth fill animation across frames
+- **Builder methods**:
+  - `.id("stable_id")` -- required to enable smooth fill animation across frames
+  - `.success()` -- emerald success fill
+  - `.warning()` -- amber warning fill
+  - `.error()` -- rose error fill
 - **Animation**: `ProgressBarState` tracks `animated_progress` via `Motion::FLUID`. Without a stable `.id()`, the bar renders at the raw ratio with no animation.
-
