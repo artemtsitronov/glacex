@@ -37,15 +37,15 @@ impl Widget for ThemesApp {
         .muted();
 
         // Theme Switcher Buttons (Row 1 & Row 2)
-        let mut btn_0 = Button::new("shadcn Light").outline();
-        let mut btn_1 = Button::new("shadcn Dark").outline();
-        let mut btn_2 = Button::new("Catppuccin Mocha").outline();
-        let mut btn_3 = Button::new("Catppuccin Latte").outline();
-        let mut btn_4 = Button::new("Tokyo Night").outline();
-        let mut btn_5 = Button::new("Gruvbox Dark").outline();
-        let mut btn_6 = Button::new("Gruvbox Light").outline();
-        let mut btn_7 = Button::new("Nord").outline();
-        let mut btn_8 = Button::new("Rosé Pine").outline();
+        let mut btn_0 = Button::new("_a", "shadcn Light").outline();
+        let mut btn_1 = Button::new("_b", "shadcn Dark").outline();
+        let mut btn_2 = Button::new("_c", "Catppuccin Mocha").outline();
+        let mut btn_3 = Button::new("_d", "Catppuccin Latte").outline();
+        let mut btn_4 = Button::new("_e", "Tokyo Night").outline();
+        let mut btn_5 = Button::new("_f", "Gruvbox Dark").outline();
+        let mut btn_6 = Button::new("_g", "Gruvbox Light").outline();
+        let mut btn_7 = Button::new("_h", "Nord").outline();
+        let mut btn_8 = Button::new("_i", "Rosé Pine").outline();
 
         // Active Theme Indicator Badge
         let mut active_badge =
@@ -59,10 +59,10 @@ impl Widget for ThemesApp {
 
         // Component Showcase in Left & Right Cards
         let mut left_heading = Label::new("Interactive Surface & Controls");
-        let mut primary_btn = Button::new("Primary Action").primary();
-        let mut outline_btn = Button::new("Outline Button").outline();
-        let mut ghost_btn = Button::new("Ghost Button").ghost();
-        let mut danger_btn = Button::new("Destructive Action").danger();
+        let mut primary_btn = Button::new("_j", "Primary Action").primary();
+        let mut outline_btn = Button::new("_k", "Outline Button").outline();
+        let mut ghost_btn = Button::new("_l", "Ghost Button").ghost();
+        let mut danger_btn = Button::new("_m", "Destructive Action").danger();
 
         let mut input_label = Label::new("Input Field with Floating Focus").secondary();
         let mut text_input = TextInput::new("showcase_input", 280.0)

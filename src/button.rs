@@ -139,6 +139,7 @@ pub enum ButtonVariant {
 }
 
 pub struct Button {
+    id: String,
     label: String,
     interaction: Interaction,
     variant: ButtonVariant,
@@ -147,8 +148,9 @@ pub struct Button {
 }
 
 impl Button {
-    pub fn new(label: impl Into<String>) -> Self {
+    pub fn new(id: impl Into<String>, label: impl Into<String>) -> Self {
         Button {
+            id: id.into(),
             label: label.into(),
             interaction: Interaction::default(),
             variant: ButtonVariant::Default,
@@ -244,12 +246,7 @@ impl Measurable for Button {
         let interaction = Interaction::update(position, size, style.corner_radius, ui);
         self.interaction = interaction;
 
-        // Animate hover and press smoothly using Framer / Linear motion constants
-        let state_id = format!(
-            "__btn_anim_{}_{}_{}",
-            self.label, position[0] as i32, position[1] as i32
-        );
-        let state = ui.widget_state::<ButtonState>(&state_id);
+        let state = ui.widget_state::<ButtonState>(&self.id);
 
         let hover_target = if interaction.hovered { 1.0f32 } else { 0.0 };
         let press_target = if interaction.pressed { 1.0f32 } else { 0.0 };

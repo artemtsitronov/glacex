@@ -178,6 +178,7 @@ pub struct Painter {
     viewport: Viewport,
     text_atlas: TextAtlas,
     text_renderer: TextRenderer,
+    overlay_text_renderer: TextRenderer,
     font_metrics: Metrics,
     pending_labels: Vec<(glyphon::Buffer, [f32; 2], [f32; 4], Color)>,
     pending_overlay_labels: Vec<(glyphon::Buffer, [f32; 2], [f32; 4], Color)>,
@@ -356,6 +357,8 @@ impl Painter {
         let mut text_atlas = TextAtlas::new(&device, &queue, &cache, surface_config.format);
         let text_renderer =
             TextRenderer::new(&mut text_atlas, &device, MultisampleState::default(), None);
+        let overlay_text_renderer =
+            TextRenderer::new(&mut text_atlas, &device, MultisampleState::default(), None);
 
         let font_metrics = Metrics {
             font_size: 14.0,
@@ -380,6 +383,7 @@ impl Painter {
             viewport,
             text_atlas,
             text_renderer,
+            overlay_text_renderer,
             font_metrics,
             pending_labels: vec![],
             pending_overlay_labels: vec![],
@@ -756,6 +760,41 @@ impl Painter {
             )
             .expect("failed to prepare text");
 
+        let overlay_text_areas =
+            self.pending_overlay_labels
+                .iter()
+                .map(|(buffer, position, bounds, color)| TextArea {
+                    buffer,
+                    left: position[0],
+                    top: position[1],
+                    scale: 1.0,
+                    bounds: TextBounds {
+                        left: bounds[0] as i32,
+                        top: bounds[1] as i32,
+                        right: bounds[2] as i32,
+                        bottom: bounds[3] as i32,
+                    },
+                    default_color: glyphon::Color::rgba(
+                        (color.r * 255.0).round().clamp(0.0, 255.0) as u8,
+                        (color.g * 255.0).round().clamp(0.0, 255.0) as u8,
+                        (color.b * 255.0).round().clamp(0.0, 255.0) as u8,
+                        (color.a * 255.0).round().clamp(0.0, 255.0) as u8,
+                    ),
+                    custom_glyphs: &[],
+                });
+
+        self.overlay_text_renderer
+            .prepare(
+                &self.device,
+                &self.queue,
+                &mut self.font_system,
+                &mut self.text_atlas,
+                &self.viewport,
+                overlay_text_areas,
+                &mut self.swash_cache,
+            )
+            .expect("failed to prepare overlay text");
+
         {
             let mut render_pass = command_encoder.begin_render_pass(&RenderPassDescriptor {
                 label: None,
@@ -823,6 +862,16 @@ impl Painter {
             self.text_renderer
                 .render(&self.text_atlas, &self.viewport, &mut render_pass)
                 .expect("failed to render text");
+
+            self.overlay_text_renderer
+                .render(&self.text_atlas, &self.viewport, &mut render_pass)
+                .expect("failed to render overlay text");
+
+            render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.set_vertex_buffer(0, self.quad_vertex_buffer.slice(..));
+            render_pass.set_vertex_buffer(1, self.rect_instance_buffer.slice(..));
+            render_pass.set_bind_group(0, &self.bind_group, &[]);
+            render_pass.set_bind_group(1, &self.gradient_bind_group, &[]);
 
             // --- OVERLAY PASS (Tooltips, Popovers, Modals) ---
             // Rendered strictly on top of all base geometry and base text

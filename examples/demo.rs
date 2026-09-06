@@ -37,7 +37,7 @@ impl Widget for DemoApp {
         let mut status_badge = Badge::new("ONLINE").variant(BadgeVariant::Success);
 
         let theme_label_text = format!("Theme: {}", current_theme.name);
-        let mut theme_btn = Button::new(theme_label_text)
+        let mut theme_btn = Button::new("_a", theme_label_text)
             .tooltip("Cycle 9 curated palettes (Light, Dark, Catppuccin, Tokyo Night, Gruvbox, Nord, Rosé Pine)")
             .outline();
 
@@ -79,13 +79,13 @@ impl Widget for DemoApp {
 
         // --- Column 1: Compute & Dispatch Panel ---
         let mut col1_title = Label::new("Compute & Dispatch").subheading();
-        let mut primary_action_btn = Button::new("Dispatch Task")
+        let mut primary_action_btn = Button::new("_b", "Dispatch Task")
             .tooltip("Submits high-priority worker task")
             .primary();
-        let mut reset_counter_btn = Button::new("Reset Metrics")
+        let mut reset_counter_btn = Button::new("_c", "Reset Metrics")
             .tooltip("Resets processed task counters")
             .outline();
-        let mut danger_btn = Button::new("Purge Queue")
+        let mut danger_btn = Button::new("_d", "Purge Queue")
             .tooltip("Clears worker cache")
             .danger();
 
@@ -307,7 +307,7 @@ impl Widget for DemoApp {
             .spacing(12.0)
             .align(Alignment::Start);
 
-            root_column.arrange_at([48.0, 36.0], ui);
+            let _ = ScrollView::new("full_view", ui.window_size(), &mut root_column).ui(ui);
         }
 
         if primary_action_btn.clicked() {

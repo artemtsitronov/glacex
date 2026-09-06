@@ -682,8 +682,7 @@ impl Ui {
                 0.0,
             );
 
-            // Geist 12px Medium text (rendered on overlay pass)
-            self.painter.draw_text_styled(
+            self.painter.draw_overlay_text_styled(
                 &text,
                 [tooltip_pos[0] + pad_x, tooltip_pos[1] + pad_y],
                 [

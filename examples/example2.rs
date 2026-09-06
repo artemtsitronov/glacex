@@ -281,7 +281,7 @@ impl Widget for AppState {
         let mut area_caption = Label::new("TextArea");
         let mut scroll_caption = Label::new("ScrollView");
 
-        let mut demo_button = Button::new("Button").style(button_style_value);
+        let mut demo_button = Button::new("_a", "Button").style(button_style_value);
         let mut demo_checkbox = Checkbox::new("demo_checkbox").style(checkbox_style_value);
         let mut demo_text_input = TextInput::new("demo_text_input", 170.0).style(input_style_value);
         let mut demo_text_area =
