@@ -4,7 +4,8 @@ use crate::interaction::Interaction;
 use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::theme::Theme;
 use crate::ui::Ui;
-use crate::widget::{Measurable, StatefulWidget, Widget};
+use crate::widget::{Accessible, Measurable, StatefulWidget, Widget, hash_id};
+use accesskit::{NodeId, Role};
 use winit::window::CursorIcon;
 
 use crate::animation::{Motion, animate_towards};
@@ -55,6 +56,8 @@ pub struct Switch {
     style: Option<SwitchStyle>,
     interaction: Interaction,
     default_enabled: bool,
+    width: Option<f32>,
+    height: Option<f32>,
 }
 
 impl Switch {
@@ -64,7 +67,25 @@ impl Switch {
             style: None,
             interaction: Interaction::default(),
             default_enabled: false,
+            width: None,
+            height: None,
         }
+    }
+
+    pub fn width(mut self, width: f32) -> Self {
+        self.width = Some(width);
+        self
+    }
+
+    pub fn height(mut self, height: f32) -> Self {
+        self.height = Some(height);
+        self
+    }
+
+    pub fn size(mut self, size: [f32; 2]) -> Self {
+        self.width = Some(size[0]);
+        self.height = Some(size[1]);
+        self
     }
 
     pub fn style(mut self, style: SwitchStyle) -> Self {
@@ -101,7 +122,7 @@ impl Widget for Switch {
 
 impl Measurable for Switch {
     fn measure(&mut self, _ui: &mut Ui) -> [f32; 2] {
-        [40.0, 22.0]
+        [self.width.unwrap_or(40.0), self.height.unwrap_or(22.0)]
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) -> SwitchResponse {
@@ -109,6 +130,16 @@ impl Measurable for Switch {
         let style = self.style.clone().unwrap_or_else(|| theme.switch_style());
         let interaction = Interaction::update(position, size, style.corner_radius, ui);
         self.interaction = interaction;
+
+        ui.register_accessible(
+            self,
+            [
+                position[0],
+                position[1],
+                position[0] + size[0],
+                position[1] + size[1],
+            ],
+        );
 
         if interaction.hovered {
             ui.set_cursor_icon(CursorIcon::Pointer);
@@ -129,7 +160,6 @@ impl Measurable for Switch {
             }
             let enabled = state.enabled;
             let target_progress = if enabled { 1.0 } else { 0.0 };
-            // Apple/Linear fluid switch animation curve
             state.anim_progress =
                 animate_towards(state.anim_progress, target_progress, dt, Motion::FLUID);
             let hover_target = if interaction.hovered { 1.0f32 } else { 0.0 };
@@ -142,7 +172,6 @@ impl Measurable for Switch {
             (enabled, progress, state.hover_t, velocity)
         };
 
-        // Smooth cross-fade between idle, hover, and active states
         let track_fill = if let (Fill::Solid(off_col), Fill::Solid(on_col)) =
             (&style.track_off_fill, &style.track_on_fill)
         {
@@ -166,7 +195,6 @@ impl Measurable for Switch {
             draw_shadow(shadow, position, size, style.corner_radius, ui);
         }
 
-        // Draw track
         ui.draw_rect(
             position,
             size,
@@ -179,7 +207,6 @@ impl Measurable for Switch {
             0.0,
         );
 
-        // Draw sliding knob / thumb with fluid glide and soft thumb shadow
         let padding = 2.0;
         let knob_size = size[1] - padding * 2.0;
         let min_x = position[0] + padding;
@@ -188,7 +215,6 @@ impl Measurable for Switch {
         let knob_pos = [knob_x, position[1] + padding];
         let knob_radius = knob_size / 2.0;
 
-        // Subtle motion trail on knob during active sliding
         if knob_velocity > 0.005 {
             let stretch_w = knob_size + knob_velocity * 12.0;
             let stretch_x = if progress > 0.5 {
@@ -209,7 +235,6 @@ impl Measurable for Switch {
             );
         }
 
-        // Micro thumb drop shadow for physical elevation
         let thumb_shadow = ShadowStyle {
             color: Color::rgba(0, 0, 0, 0.35),
             blur_radius: 4.0,
@@ -258,5 +283,14 @@ impl StatefulWidget for Switch {
             initialized: true,
             prev_progress: if self.default_enabled { 1.0 } else { 0.0 },
         }
+    }
+}
+
+impl Accessible for Switch {
+    fn accessibility_id(&self) -> NodeId {
+        NodeId(hash_id(&self.id))
+    }
+    fn accessibility_role(&self) -> Role {
+        Role::Switch
     }
 }

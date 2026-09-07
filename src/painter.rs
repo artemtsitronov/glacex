@@ -858,14 +858,16 @@ impl Painter {
                 range_start = range_end;
             }
 
+            // Text clipping is handled per text area via glyphon's own
+            // `TextBounds`, not the pass's scissor rect — reset the scissor
+            // to the full surface first, or text would inherit whatever
+            // scissor the last base-rect group happened to leave behind.
+            render_pass.set_scissor_rect(0, 0, surface_w, surface_h);
+
             // Render base text
             self.text_renderer
                 .render(&self.text_atlas, &self.viewport, &mut render_pass)
                 .expect("failed to render text");
-
-            self.overlay_text_renderer
-                .render(&self.text_atlas, &self.viewport, &mut render_pass)
-                .expect("failed to render overlay text");
 
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_vertex_buffer(0, self.quad_vertex_buffer.slice(..));
@@ -874,7 +876,10 @@ impl Painter {
             render_pass.set_bind_group(1, &self.gradient_bind_group, &[]);
 
             // --- OVERLAY PASS (Tooltips, Popovers, Modals) ---
-            // Rendered strictly on top of all base geometry and base text
+            // Rendered strictly on top of all base geometry and base text.
+            // Overlay rects (card + shadow) draw first, then overlay text on
+            // top of them — the other way around and the rect fill paints
+            // straight over the text.
             if !self.pending_overlay_rects.is_empty() {
                 let overlay_offset = self.pending_rects.len();
                 let mut range_start = 0usize;
@@ -905,6 +910,10 @@ impl Painter {
             }
 
             render_pass.set_scissor_rect(0, 0, surface_w, surface_h);
+
+            self.overlay_text_renderer
+                .render(&self.text_atlas, &self.viewport, &mut render_pass)
+                .expect("failed to render overlay text");
         }
 
         self.queue.submit(iter::once(command_encoder.finish()));

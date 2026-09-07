@@ -5,7 +5,8 @@ use crate::interaction::Interaction;
 use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::theme::Theme;
 use crate::ui::Ui;
-use crate::widget::{Measurable, StatefulWidget, Widget};
+use crate::widget::{Accessible, Measurable, StatefulWidget, Widget, hash_id};
+use accesskit::{NodeId, Role};
 use winit::window::CursorIcon;
 
 pub struct CheckboxState {
@@ -67,6 +68,8 @@ pub struct Checkbox {
     interaction: Interaction,
     style: Option<CheckboxStyle>,
     default_checked: bool,
+    width: Option<f32>,
+    height: Option<f32>,
 }
 
 impl Checkbox {
@@ -76,7 +79,25 @@ impl Checkbox {
             interaction: Interaction::default(),
             style: None,
             default_checked: false,
+            width: None,
+            height: None,
         }
+    }
+
+    pub fn width(mut self, width: f32) -> Self {
+        self.width = Some(width);
+        self
+    }
+
+    pub fn height(mut self, height: f32) -> Self {
+        self.height = Some(height);
+        self
+    }
+
+    pub fn size(mut self, size: [f32; 2]) -> Self {
+        self.width = Some(size[0]);
+        self.height = Some(size[1]);
+        self
     }
 
     pub fn style(mut self, style: CheckboxStyle) -> Self {
@@ -119,7 +140,6 @@ fn draw_checkmark(cx: f32, cy: f32, t: f32, color: Color, ui: &mut Ui) {
     let valley = [cx - 1.4, cy + 3.4];
     let right = [cx + 4.8, cy - 3.6];
 
-    // Left downward short leg completes during 0.0..=0.35 progress
     let left_t = (t / 0.35).clamp(0.0, 1.0);
     if left_t > 0.01 {
         let current_end = [
@@ -129,7 +149,6 @@ fn draw_checkmark(cx: f32, cy: f32, t: f32, color: Color, ui: &mut Ui) {
         draw_stroke(left, current_end, stroke_w, c, ui);
     }
 
-    // Right upward long leg completes during 0.30..=1.0 progress
     if t > 0.30 {
         let right_t = ((t - 0.30) / 0.70).clamp(0.0, 1.0);
         let current_end = [
@@ -156,7 +175,7 @@ fn draw_stroke(a: [f32; 2], b: [f32; 2], width: f32, color: Color, ui: &mut Ui) 
         position,
         [length, width],
         Fill::Solid(color),
-        width / 2.0, // rounded caps
+        width / 2.0,
         0.0,
         Color::TRANSPARENT,
         0.0,
@@ -167,7 +186,7 @@ fn draw_stroke(a: [f32; 2], b: [f32; 2], width: f32, color: Color, ui: &mut Ui) 
 
 impl Measurable for Checkbox {
     fn measure(&mut self, _ui: &mut Ui) -> [f32; 2] {
-        [18.0, 18.0]
+        [self.width.unwrap_or(18.0), self.height.unwrap_or(18.0)]
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) -> CheckboxResponse {
@@ -177,6 +196,16 @@ impl Measurable for Checkbox {
 
         let interaction = Interaction::update(position, size, style.corner_radius, ui);
         self.interaction = interaction;
+
+        ui.register_accessible(
+            self,
+            [
+                position[0],
+                position[1],
+                position[0] + size[0],
+                position[1] + size[1],
+            ],
+        );
 
         if interaction.hovered {
             ui.set_cursor_icon(CursorIcon::Pointer);
@@ -194,7 +223,6 @@ impl Measurable for Checkbox {
         }
         let checked = state.checked;
         let target_anim = if checked { 1.0 } else { 0.0 };
-        // Snappy stroke write animation (45ms half-life)
         state.anim_progress = animate_towards(state.anim_progress, target_anim, dt, Motion::SNAPPY);
         let hover_target = if interaction.hovered { 1.0f32 } else { 0.0 };
         state.hover_t = animate_towards(state.hover_t, hover_target, dt, Motion::SNAPPY);
@@ -202,7 +230,6 @@ impl Measurable for Checkbox {
         let anim_t = state.anim_progress;
         let hover_t = state.hover_t;
 
-        // Blend background fill smoothly
         let fill = if let (Fill::Solid(idle_col), Fill::Solid(chk_col)) =
             (&style.fill, &style.checked_fill)
         {
@@ -214,7 +241,6 @@ impl Measurable for Checkbox {
             style.fill
         };
 
-        // Smooth subtle border transition
         let border_color = if anim_t > 0.01 {
             style.border_color.lerp(theme.active, anim_t * 0.4)
         } else if hover_t > 0.01 {
@@ -238,7 +264,6 @@ impl Measurable for Checkbox {
             0.0,
         );
 
-        // Draw progressive animated checkmark stroke
         if anim_t > 0.01 {
             let cx = position[0] + size[0] * 0.5;
             let cy = position[1] + size[1] * 0.5;
@@ -267,5 +292,14 @@ impl StatefulWidget for Checkbox {
             hover_t: 0.0,
             initialized: true,
         }
+    }
+}
+
+impl Accessible for Checkbox {
+    fn accessibility_id(&self) -> NodeId {
+        NodeId(hash_id(&self.id))
+    }
+    fn accessibility_role(&self) -> Role {
+        Role::CheckBox
     }
 }

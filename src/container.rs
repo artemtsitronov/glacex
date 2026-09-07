@@ -1,21 +1,58 @@
 use crate::ui::Ui;
-use crate::widget::{AnyWidget, Measurable, Widget};
+use crate::widget::{Accessible, AnyWidget, Measurable, Widget, hash_id};
+use accesskit::{NodeId, Role};
 
 pub struct Container<'a> {
-    size: [f32; 2],
+    id: Option<String>,
+    width: f32,
+    height: f32,
+    padding: [f32; 2],
     child: Box<dyn AnyWidget + 'a>,
 }
 
 impl<'a> Container<'a> {
-    pub fn new(size: [f32; 2], child: &'a mut impl Measurable) -> Self {
+    pub const DEFAULT_WIDTH: f32 = 100.0;
+    pub const DEFAULT_HEIGHT: f32 = 100.0;
+
+    pub fn new(child: &'a mut impl Measurable) -> Self {
         Container {
-            size,
+            id: None,
+            width: Self::DEFAULT_WIDTH,
+            height: Self::DEFAULT_HEIGHT,
+            padding: [0.0, 0.0],
             child: Box::new(child),
         }
     }
 
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = Some(id.into());
+        self
+    }
+
+    pub fn padding(mut self, padding: [f32; 2]) -> Self {
+        self.padding = padding;
+        self
+    }
+
+    pub fn width(mut self, width: f32) -> Self {
+        self.width = width;
+        self
+    }
+
+    pub fn height(mut self, height: f32) -> Self {
+        self.height = height;
+        self
+    }
+
+    pub fn size(mut self, size: [f32; 2]) -> Self {
+        self.width = size[0];
+        self.height = size[1];
+        self
+    }
+
     pub fn arrange_at(&mut self, position: [f32; 2], ui: &mut Ui) {
-        Measurable::arrange(self, position, self.size, ui);
+        let size = self.measure(ui);
+        Measurable::arrange(self, position, size, ui);
     }
 }
 
@@ -28,13 +65,39 @@ impl<'a> Widget for Container<'a> {
 
 impl<'a> Measurable for Container<'a> {
     fn measure(&mut self, _ui: &mut Ui) -> [f32; 2] {
-        self.size // explicit, not derived from the child at all
+        [self.width, self.height]
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
-        // child is drawn at this container's position/size, full stop —
-        // no measure-and-center logic like Column/Row do; the child
-        // simply gets exactly this box.
-        self.child.arrange(position, size, ui);
+        // Same reasoning as `Card`/`Divider`: an un-identified container has
+        // no unique identity, so every anonymous one in the frame would
+        // collide under the shared "container" fallback id.
+        if self.id.is_some() {
+            ui.register_accessible(
+                self,
+                [
+                    position[0],
+                    position[1],
+                    position[0] + size[0],
+                    position[1] + size[1],
+                ],
+            );
+        }
+
+        let child_position = [position[0] + self.padding[0], position[1] + self.padding[1]];
+        let child_size = [
+            (size[0] - self.padding[0] * 2.0).max(0.0),
+            (size[1] - self.padding[1] * 2.0).max(0.0),
+        ];
+        self.child.arrange(child_position, child_size, ui);
+    }
+}
+
+impl<'a> Accessible for Container<'a> {
+    fn accessibility_id(&self) -> NodeId {
+        NodeId(hash_id(self.id.as_deref().unwrap_or("container")))
+    }
+    fn accessibility_role(&self) -> Role {
+        Role::GenericContainer
     }
 }

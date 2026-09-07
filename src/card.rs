@@ -3,7 +3,8 @@ use crate::fill::Fill;
 use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::theme::Theme;
 use crate::ui::Ui;
-use crate::widget::{AnyWidget, Measurable, Widget};
+use crate::widget::{Accessible, AnyWidget, Measurable, Widget, hash_id};
+use accesskit::{NodeId, Role};
 
 #[derive(Debug, Clone)]
 pub struct CardStyle {
@@ -33,7 +34,6 @@ impl Default for CardStyle {
 }
 
 impl CardStyle {
-    /// Inset subtle card surface (Linear sub-panel style).
     pub fn subtle() -> Self {
         CardStyle {
             fill: Fill::Solid(Theme::SURFACE_SUBTLE),
@@ -45,7 +45,6 @@ impl CardStyle {
         }
     }
 
-    /// Elevated surface with prominent depth for floating cards/modals.
     pub fn elevated() -> Self {
         CardStyle {
             fill: Fill::Solid(Theme::SURFACE_ELEVATED),
@@ -71,20 +70,47 @@ pub enum CardVariant {
 }
 
 pub struct Card<'a> {
+    id: Option<String>,
     child: Box<dyn AnyWidget + 'a>,
     variant: CardVariant,
     style: Option<CardStyle>,
     custom_padding: Option<[f32; 2]>,
+    width: Option<f32>,
+    height: Option<f32>,
 }
 
 impl<'a> Card<'a> {
     pub fn new(child: &'a mut impl Measurable) -> Self {
         Card {
+            id: None,
             child: Box::new(child),
             variant: CardVariant::Default,
             style: None,
             custom_padding: None,
+            width: None,
+            height: None,
         }
+    }
+
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = Some(id.into());
+        self
+    }
+
+    pub fn width(mut self, width: f32) -> Self {
+        self.width = Some(width);
+        self
+    }
+
+    pub fn height(mut self, height: f32) -> Self {
+        self.height = Some(height);
+        self
+    }
+
+    pub fn size(mut self, size: [f32; 2]) -> Self {
+        self.width = Some(size[0]);
+        self.height = Some(size[1]);
+        self
     }
 
     pub fn style(mut self, style: CardStyle) -> Self {
@@ -101,13 +127,11 @@ impl<'a> Card<'a> {
         self
     }
 
-    /// Applies the subtle sub-panel style.
     pub fn subtle(mut self) -> Self {
         self.variant = CardVariant::Subtle;
         self
     }
 
-    /// Applies the elevated floating card style.
     pub fn elevated(mut self) -> Self {
         self.variant = CardVariant::Elevated;
         self
@@ -144,13 +168,31 @@ impl<'a> Measurable for Card<'a> {
         let style = self.resolved_style(ui.theme());
         let inner_size = self.child.measure(ui);
         [
-            inner_size[0] + style.padding[0] * 2.0,
-            inner_size[1] + style.padding[1] * 2.0,
+            self.width.unwrap_or(inner_size[0] + style.padding[0] * 2.0),
+            self.height
+                .unwrap_or(inner_size[1] + style.padding[1] * 2.0),
         ]
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
         let style = self.resolved_style(ui.theme());
+
+        // Cards have no identity beyond their `.id(..)`; without one, every
+        // un-identified card in the frame would hash to the same node id and
+        // collide in the accessibility tree, so only register those the
+        // caller has explicitly named.
+        if self.id.is_some() {
+            ui.register_accessible(
+                self,
+                [
+                    position[0],
+                    position[1],
+                    position[0] + size[0],
+                    position[1] + size[1],
+                ],
+            );
+        }
+
         if let Some(shadow) = &style.shadow {
             draw_shadow(shadow, position, size, style.corner_radius, ui);
         }
@@ -177,5 +219,14 @@ impl<'a> Measurable for Card<'a> {
         ];
 
         self.child.arrange(child_position, child_size, ui);
+    }
+}
+
+impl<'a> Accessible for Card<'a> {
+    fn accessibility_id(&self) -> NodeId {
+        NodeId(hash_id(self.id.as_deref().unwrap_or("card")))
+    }
+    fn accessibility_role(&self) -> Role {
+        Role::GenericContainer
     }
 }

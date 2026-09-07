@@ -29,15 +29,17 @@ impl Widget for ColorDemo {
         let parsed_color = Color::hex_str(&hex_text);
 
         let mut badge = Badge::new("COLOR").variant(BadgeVariant::Success);
-        let mut title = Label::new("Dynamic Color Preview");
-        let mut subtitle =
-            Label::new("Enter a 6-digit hex code to update the button style in real time.");
+        let mut title = Label::new("title", "Dynamic Color Preview");
+        let mut subtitle = Label::new(
+            "subtitle",
+            "Enter a 6-digit hex code to update the button style in real time.",
+        );
         let mut divider = Divider::horizontal(360.0);
 
-        let mut input_label = Label::new("Hex Code (#RRGGBB)");
-        let mut hex_input = TextInput::new("color_hex_input", 320.0);
+        let mut input_label = Label::new("input_label", "Hex Code (#RRGGBB)");
+        let mut hex_input = TextInput::new("color_hex_input").width(320.0);
 
-        let mut preview_label = Label::new("Styled Preview");
+        let mut preview_label = Label::new("preview_label", "Styled Preview");
         let mut preview_btn = Button::new("_a", "Sample Button").style(ButtonStyle {
             fill: Fill::Solid(parsed_color),
             hover_fill: Fill::Solid(parsed_color.lighten(0.15)),
@@ -46,6 +48,7 @@ impl Widget for ColorDemo {
             border_width: 1.0,
             border_color: Color::WHITE.with_alpha(0.2),
             corner_radius: Theme::RADIUS_MD,
+            padding: [14.0, 8.0],
             shadow: Some(ShadowStyle {
                 color: parsed_color.with_alpha(0.35),
                 blur_radius: 16.0,

@@ -6,7 +6,8 @@ use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::text_edit::TextEditState;
 use crate::theme::Theme;
 use crate::ui::Ui;
-use crate::widget::{FocusId, Measurable, StatefulWidget, Widget};
+use crate::widget::{Accessible, FocusId, Measurable, StatefulWidget, Widget, hash_id};
+use accesskit::{NodeId, Role};
 use winit::window::CursorIcon;
 
 #[derive(Debug, Clone)]
@@ -18,6 +19,7 @@ pub struct TextInputStyle {
     pub border_color: Color,
     pub focus_border_color: Color,
     pub corner_radius: f32,
+    pub padding: [f32; 2],
     pub selection_color: Color,
     pub cursor_color: Color,
     pub shadow: Option<ShadowStyle>,
@@ -34,6 +36,7 @@ impl Default for TextInputStyle {
             border_color: Theme::BORDER,
             focus_border_color: Theme::FOCUS_BORDER,
             corner_radius: Theme::RADIUS_MD,
+            padding: [10.0, 10.0],
             selection_color: Theme::SELECTION,
             cursor_color: Theme::ACTIVE,
             shadow: Some(ShadowStyle {
@@ -50,22 +53,49 @@ pub struct TextInput {
     id: String,
     focus_id: FocusId,
     width: f32,
+    height: Option<f32>,
     style: Option<TextInputStyle>,
     default_text: String,
     placeholder: Option<String>,
+    custom_padding: Option<[f32; 2]>,
 }
 
 impl TextInput {
-    pub fn new(id: impl Into<String>, width: f32) -> Self {
+    pub const DEFAULT_WIDTH: f32 = 200.0;
+
+    pub fn new(id: impl Into<String>) -> Self {
         let id = id.into();
         TextInput {
             focus_id: FocusId::new(&id),
             id,
-            width,
+            width: Self::DEFAULT_WIDTH,
+            height: None,
             style: None,
             default_text: String::new(),
             placeholder: None,
+            custom_padding: None,
         }
+    }
+
+    pub fn padding(mut self, padding: [f32; 2]) -> Self {
+        self.custom_padding = Some(padding);
+        self
+    }
+
+    pub fn width(mut self, width: f32) -> Self {
+        self.width = width;
+        self
+    }
+
+    pub fn height(mut self, height: f32) -> Self {
+        self.height = Some(height);
+        self
+    }
+
+    pub fn size(mut self, size: [f32; 2]) -> Self {
+        self.width = size[0];
+        self.height = Some(size[1]);
+        self
     }
 
     pub fn placeholder(mut self, placeholder: impl Into<String>) -> Self {
@@ -95,6 +125,14 @@ impl TextInput {
         let state = ui.widget_state::<TextEditState>(&self.id);
         state.hovered
     }
+
+    fn resolved_style(&self, theme: &Theme) -> TextInputStyle {
+        let mut style = self.style.clone().unwrap_or_else(|| theme.input_style());
+        if let Some(p) = self.custom_padding {
+            style.padding = p;
+        }
+        style
+    }
 }
 
 impl Widget for TextInput {
@@ -108,17 +146,28 @@ impl Widget for TextInput {
 
 impl Measurable for TextInput {
     fn measure(&mut self, ui: &mut Ui) -> [f32; 2] {
-        let padding = 10.0;
-        [self.width, ui.line_height() + padding * 2.0]
+        let style = self.resolved_style(ui.theme());
+        let natural_height = ui.line_height() + style.padding[1] * 2.0;
+        [self.width, self.height.unwrap_or(natural_height)]
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
         ui.register_focusable(self.focus_id);
 
         let theme = *ui.theme();
-        let style = self.style.clone().unwrap_or_else(|| theme.input_style());
+        let style = self.resolved_style(&theme);
         let dt = ui.dt();
-        let padding = 10.0;
+        let padding = style.padding[0];
+
+        ui.register_accessible(
+            self,
+            [
+                position[0],
+                position[1],
+                position[0] + size[0],
+                position[1] + size[1],
+            ],
+        );
 
         let mouse_pos = ui.mouse_position();
         let hovered = !ui.is_input_blocked(mouse_pos)
@@ -181,7 +230,6 @@ impl Measurable for TextInput {
         let cursor_x = ui.measure_text(state.prefix());
         state.scroll_into_view(cursor_x, text_width);
 
-        // Animate focus ring and hover transitions smoothly
         let focus_target = if focused { 1.0f32 } else { 0.0 };
         let hover_target = if hovered { 1.0f32 } else { 0.0 };
         state.focus_t = animate_towards(state.focus_t, focus_target, dt, Motion::GENTLE);
@@ -189,12 +237,10 @@ impl Measurable for TextInput {
         let focus_t = state.focus_t;
         let hover_t = state.hover_t;
 
-        // Dynamic border color blending
         let base_or_hover = style.border_color.lerp(theme.border_strong, hover_t);
         let border_color = base_or_hover.lerp(style.focus_border_color, focus_t);
         let border_width = style.border_width + focus_t * 0.5;
 
-        // Elevated shadow with focus glow (shadcn/Vercel focus-visible ring)
         if let Some(shadow) = &style.shadow {
             let mut s = *shadow;
             if focus_t > 0.01 {
@@ -217,6 +263,18 @@ impl Measurable for TextInput {
             style.sharp,
             0.0,
         );
+
+        // Selection highlight, text, and cursor are all clipped to the
+        // field's own inner (padding-inset) bounds — otherwise a selection
+        // spanning off-screen text (once scrolled) would paint past the
+        // edges of the input instead of just disappearing under it.
+        let clip_rect = [
+            position[0] + padding,
+            position[1],
+            position[0] + size[0] - padding,
+            position[1] + size[1],
+        ];
+        ui.push_clip(clip_rect);
 
         if let Some((start, end)) = state.selection_range() {
             let prefix_start = ui.measure_text(&state.text()[..state.byte_index_for(start)]);
@@ -241,12 +299,6 @@ impl Measurable for TextInput {
             );
         }
 
-        let clip_rect = [
-            position[0] + padding,
-            position[1],
-            position[0] + size[0] - padding,
-            position[1] + size[1],
-        ];
         if state.text().is_empty() {
             if let Some(placeholder) = &self.placeholder {
                 ui.draw_text_colored(
@@ -287,6 +339,8 @@ impl Measurable for TextInput {
             }
         }
 
+        ui.pop_clip();
+
         ui.put_widget_state(&self.id, state);
     }
 }
@@ -302,5 +356,17 @@ impl StatefulWidget for TextInput {
         let mut state = TextEditState::default();
         state.set_text(&self.default_text);
         state
+    }
+}
+
+impl Accessible for TextInput {
+    fn accessibility_id(&self) -> NodeId {
+        NodeId(hash_id(&self.id))
+    }
+    fn accessibility_role(&self) -> Role {
+        Role::TextInput
+    }
+    fn accessibility_label(&self) -> Option<String> {
+        self.placeholder.clone()
     }
 }

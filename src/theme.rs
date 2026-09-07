@@ -1548,6 +1548,7 @@ impl Theme {
             border_width: 1.0,
             border_color: self.border,
             corner_radius: 6.0,
+            padding: [14.0, 8.0],
             shadow: Some(self.shadow_sm()[0]),
             sharp: false,
         }
@@ -1567,6 +1568,7 @@ impl Theme {
             border_width: 1.0,
             border_color: Color::WHITE.with_alpha(0.15),
             corner_radius: 6.0,
+            padding: [14.0, 8.0],
             shadow: Some(ShadowStyle {
                 color: self.active.with_alpha(0.20),
                 blur_radius: 4.0,
@@ -1586,6 +1588,7 @@ impl Theme {
             border_width: 1.0,
             border_color: self.border_strong,
             corner_radius: 6.0,
+            padding: [14.0, 8.0],
             shadow: Some(self.shadow_sm()[0]),
             sharp: false,
         }
@@ -1601,6 +1604,7 @@ impl Theme {
             border_width: 0.0,
             border_color: Color::TRANSPARENT,
             corner_radius: 6.0,
+            padding: [14.0, 8.0],
             shadow: None,
             sharp: false,
         }
@@ -1616,6 +1620,7 @@ impl Theme {
             border_width: 1.0,
             border_color: self.error.darken(0.15),
             corner_radius: 6.0,
+            padding: [14.0, 8.0],
             shadow: Some(ShadowStyle {
                 color: self.error.with_alpha(0.25),
                 blur_radius: 4.0,
@@ -1721,6 +1726,7 @@ impl Theme {
             border_color: self.border_strong,
             focus_border_color: self.focus_border,
             corner_radius: 6.0,
+            padding: [10.0, 10.0],
             selection_color: self.selection,
             cursor_color: self.active,
             shadow: Some(self.shadow_sm()[0]),
@@ -1737,6 +1743,7 @@ impl Theme {
             border_color: self.border_strong,
             focus_border_color: self.focus_border,
             corner_radius: 6.0,
+            padding: [10.0, 10.0],
             selection_color: self.selection,
             cursor_color: self.active,
             thumb_fill: Fill::Solid(self.text_muted.with_alpha(0.35)),

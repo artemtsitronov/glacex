@@ -12,7 +12,7 @@ impl DemoApp {
     fn new() -> Self {
         DemoApp {
             events_count: 148,
-            current_theme_idx: 1, // Start on Theme::DARK (Pure Black OLED)
+            current_theme_idx: 1,
         }
     }
 }
@@ -25,15 +25,14 @@ impl Widget for DemoApp {
         let current_theme = themes[self.current_theme_idx % themes.len()];
         ui.set_theme(current_theme);
 
-        // Read currently selected cluster to reflect across stats
         let cluster_selected = ui.selected_option("cluster_select").unwrap_or("us_east");
         let is_eu = cluster_selected == "eu_west";
 
-        // Top Navigation Bar (shadcn style header)
-        let mut logo_label = Label::new("Acme Inc.").heading();
+        let mut logo_label = Label::new("logo_label", "Acme Inc.").heading();
         let mut logo_badge = Badge::new("v0.1.4").variant(BadgeVariant::Secondary);
-        let mut search_input =
-            TextInput::new("nav_search", 240.0).placeholder("Search documentation...");
+        let mut search_input = TextInput::new("nav_search")
+            .width(240.0)
+            .placeholder("Search documentation...");
         let mut status_badge = Badge::new("ONLINE").variant(BadgeVariant::Success);
 
         let theme_label_text = format!("Theme: {}", current_theme.name);
@@ -41,44 +40,42 @@ impl Widget for DemoApp {
             .tooltip("Cycle 9 curated palettes (Light, Dark, Catppuccin, Tokyo Night, Gruvbox, Nord, Rosé Pine)")
             .outline();
 
-        // Header Title
-        let mut page_title = Label::new("Dashboard Overview").title();
-        let mut page_subtitle = Label::new(
-            "High-performance GPU immediate-mode UI with bundled Geist typography and SDF surfaces.",
+        let mut page_title = Label::new("page_title", "Dashboard Overview").title();
+        let mut page_subtitle = Label::new("page_subtitle", "High-performance GPU immediate-mode UI with bundled Geist typography and SDF surfaces.").muted();
+
+        let mut stat1_metric = Label::new("stat1_metric", "$1,250.00").metric();
+        let mut stat1_title = Label::new("stat1_title", "Trending up this month ↗").medium();
+        let mut stat1_sub = Label::new("stat1_sub", "Visitors for the last 6 months")
+            .secondary()
+            .caption();
+
+        let mut stat2_metric =
+            Label::new("stat2_metric", format!("{:#}", self.events_count)).metric();
+        let mut stat2_title = Label::new("stat2_title", "Down 20% this period ↘").medium();
+        let mut stat2_sub = Label::new("stat2_sub", "Acquisition needs attention")
+            .secondary()
+            .caption();
+
+        let mut stat3_metric = Label::new("stat3_metric", "45,678").metric();
+        let mut stat3_title = Label::new("stat3_title", "Strong user retention ↗").medium();
+        let mut stat3_sub = Label::new("stat3_sub", "Engagement exceeds targets")
+            .secondary()
+            .caption();
+
+        let mut stat4_metric = Label::new("stat4_metric", "4.5%").metric();
+        let mut stat4_title = Label::new("stat4_title", "Steady performance increase ↗").medium();
+        let mut stat4_sub = Label::new(
+            "stat4_sub",
+            if is_eu {
+                "Meets Frankfurt growth projections"
+            } else {
+                "Meets growth projections"
+            },
         )
-        .muted();
-
-        // --- Stat Cards Row (shadcn metrics matching screenshot) ---
-        let mut stat1_metric = Label::new("$1,250.00").metric();
-        let mut stat1_title = Label::new("Trending up this month ↗").medium();
-        let mut stat1_sub = Label::new("Visitors for the last 6 months")
-            .secondary()
-            .caption();
-
-        let mut stat2_metric = Label::new(format!("{:#}", self.events_count)).metric();
-        let mut stat2_title = Label::new("Down 20% this period ↘").medium();
-        let mut stat2_sub = Label::new("Acquisition needs attention")
-            .secondary()
-            .caption();
-
-        let mut stat3_metric = Label::new("45,678").metric();
-        let mut stat3_title = Label::new("Strong user retention ↗").medium();
-        let mut stat3_sub = Label::new("Engagement exceeds targets")
-            .secondary()
-            .caption();
-
-        let mut stat4_metric = Label::new("4.5%").metric();
-        let mut stat4_title = Label::new("Steady performance increase ↗").medium();
-        let mut stat4_sub = Label::new(if is_eu {
-            "Meets Frankfurt growth projections"
-        } else {
-            "Meets growth projections"
-        })
         .secondary()
         .caption();
 
-        // --- Column 1: Compute & Dispatch Panel ---
-        let mut col1_title = Label::new("Compute & Dispatch").subheading();
+        let mut col1_title = Label::new("col1_title", "Compute & Dispatch").subheading();
         let mut primary_action_btn = Button::new("_b", "Dispatch Task")
             .tooltip("Submits high-priority worker task")
             .primary();
@@ -89,74 +86,93 @@ impl Widget for DemoApp {
             .tooltip("Clears worker cache")
             .danger();
 
-        let mut api_title = Label::new("Endpoint Configuration").subheading();
-        let mut endpoint_label = Label::new("Ingress Gateway Host").secondary();
-        let mut endpoint_input = TextInput::new("endpoint_input", 350.0)
+        let mut api_title = Label::new("api_title", "Endpoint Configuration").subheading();
+        let mut endpoint_label = Label::new("endpoint_label", "Ingress Gateway Host").secondary();
+        let mut endpoint_input = TextInput::new("endpoint_input")
+            .width(350.0)
             .placeholder("https://api.gateway.internal/v2/ingest")
             .default_text("https://gateway.internal.net/v2/ingest");
 
-        let mut payload_label = Label::new("Telemetry Metadata (JSON)").secondary();
-        let mut payload_area = TextArea::new("payload_json", 350.0, 110.0).default_text(
+        let mut payload_label =
+            Label::new("payload_label", "Telemetry Metadata (JSON)").secondary();
+        let mut payload_area = TextArea::new("payload_json").size([350.0, 110.0]).default_text(
             "{\n  \"service\": \"analytics-worker\",\n  \"sample_rate\": 1.0,\n  \"batch_size\": 256,\n  \"compression\": \"zstd\"\n}",
         );
 
-        // --- Column 2: System Policies & Controls ---
-        let mut col2_title = Label::new("Runtime Policies").subheading();
+        let mut col2_title = Label::new("col2_title", "Runtime Policies").subheading();
 
         let mut live_stream_switch = Switch::new("live_stream_toggle").default_enabled(true);
-        let mut live_stream_label = Label::new("Real-time Event Streaming");
+        let mut live_stream_label = Label::new("live_stream_label", "Real-time Event Streaming");
         let mut live_stream_badge = Badge::new("ACTIVE").variant(BadgeVariant::Success);
 
         let mut auto_reconnect_check = Checkbox::new("auto_reconnect").default_checked(true);
-        let mut auto_reconnect_label = Label::new("Automatic Node Failover");
+        let mut auto_reconnect_label =
+            Label::new("auto_reconnect_label", "Automatic Node Failover");
 
         let mut strict_tls_check = Checkbox::new("strict_tls").default_checked(true);
-        let mut strict_tls_label = Label::new("Enforce Mutual TLS v1.3");
+        let mut strict_tls_label = Label::new("strict_tls_label", "Enforce Mutual TLS v1.3");
 
         let mut compression_check = Checkbox::new("payload_compression").default_checked(true);
-        let mut compression_label = Label::new("Wire Compression (zstd)");
+        let mut compression_label = Label::new("compression_label", "Wire Compression (zstd)");
 
-        let mut slider_caption = Label::new("Bandwidth Allotment").secondary();
-        let mut bandwidth_slider =
-            Slider::new("bandwidth_slider", 0.0, 100.0, 350.0).default_value(80.0);
+        let mut slider_caption = Label::new("slider_caption", "Bandwidth Allotment").secondary();
+        let mut bandwidth_slider = Slider::new("bandwidth_slider", 0.0, 100.0)
+            .width(350.0)
+            .default_value(80.0);
         let bandwidth_val = bandwidth_slider.state(ui).value;
-        let mut bandwidth_progress_label =
-            Label::new(format!("Allocated Capacity: {:.0}%", bandwidth_val)).secondary();
-        let mut bandwidth_progress =
-            ProgressBar::new(bandwidth_val / 100.0, 350.0).id("bandwidth_progress");
+        let mut bandwidth_progress_label = Label::new(
+            "bandwidth_progress_label",
+            format!("Allocated Capacity: {:.0}%", bandwidth_val),
+        )
+        .secondary();
+        let mut bandwidth_progress = ProgressBar::new(bandwidth_val / 100.0)
+            .width(350.0)
+            .id("bandwidth_progress");
 
-        let mut region_label = Label::new("Deployment Cluster").secondary();
+        let mut region_label = Label::new("region_label", "Deployment Cluster").secondary();
         let mut cluster_us = RadioButton::new("cluster_select", "us_east");
-        let mut cluster_us_label = Label::new("US-East-1 (Primary Region)");
+        let mut cluster_us_label = Label::new("cluster_us_label", "US-East-1 (Primary Region)");
         let mut cluster_eu = RadioButton::new("cluster_select", "eu_west");
-        let mut cluster_eu_label = Label::new("EU-West-1 (Failover Replica)");
+        let mut cluster_eu_label = Label::new("cluster_eu_label", "EU-West-1 (Failover Replica)");
 
-        // --- Diagnostic Logs View ---
-        let mut activity_title = Label::new("System Diagnostic Logs").subheading();
-        let mut log_line_1 =
-            Label::new("[09:24:01] [wgpu] Initialized swapchain surface on primary GPU adapter")
-                .mono()
-                .caption();
-        let mut log_line_2 =
-            Label::new("[09:24:02] [layout] Computed Taffy flexbox dimensions for 48 nodes")
-                .mono()
-                .caption();
-        let mut log_line_3 =
-            Label::new("[09:24:03] [pipeline] Warmed SDF quad shaders with sub-pixel antialiasing")
-                .mono()
-                .caption();
-        let mut log_line_4 =
-            Label::new("[09:24:04] [text] Loaded bundled Geist Sans & Geist Mono font family")
-                .mono()
-                .caption();
-        let mut log_line_5 =
-            Label::new("[09:24:05] [network] Connected to telemetry backend: ping 1.2ms")
-                .mono()
-                .caption();
-        let mut log_line_6 =
-            Label::new("[09:24:06] [motion] Spring & fluid physics active across all surfaces")
-                .mono()
-                .caption();
+        let mut activity_title =
+            Label::new("activity_title", "System Diagnostic Logs").subheading();
+        let mut log_line_1 = Label::new(
+            "log_line_1",
+            "[09:24:01] [wgpu] Initialized swapchain surface on primary GPU adapter",
+        )
+        .mono()
+        .caption();
+        let mut log_line_2 = Label::new(
+            "log_line_2",
+            "[09:24:02] [layout] Computed Taffy flexbox dimensions for 48 nodes",
+        )
+        .mono()
+        .caption();
+        let mut log_line_3 = Label::new(
+            "log_line_3",
+            "[09:24:03] [pipeline] Warmed SDF quad shaders with sub-pixel antialiasing",
+        )
+        .mono()
+        .caption();
+        let mut log_line_4 = Label::new(
+            "log_line_4",
+            "[09:24:04] [text] Loaded bundled Geist Sans & Geist Mono font family",
+        )
+        .mono()
+        .caption();
+        let mut log_line_5 = Label::new(
+            "log_line_5",
+            "[09:24:05] [network] Connected to telemetry backend: ping 1.2ms",
+        )
+        .mono()
+        .caption();
+        let mut log_line_6 = Label::new(
+            "log_line_6",
+            "[09:24:06] [motion] Spring & fluid physics active across all surfaces",
+        )
+        .mono()
+        .caption();
 
         let mut log_col = column![
             &mut log_line_1,
@@ -170,13 +186,12 @@ impl Widget for DemoApp {
         .align(Alignment::Start);
 
         let mut log_scroll_view =
-            ScrollView::new("log_scroll_container", [764.0, 110.0], &mut log_col);
+            ScrollView::new("log_scroll_container", &mut log_col).size([764.0, 110.0]);
 
         let mut divider_top = Divider::horizontal(804.0).faint();
         let mut divider_mid = Divider::horizontal(804.0).faint();
 
         {
-            // Stat cards assembly (matching shadcn screenshot: Large bold number, then trending up, then subtitle)
             let mut stat1_col = column![&mut stat1_metric, &mut stat1_title, &mut stat1_sub]
                 .spacing(6.0)
                 .align(Alignment::Start);
@@ -206,7 +221,6 @@ impl Widget for DemoApp {
             .spacing(14.0)
             .align(Alignment::Start);
 
-            // Left card content
             let mut btn_row = row![
                 &mut primary_action_btn,
                 &mut reset_counter_btn,
@@ -227,7 +241,6 @@ impl Widget for DemoApp {
             .spacing(10.0)
             .align(Alignment::Start);
 
-            // Right card content
             let mut stream_row = row![
                 &mut live_stream_switch,
                 &mut live_stream_label,
@@ -307,7 +320,11 @@ impl Widget for DemoApp {
             .spacing(12.0)
             .align(Alignment::Start);
 
-            let _ = ScrollView::new("full_view", ui.window_size(), &mut root_column).ui(ui);
+            let window_size = ui.window_size();
+            ScrollView::new("full_view", &mut root_column)
+                .size(window_size)
+                .padding([16.0; 2])
+                .ui(ui);
         }
 
         if primary_action_btn.clicked() {
@@ -326,5 +343,6 @@ fn main() {
     App::new(DemoApp::new())
         .title("Glacex - High Performance GPU UI Demo")
         .window_size(1360, 920)
+        .accessibility_enabled(true)
         .run();
 }

@@ -120,17 +120,18 @@ Gradient fills bake onto a dedicated GPU ramp texture atlas:
 ## 7. Frame Lifecycle (`src/lib.rs`)
 
 Each `WindowEvent::RedrawRequested`:
-1. `ui.begin_frame()` -- clears clip stack, focus registers, computes `dt`.
+1. `ui.begin_frame()` -- clears clip stack, focus registers, accessibility node list, and computes `dt`.
 2. `App::update` callback runs (optional, for app-level state changes).
-3. `root_widget.ui(ui)` -- measures, lays out, animates, and queues all draw calls.
-4. Tab navigation and floating tooltip compositing resolve.
-5. `ui.render()` -- flushes `Painter`, submits GPU command buffer, presents surface.
-6. `ui.end_frame()` -- clears per-frame input buffers and flags.
-7. `window.request_redraw()` -- schedules the next frame immediately (uncapped, vsync-limited by the OS compositor).
+3. `root_widget.ui(ui)` -- measures, lays out, animates, and queues all draw calls. Each widget also calls `Ui::register_accessible` for itself if accessibility is enabled.
+4. If accessibility is enabled, the frame's accessibility nodes are copied into the shared tree and pushed to the `accesskit` adapter (see [Accessibility](#9-accessibility-srcaccessibilityrs)).
+5. Tab navigation and floating tooltip compositing resolve.
+6. `ui.render()` -- flushes `Painter`, submits GPU command buffer, presents surface.
+7. `ui.end_frame()` -- clears per-frame input buffers and flags.
+8. `window.request_redraw()` -- schedules the next frame immediately (uncapped, vsync-limited by the OS compositor).
 
 ## 8. Design Token System & Themes (`src/theme.rs`)
 
-Glacex features a runtime theming engine with **9 curated presets**, defaulted to a pristine Apple & shadcn-inspired **White / Light** aesthetic (`Theme::LIGHT`). Themes can be hot-swapped dynamically at runtime using `ui.set_theme(theme)`.
+Glacex ships 9 built-in theme presets, defaulting to a light, shadcn-inspired palette (`Theme::LIGHT`). Themes can be swapped at runtime with `ui.set_theme(theme)`.
 
 ### Presets Available
 - `Theme::LIGHT` (Default): Pure white `#ffffff` canvas with zinc borders and charcoal primary accent.
@@ -155,4 +156,15 @@ Depth is expressed through multi-layered shadows combining an ambient layer (wid
 - `Shadow::md()` -- cards and panels
 - `Shadow::lg()` -- elevated tooltips and overlays
 - `theme.shadow_sm()`, `theme.shadow_md()`, `theme.shadow_lg()` dynamically tailor blur and alpha to the current palette.
+
+## 9. Accessibility (`src/accessibility.rs`)
+
+Accessibility is opt-in (`App::accessibility_enabled(true)`) and layered on top of the normal frame loop rather than baked into it, via [`accesskit`](https://accesskit.dev/) / `accesskit_winit`.
+
+- **`SharedTree`**: an `Arc<Mutex<Vec<(NodeId, Node)>>>` shared between the render thread and `accesskit`'s platform adapter thread. Every widget that calls `Ui::register_accessible` during `arrange` appends itself here for the current frame. `Ui::begin_frame` clears the list, so it never accumulates stale entries from previous frames.
+- **`build_update`**: wraps the current node list in a synthetic `Role::Window` root, sets that root's `children` to every registered node id (accesskit requires every non-root node to be reachable from the root), and returns a `TreeUpdate`.
+- **`AccessibilityActivationHandler`** / **`AccessibilityDeactivationHandler`**: called by the platform backend when an assistive technology attaches or detaches. On Linux this only happens once the desktop's `ScreenReaderEnabled` AT-SPI flag is set (normally by a running screen reader), which is a common point of confusion when testing with an inspector like Accerciser instead of an actual screen reader.
+- **`AccessibilityActionHandler`**: receives action requests from the AT client (e.g. "invoke this button"). Currently just logged — wiring it back into widget state is app-specific and left to the caller.
+
+Each widget's `NodeId` is a hash of its own id string (`hash_id`, `src/widget.rs`), so two widgets sharing an id — including two anonymous `Card`/`Container`/`Divider`/`ProgressBar` instances that both fall back to the same default id — collide in the tree. `Card`, `Container`, and `Divider` only call `register_accessible` when the caller has actually set an `.id(...)`, precisely to avoid that.
 

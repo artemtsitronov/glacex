@@ -7,16 +7,17 @@ use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::text_edit::TextEditState;
 use crate::theme::Theme;
 use crate::ui::Ui;
-use crate::widget::{FocusId, Measurable, StatefulWidget, Widget};
+use crate::widget::{Accessible, FocusId, Measurable, StatefulWidget, Widget, hash_id};
+use accesskit::{NodeId, Role};
 use winit::keyboard::{Key, NamedKey};
 use winit::window::CursorIcon;
 
 #[derive(Default)]
 struct TextAreaExtra {
     preferred_column: Option<usize>,
-    scroll: ScrollAxisState, // vertical, scrollbar-driven
-    scroll_x: f32,           // horizontal, cursor-follow only — no scrollbar
-    text_dragging: bool,     // dragging inside the text to select, distinct from scrollbar drag
+    scroll: ScrollAxisState,
+    scroll_x: f32,
+    text_dragging: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -27,6 +28,7 @@ pub struct TextAreaStyle {
     pub border_color: Color,
     pub focus_border_color: Color,
     pub corner_radius: f32,
+    pub padding: [f32; 2],
     pub selection_color: Color,
     pub cursor_color: Color,
     pub thumb_fill: Fill,
@@ -44,10 +46,9 @@ impl Default for TextAreaStyle {
             border_color: Theme::BORDER,
             focus_border_color: Theme::FOCUS_BORDER,
             corner_radius: Theme::RADIUS_MD,
+            padding: [10.0, 10.0],
             selection_color: Theme::SELECTION,
             cursor_color: Theme::ACTIVE,
-            // Neutral zinc fallback — the real thumb colors are resolved
-            // per-theme in arrange() against the live theme palette.
             thumb_fill: Fill::Solid(Color::rgb(113, 113, 122).with_alpha(0.45)),
             thumb_dragging_fill: Fill::Solid(Color::rgb(82, 82, 91).with_alpha(0.75)),
             shadow: Some(ShadowStyle {
@@ -68,21 +69,47 @@ pub struct TextArea {
     height: f32,
     style: Option<TextAreaStyle>,
     default_text: String,
+    custom_padding: Option<[f32; 2]>,
 }
 
 impl TextArea {
-    pub fn new(id: impl Into<String>, width: f32, height: f32) -> Self {
+    pub const DEFAULT_WIDTH: f32 = 240.0;
+    pub const DEFAULT_HEIGHT: f32 = 120.0;
+
+    pub fn new(id: impl Into<String>) -> Self {
         let id = id.into();
         let extra_id = format!("{id}__extra");
         TextArea {
             focus_id: FocusId::new(&id),
             extra_id,
             id,
-            width,
-            height,
+            width: Self::DEFAULT_WIDTH,
+            height: Self::DEFAULT_HEIGHT,
             style: None,
             default_text: String::new(),
+            custom_padding: None,
         }
+    }
+
+    pub fn padding(mut self, padding: [f32; 2]) -> Self {
+        self.custom_padding = Some(padding);
+        self
+    }
+
+    pub fn width(mut self, width: f32) -> Self {
+        self.width = width;
+        self
+    }
+
+    pub fn height(mut self, height: f32) -> Self {
+        self.height = height;
+        self
+    }
+
+    pub fn size(mut self, size: [f32; 2]) -> Self {
+        self.width = size[0];
+        self.height = size[1];
+        self
     }
 
     pub fn style(mut self, style: TextAreaStyle) -> Self {
@@ -102,6 +129,17 @@ impl TextArea {
     pub fn focused(&self, ui: &Ui) -> bool {
         ui.is_focused(self.focus_id)
     }
+
+    fn resolved_style(&self, theme: &Theme) -> TextAreaStyle {
+        let mut style = self
+            .style
+            .clone()
+            .unwrap_or_else(|| theme.text_area_style());
+        if let Some(p) = self.custom_padding {
+            style.padding = p;
+        }
+        style
+    }
 }
 
 impl Widget for TextArea {
@@ -113,7 +151,6 @@ impl Widget for TextArea {
     }
 }
 
-/// Char index of the start of the Nth line (0-indexed) in `text`.
 fn line_start_char_index(text: &str, line_index: usize) -> usize {
     if line_index == 0 {
         return 0;
@@ -126,10 +163,6 @@ fn line_start_char_index(text: &str, line_index: usize) -> usize {
         .unwrap_or(text.chars().count())
 }
 
-/// Given a click position (already relative to text_origin, i.e. pixels
-/// into the unscrolled content), finds the closest char index — first
-/// picking the line by y, then the closest char boundary within that
-/// line by x.
 fn char_index_at_point(
     state: &TextEditState,
     ui: &mut Ui,
@@ -176,13 +209,21 @@ impl Measurable for TextArea {
         ui.register_focusable(self.focus_id);
 
         let theme = *ui.theme();
-        let style = self
-            .style
-            .clone()
-            .unwrap_or_else(|| theme.text_area_style());
+        let style = self.resolved_style(&theme);
 
-        let padding = 10.0;
+        let padding_x = style.padding[0];
+        let padding_y = style.padding[1];
         let config = ScrollConfig::default();
+
+        ui.register_accessible(
+            self,
+            [
+                position[0],
+                position[1],
+                position[0] + size[0],
+                position[1] + size[1],
+            ],
+        );
 
         let mouse_pos = ui.mouse_position();
         let hovered = !ui.is_input_blocked(mouse_pos)
@@ -264,25 +305,27 @@ impl Measurable for TextArea {
             }
         }
 
-        // --- vertical scroll (scrollbar-driven) ---
         let line_height = ui.line_height();
         let content_height = state.line_count() as f32 * line_height;
-        let visible_height = size[1] - padding * 2.0;
+        let visible_height = size[1] - padding_y * 2.0;
         let track_length = size[1] - config.padding * 2.0;
 
-        // Track hit-test computed early so a click on the scrollbar isn't
-        // misread as a click on the text itself.
         let track_x = position[0] + size[0] - config.thickness - config.padding;
         let track_rect_position = [track_x, position[1]];
         let track_rect_size = [config.thickness + config.padding, size[1]];
         let track_hovered = contains(track_rect_position, track_rect_size, 0.0, mouse_pos);
+        // Keep resetting the "last activity" clock while the pointer is on
+        // the track, so the linger countdown only starts once it actually
+        // leaves — not from whatever scroll/drag last happened.
+        if track_hovered {
+            extra.scroll.mark_activity();
+        }
 
         let text_click = ui.mouse_pressed_this_frame() && hovered && !track_hovered;
 
-        // --- click / drag / double / triple-click selection ---
         let text_origin_unscrolled = [
-            position[0] + padding - extra.scroll_x,
-            position[1] + padding - extra.scroll.offset,
+            position[0] + padding_x - extra.scroll_x,
+            position[1] + padding_y - extra.scroll.offset,
         ];
         let relative_click = [
             mouse_pos[0] - text_origin_unscrolled[0],
@@ -290,7 +333,7 @@ impl Measurable for TextArea {
         ];
 
         if text_click {
-            ui.request_focus(self.focus_id); // already done above too; harmless
+            ui.request_focus(self.focus_id);
             state.mark_activity();
             let index = char_index_at_point(&state, ui, line_height, relative_click);
 
@@ -387,9 +430,8 @@ impl Measurable for TextArea {
 
         extra.scroll.offset = extra.scroll.offset.clamp(0.0, geometry.max_scroll);
 
-        // Recompute after clamp — same one-frame-overshoot fix as ScrollView.
         let geometry_final = compute_geometry(
-            visible_height, // was: size[1] — same units bug as the vertical fix
+            visible_height,
             content_height,
             track_length,
             extra.scroll.offset,
@@ -412,14 +454,13 @@ impl Measurable for TextArea {
             ]);
         }
 
-        // --- horizontal scroll (cursor-follow only, no scrollbar) ---
         let line_start = state.line_start(state.cursor());
         let line_start_byte = state.byte_index_for(line_start);
         let cursor_byte = state.byte_index_for(state.cursor());
         let prefix = &state.text()[line_start_byte..cursor_byte];
         let cursor_x = ui.measure_text(prefix);
 
-        let visible_width = size[0] - padding * 2.0;
+        let visible_width = size[0] - padding_x * 2.0;
         if focused && cursor_moved {
             if cursor_x - extra.scroll_x > visible_width {
                 extra.scroll_x = cursor_x - visible_width;
@@ -438,7 +479,6 @@ impl Measurable for TextArea {
         let focus_t = state.focus_t;
         let hover_t = state.hover_t;
 
-        // Dynamic border color and width blending
         let base_or_hover = style.border_color.lerp(theme.border_strong, hover_t);
         let border_color = base_or_hover.lerp(style.focus_border_color, focus_t);
         let border_width = style.border_width + focus_t * 0.5;
@@ -467,20 +507,18 @@ impl Measurable for TextArea {
         );
 
         let clip_rect = [
-            position[0] + padding,
-            position[1] + padding,
-            position[0] + size[0] - padding,
-            position[1] + size[1] - padding,
+            position[0] + padding_x,
+            position[1] + padding_y,
+            position[0] + size[0] - padding_x,
+            position[1] + size[1] - padding_y,
         ];
         ui.push_clip(clip_rect);
 
         let text_origin = [
-            position[0] + padding - extra.scroll_x,
-            position[1] + padding - extra.scroll.offset,
+            position[0] + padding_x - extra.scroll_x,
+            position[1] + padding_y - extra.scroll.offset,
         ];
 
-        // Selection highlight — one rect per line the selection touches,
-        // drawn before the text so glyphs render on top of it.
         if let Some((sel_start, sel_end)) = state.selection_range() {
             let mut char_offset = 0usize;
             for (i, line) in state.text().split('\n').enumerate() {
@@ -518,7 +556,7 @@ impl Measurable for TextArea {
                     );
                 }
 
-                char_offset = this_line_end + 1; // +1 for the '\n' consumed by split
+                char_offset = this_line_end + 1;
             }
         }
 
@@ -592,5 +630,14 @@ impl StatefulWidget for TextArea {
         let mut state = TextEditState::default();
         state.set_text(&self.default_text);
         state
+    }
+}
+
+impl Accessible for TextArea {
+    fn accessibility_id(&self) -> NodeId {
+        NodeId(hash_id(&self.id))
+    }
+    fn accessibility_role(&self) -> Role {
+        Role::MultilineTextInput
     }
 }

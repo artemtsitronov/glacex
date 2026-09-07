@@ -1,6 +1,6 @@
 [package]
 name = "glacex"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2024"
 rust-version = "1.85"
 description = "GPU-accelerated, immediate-mode GPU UI library built from scratch in Rust — Geist typography, SDF rendering, shadcn-grade design system"
@@ -21,6 +21,8 @@ include = [
 ]
 
 [dependencies]
+accesskit = "0.24"
+accesskit_winit = "0.32"
 arboard = "3.6.1"
 bytemuck = { version = "1.25.2", features = ["derive"] }
 env_logger = "0.11.11"

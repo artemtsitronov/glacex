@@ -1,16 +1,3 @@
-//! Live style playground.
-//!
-//! Type a command into the text box in the form:
-//!
-//!     widget_type|attribute:value,attribute:value,...
-//!
-//! e.g.
-//!
-//!     checkbox|corner_radius:12.0,color:#f5656f
-//!
-//! and the matching preview widget below updates immediately, every frame,
-//! straight from the typed text.
-
 use glacex::{
     Alignment, App, Badge, BadgeVariant, Button, ButtonStyle, Card, CardStyle, Checkbox,
     CheckboxStyle, Color, Divider, Fill, Label, ScrollView, ScrollViewStyle, ShadowStyle, TextArea,
@@ -262,36 +249,40 @@ impl Widget for AppState {
             }
         }
 
-        let mut title_label = Label::new("Style Playground");
+        let mut title_label = Label::new("title_label", "Style Playground");
         let mut mode_badge = Badge::new("LIVE REPL").variant(BadgeVariant::Success);
         let mut hint_label = Label::new(
+            "hint_label",
             "Format: widget|key:value,key:value   e.g. checkbox|corner_radius:12.0,color:#f5656f",
         );
         let mut divider_top = Divider::horizontal(620.0);
         let mut divider_mid = Divider::horizontal(620.0);
 
-        let mut command_caption = Label::new("Command Input");
-        let mut command_input = TextInput::new("command_input", 580.0);
+        let mut command_caption = Label::new("command_caption", "Command Input");
+        let mut command_input = TextInput::new("command_input").width(580.0);
 
-        let mut preview_caption = Label::new("Live Render Preview");
+        let mut preview_caption = Label::new("preview_caption", "Live Render Preview");
 
-        let mut button_caption = Label::new("Button");
-        let mut checkbox_caption = Label::new("Checkbox");
-        let mut input_caption = Label::new("TextInput");
-        let mut area_caption = Label::new("TextArea");
-        let mut scroll_caption = Label::new("ScrollView");
+        let mut button_caption = Label::new("button_caption", "Button");
+        let mut checkbox_caption = Label::new("checkbox_caption", "Checkbox");
+        let mut input_caption = Label::new("input_caption", "TextInput");
+        let mut area_caption = Label::new("area_caption", "TextArea");
+        let mut scroll_caption = Label::new("scroll_caption", "ScrollView");
 
         let mut demo_button = Button::new("_a", "Button").style(button_style_value);
         let mut demo_checkbox = Checkbox::new("demo_checkbox").style(checkbox_style_value);
-        let mut demo_text_input = TextInput::new("demo_text_input", 170.0).style(input_style_value);
-        let mut demo_text_area =
-            TextArea::new("demo_text_area", 270.0, 80.0).style(area_style_value);
+        let mut demo_text_input = TextInput::new("demo_text_input")
+            .width(170.0)
+            .style(input_style_value);
+        let mut demo_text_area = TextArea::new("demo_text_area")
+            .size([270.0, 80.0])
+            .style(area_style_value);
 
-        let mut scroll_item_1 = Label::new("Line one");
-        let mut scroll_item_2 = Label::new("Line two");
-        let mut scroll_item_3 = Label::new("Line three");
-        let mut scroll_item_4 = Label::new("Line four");
-        let mut scroll_item_5 = Label::new("Line five");
+        let mut scroll_item_1 = Label::new("scroll_item_1", "Line one");
+        let mut scroll_item_2 = Label::new("scroll_item_2", "Line two");
+        let mut scroll_item_3 = Label::new("scroll_item_3", "Line three");
+        let mut scroll_item_4 = Label::new("scroll_item_4", "Line four");
+        let mut scroll_item_5 = Label::new("scroll_item_5", "Line five");
 
         let mut btn_col = column![&mut button_caption, &mut demo_button]
             .spacing(6.0)
@@ -314,7 +305,8 @@ impl Widget for AppState {
             &mut scroll_item_5,
         ];
 
-        let mut demo_scroll = ScrollView::new("demo_scroll", [270.0, 80.0], &mut scroll_content)
+        let mut demo_scroll = ScrollView::new("demo_scroll", &mut scroll_content)
+            .size([270.0, 80.0])
             .style(scroll_style_value);
 
         let mut area_col = column![&mut area_caption, &mut demo_text_area]

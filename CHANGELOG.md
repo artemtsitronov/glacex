@@ -2,21 +2,43 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.1.5]
+
+### Added
+- Accessibility support via `AccessKit` (AT-SPI on Linux, UIA on Windows, NSAccessibility on macOS), opt-in via `App::accessibility_enabled(true)` (disabled by default).
+- Implemented overlaying system
+- Split `Painter` into two full render passes(normal, overlay)
+
+### Fixed
+- Fixed the removed bind_rect_pipeline
+- Glyphon rendering issues
+- State ID of Button
+- Removed borrows
+- Accessibility tree crashing on the first frame
+- Tooltip text not showing up
+
+### Changed
+- Every widget now has an ID as argument(optional or required)
+- Design decision: now the size of the widget can be changed, and also introduced padding.
+
+### Removed
+- `ROADMAP.md` — wasn't being kept up to date and drifted from what's actually planned.
+
 ## [0.1.4]
 
 ### Added
 - Dynamic Theme Engine & 9 Built-in Presets (`src/theme.rs`):
   - White-by-default Apple & shadcn-grade luxury aesthetic (`Theme::LIGHT`).
   - 9 curated, pixel-perfect theme palettes:
-    - `Theme::LIGHT` (pure white canvas `#ffffff`, zinc borders, charcoal accent).
-    - `Theme::DARK` (deep linear near-black `#09090b`, electric indigo accent).
-    - `Theme::CATPPUCCIN_MOCHA` (soothing dark pastel warmth).
-    - `Theme::CATPPUCCIN_LATTE` (cozy daylight pastel warmth).
-    - `Theme::TOKYO_NIGHT` (cyberpunk neon midnight).
-    - `Theme::GRUVBOX_DARK` (retro warm groove charcoal and orange).
-    - `Theme::GRUVBOX_LIGHT` (warm retro light paper canvas).
-    - `Theme::NORD` (arctic cool frost slate).
-    - `Theme::ROSE_PINE` (moody vintage rose aesthetic).
+    - `Theme::LIGHT`
+    - `Theme::DARK`
+    - `Theme::CATPPUCCIN_MOCHA`
+    - `Theme::CATPPUCCIN_LATTE`
+    - `Theme::TOKYO_NIGHT`
+    - `Theme::GRUVBOX_DARK`
+    - `Theme::GRUVBOX_LIGHT`
+    - `Theme::NORD`
+    - `Theme::ROSE_PINE`
   - Dynamic palette switching via `Ui::set_theme(theme)` and query via `Ui::theme()`.
   - Component style factories on `Theme`: `.button_style()`, `.primary_button_style()`, `.outline_button_style()`, `.ghost_button_style()`, `.danger_button_style()`, `.card_style()`, `.card_subtle_style()`, `.card_elevated_style()`, `.checkbox_style()`, `.switch_style()`, `.slider_style()`, `.input_style()`, `.text_area_style()`.
   - Dedicated `examples/themes.rs` demonstration showcasing all 9 palettes.

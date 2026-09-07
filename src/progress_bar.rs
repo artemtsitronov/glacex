@@ -3,7 +3,8 @@ use crate::color::Color;
 use crate::fill::Fill;
 use crate::theme::Theme;
 use crate::ui::Ui;
-use crate::widget::{Measurable, StatefulWidget, Widget};
+use crate::widget::{Accessible, Measurable, StatefulWidget, Widget, hash_id};
+use accesskit::{NodeId, Role};
 
 #[derive(Default)]
 pub struct ProgressBarState {
@@ -51,25 +52,38 @@ pub struct ProgressBar {
 }
 
 impl ProgressBar {
-    pub fn new(progress: f32, width: f32) -> Self {
+    pub const DEFAULT_WIDTH: f32 = 200.0;
+    pub const DEFAULT_HEIGHT: f32 = 6.0;
+
+    pub fn new(progress: f32) -> Self {
         ProgressBar {
             id: None,
             progress: progress.clamp(0.0, 1.0),
-            width,
-            height: 6.0,
+            width: Self::DEFAULT_WIDTH,
+            height: Self::DEFAULT_HEIGHT,
             variant: ProgressBarVariant::Default,
             style: None,
         }
     }
 
-    /// Assigns a stable state ID for smooth animated progress transitions.
     pub fn id(mut self, id: impl Into<String>) -> Self {
         self.id = Some(id.into());
         self
     }
 
+    pub fn width(mut self, width: f32) -> Self {
+        self.width = width;
+        self
+    }
+
     pub fn height(mut self, height: f32) -> Self {
         self.height = height;
+        self
+    }
+
+    pub fn size(mut self, size: [f32; 2]) -> Self {
+        self.width = size[0];
+        self.height = size[1];
         self
     }
 
@@ -82,19 +96,16 @@ impl ProgressBar {
         self.style = style;
     }
 
-    /// Colors the progress bar with the semantic success color (Emerald).
     pub fn success(mut self) -> Self {
         self.variant = ProgressBarVariant::Success;
         self
     }
 
-    /// Colors the progress bar with the semantic warning color (Amber).
     pub fn warning(mut self) -> Self {
         self.variant = ProgressBarVariant::Warning;
         self
     }
 
-    /// Colors the progress bar with the semantic error color (Rose).
     pub fn error(mut self) -> Self {
         self.variant = ProgressBarVariant::Error;
         self
@@ -134,7 +145,21 @@ impl Measurable for ProgressBar {
         });
         let dt = ui.dt();
 
-        // Draw track
+        // Same reasoning as `Card`/`Container`/`Divider`: without an
+        // explicit `.id(..)`, every anonymous progress bar in the frame
+        // would collide under the shared fallback id.
+        if self.id.is_some() {
+            ui.register_accessible(
+                self,
+                [
+                    position[0],
+                    position[1],
+                    position[0] + size[0],
+                    position[1] + size[1],
+                ],
+            );
+        }
+
         ui.draw_rect(
             position,
             size,
@@ -147,7 +172,6 @@ impl Measurable for ProgressBar {
             0.0,
         );
 
-        // Smooth progress interpolation if ID is provided, or fallback to auto position-based ID
         let id = self
             .id
             .clone()
@@ -161,7 +185,6 @@ impl Measurable for ProgressBar {
             animate_towards(state.animated_progress, self.progress, dt, Motion::FLUID);
         let current_progress = state.animated_progress;
 
-        // Draw filled progress bar with fluid animated width
         let filled_width = (size[0] * current_progress).max(0.0);
         if filled_width > 0.0 {
             ui.draw_rect(
@@ -191,5 +214,16 @@ impl StatefulWidget for ProgressBar {
             animated_progress: self.progress,
             initialized: true,
         }
+    }
+}
+
+impl Accessible for ProgressBar {
+    fn accessibility_id(&self) -> NodeId {
+        NodeId(hash_id(
+            self.id.as_deref().unwrap_or("__default_progressbar"),
+        ))
+    }
+    fn accessibility_role(&self) -> Role {
+        Role::ProgressIndicator
     }
 }

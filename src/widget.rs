@@ -1,16 +1,34 @@
 use crate::ui::Ui;
+use accesskit::Node;
+use accesskit::{NodeId, Role};
 use std::any::Any;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+
+pub trait Accessible {
+    fn accessibility_id(&self) -> NodeId;
+    fn accessibility_role(&self) -> Role;
+    fn accessibility_label(&self) -> Option<String> {
+        None
+    }
+    fn accessibility_state(&self, _node: &mut Node) {}
+}
+
+pub fn hash_id(s: &str) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    s.hash(&mut hasher);
+    hasher.finish()
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct FocusId(u64);
 
 impl FocusId {
+    pub fn as_u64(&self) -> u64 {
+        self.0
+    }
     pub fn new(id: &str) -> Self {
-        let mut hasher = DefaultHasher::new();
-        id.hash(&mut hasher);
-        FocusId(hasher.finish())
+        FocusId(hash_id(id))
     }
 }
 

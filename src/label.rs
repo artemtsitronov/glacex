@@ -1,7 +1,8 @@
 use crate::color::Color;
 use crate::painter::FontWeight;
 use crate::ui::Ui;
-use crate::widget::{Measurable, Widget};
+use crate::widget::{Accessible, Measurable, Widget, hash_id};
+use accesskit::{NodeId, Role};
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum LabelVariant {
@@ -16,85 +17,96 @@ pub enum LabelVariant {
     Custom(Color),
 }
 
-/// Typography label with semantic hierarchy, weights, and Geist font rendering.
 pub struct Label {
+    id: String,
     text: String,
     variant: LabelVariant,
     font_size: f32,
     line_height: f32,
     weight: FontWeight,
     is_mono: bool,
+    width: Option<f32>,
+    height: Option<f32>,
 }
 
 impl Label {
-    pub fn new(text: impl Into<String>) -> Self {
+    pub fn new(id: impl Into<String>, text: impl Into<String>) -> Self {
         Label {
+            id: id.into(),
             text: text.into(),
             variant: LabelVariant::Primary,
             font_size: 14.0,
             line_height: 20.0,
             weight: FontWeight::Regular,
             is_mono: false,
+            width: None,
+            height: None,
         }
     }
 
-    /// Sets an explicit text color.
+    pub fn width(mut self, width: f32) -> Self {
+        self.width = Some(width);
+        self
+    }
+
+    pub fn height(mut self, height: f32) -> Self {
+        self.height = Some(height);
+        self
+    }
+
+    pub fn size(mut self, size: [f32; 2]) -> Self {
+        self.width = Some(size[0]);
+        self.height = Some(size[1]);
+        self
+    }
+
     pub fn color(mut self, color: Color) -> Self {
         self.variant = LabelVariant::Custom(color);
         self
     }
 
-    /// Convenience for secondary/supporting text hierarchy (`ui.theme().text_secondary`).
     pub fn secondary(mut self) -> Self {
         self.variant = LabelVariant::Secondary;
         self
     }
 
-    /// Convenience for muted/subdued text hierarchy (`ui.theme().text_muted`).
     pub fn muted(mut self) -> Self {
         self.variant = LabelVariant::Muted;
         self
     }
 
-    /// Convenience for primary accent-colored text (`ui.theme().active`).
     pub fn accent(mut self) -> Self {
         self.variant = LabelVariant::Accent;
         self
     }
 
-    /// Semantic success color (`ui.theme().success`).
     pub fn success(mut self) -> Self {
         self.variant = LabelVariant::Success;
         self
     }
 
-    /// Semantic warning color (`ui.theme().warning`).
     pub fn warning(mut self) -> Self {
         self.variant = LabelVariant::Warning;
         self
     }
 
-    /// Semantic error color (`ui.theme().error`).
     pub fn error(mut self) -> Self {
         self.variant = LabelVariant::Error;
         self
     }
 
-    /// Sets custom font size and proportional line height.
-    pub fn size(mut self, size: f32) -> Self {
+    pub fn size_preset(mut self, size: f32) -> Self {
         self.font_size = size;
         self.line_height = (size * 1.35).round();
         self
     }
 
-    /// Sets custom font size and explicit line height.
     pub fn size_with_line_height(mut self, size: f32, line_height: f32) -> Self {
         self.font_size = size;
         self.line_height = line_height;
         self
     }
 
-    /// Small muted caption (12px / 16px line height).
     pub fn caption(mut self) -> Self {
         self.font_size = 12.0;
         self.line_height = 16.0;
@@ -102,7 +114,6 @@ impl Label {
         self
     }
 
-    /// Subheading style (16px / 22px line height, semibold).
     pub fn subheading(mut self) -> Self {
         self.font_size = 16.0;
         self.line_height = 22.0;
@@ -110,7 +121,6 @@ impl Label {
         self
     }
 
-    /// Section heading style (18px / 24px line height, semibold).
     pub fn heading(mut self) -> Self {
         self.font_size = 18.0;
         self.line_height = 24.0;
@@ -118,7 +128,6 @@ impl Label {
         self
     }
 
-    /// Prominent card or page title (22px / 28px line height, bold).
     pub fn title(mut self) -> Self {
         self.font_size = 22.0;
         self.line_height = 28.0;
@@ -126,7 +135,6 @@ impl Label {
         self
     }
 
-    /// Large hero metric (28px / 34px line height, bold) - e.g. "$1,250.00" in shadcn dashboards.
     pub fn metric(mut self) -> Self {
         self.font_size = 28.0;
         self.line_height = 34.0;
@@ -134,25 +142,21 @@ impl Label {
         self
     }
 
-    /// Sets Medium font weight (500).
     pub fn medium(mut self) -> Self {
         self.weight = FontWeight::Medium;
         self
     }
 
-    /// Sets SemiBold font weight (600).
     pub fn semibold(mut self) -> Self {
         self.weight = FontWeight::SemiBold;
         self
     }
 
-    /// Sets Bold font weight (700).
     pub fn bold(mut self) -> Self {
         self.weight = FontWeight::Bold;
         self
     }
 
-    /// Renders using bundled Geist Mono.
     pub fn mono(mut self) -> Self {
         self.is_mono = true;
         self
@@ -177,7 +181,10 @@ impl Measurable for Label {
             self.weight,
             self.is_mono,
         );
-        [text_width, self.line_height]
+        [
+            self.width.unwrap_or(text_width),
+            self.height.unwrap_or(self.line_height),
+        ]
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
@@ -187,6 +194,9 @@ impl Measurable for Label {
             position[0] + size[0],
             position[1] + size[1],
         ];
+
+        ui.register_accessible(self, clip_rect);
+
         let theme = *ui.theme();
         let color = match self.variant {
             LabelVariant::Primary => theme.text_primary,
@@ -208,5 +218,17 @@ impl Measurable for Label {
             self.weight,
             self.is_mono,
         );
+    }
+}
+
+impl Accessible for Label {
+    fn accessibility_id(&self) -> NodeId {
+        NodeId(hash_id(&self.id))
+    }
+    fn accessibility_role(&self) -> Role {
+        Role::Label
+    }
+    fn accessibility_label(&self) -> Option<String> {
+        Some(self.text.clone())
     }
 }

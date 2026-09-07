@@ -5,20 +5,17 @@ use crate::geometry::contains;
 use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::theme::Theme;
 use crate::ui::Ui;
-use crate::widget::{Measurable, StatefulWidget, Widget};
+use crate::widget::{Accessible, Measurable, StatefulWidget, Widget, hash_id};
+use accesskit::{NodeId, Role};
 use winit::window::CursorIcon;
 
 #[derive(Clone, Default)]
 pub struct SliderState {
     pub value: f32,
     pub dragging: bool,
-    /// Animated hover glow on the thumb, 0.0..=1.0
     pub hover_t: f32,
-    /// Animated drag scale, 0.0..=1.0
     pub drag_t: f32,
-    /// Velocity of the thumb in pixels/sec for motion blur
     pub velocity_x: f32,
-    /// Last thumb center X position
     pub last_x: f32,
 }
 
@@ -62,20 +59,40 @@ pub struct Slider {
     min: f32,
     max: f32,
     width: f32,
+    height: Option<f32>,
     style: Option<SliderStyle>,
     default_value: f32,
 }
 
 impl Slider {
-    pub fn new(id: impl Into<String>, min: f32, max: f32, width: f32) -> Self {
+    pub const DEFAULT_WIDTH: f32 = 200.0;
+
+    pub fn new(id: impl Into<String>, min: f32, max: f32) -> Self {
         Slider {
             id: id.into(),
             min,
             max,
-            width,
+            width: Self::DEFAULT_WIDTH,
+            height: None,
             style: None,
             default_value: 0.0,
         }
+    }
+
+    pub fn width(mut self, width: f32) -> Self {
+        self.width = width;
+        self
+    }
+
+    pub fn height(mut self, height: f32) -> Self {
+        self.height = Some(height);
+        self
+    }
+
+    pub fn size(mut self, size: [f32; 2]) -> Self {
+        self.width = size[0];
+        self.height = Some(size[1]);
+        self
     }
 
     pub fn style(mut self, style: SliderStyle) -> Self {
@@ -116,7 +133,8 @@ impl Widget for Slider {
 impl Measurable for Slider {
     fn measure(&mut self, _ui: &mut Ui) -> [f32; 2] {
         let style = self.style.clone().unwrap_or_default();
-        [self.width, style.thumb_size.max(style.track_height) + 8.0]
+        let natural_height = style.thumb_size.max(style.track_height) + 8.0;
+        [self.width, self.height.unwrap_or(natural_height)]
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) -> SliderResponse {
@@ -130,6 +148,16 @@ impl Measurable for Slider {
         let hovered = contains(position, size, 0.0, mouse_pos)
             && !ui.is_input_blocked(mouse_pos)
             && ui.point_in_current_clip(mouse_pos);
+
+        ui.register_accessible(
+            self,
+            [
+                position[0],
+                position[1],
+                position[0] + size[0],
+                position[1] + size[1],
+            ],
+        );
 
         let mut state = ui.take_widget_state_or::<SliderState>(&self.id, self.initial_state());
 
@@ -160,16 +188,13 @@ impl Measurable for Slider {
             state.value = state.value.clamp(self.min, self.max);
         }
 
-        // Animate hover glow on thumb with Motion::SNAPPY
         let hover_target = if hovered { 1.0f32 } else { 0.0 };
         state.hover_t = animate_towards(state.hover_t, hover_target, dt, Motion::SNAPPY);
 
-        // Animate dragging scale expansion with Motion::INSTANT
         let drag_target = if state.dragging { 1.0f32 } else { 0.0 };
         state.drag_t = animate_towards(state.drag_t, drag_target, dt, Motion::INSTANT);
         let progress = ((state.value - self.min) / range).clamp(0.0, 1.0);
 
-        // Velocity calculation for dynamic motion blur
         let target_x = position[0] + progress * size[0];
         let current_vx = if dt > 0.0001 && state.last_x > 0.0 {
             (target_x - state.last_x) / dt
@@ -186,11 +211,9 @@ impl Measurable for Slider {
         let velocity_x = state.velocity_x;
         ui.put_widget_state(&self.id, state);
 
-        // Visual layout
         let track_y = position[1] + (size[1] - style.track_height) / 2.0;
         let track_radius = style.track_height / 2.0;
 
-        // Background track
         ui.draw_rect(
             [position[0], track_y],
             [size[0], style.track_height],
@@ -205,7 +228,6 @@ impl Measurable for Slider {
 
         let filled_width = progress * size[0];
 
-        // Filled active track
         if filled_width > 0.0 {
             ui.draw_rect(
                 [position[0], track_y],
@@ -220,7 +242,6 @@ impl Measurable for Slider {
             );
         }
 
-        // Tactile thumb knob with interactive drag scale & glow halo
         let thumb_base_size = style.thumb_size;
         let thumb_current_size = thumb_base_size + drag_t * 2.5;
         let thumb_center_x = target_x;
@@ -230,7 +251,6 @@ impl Measurable for Slider {
         let thumb_size = [thumb_current_size, thumb_current_size];
         let thumb_radius = thumb_current_size / 2.0;
 
-        // Motion blur trail effect when dragged quickly (Apple / Framer grade)
         let blur_trail_len = (velocity_x * 0.012).clamp(-18.0, 18.0);
         if blur_trail_len.abs() > 1.5 && dragging {
             let trail_x = if blur_trail_len > 0.0 {
@@ -246,13 +266,12 @@ impl Measurable for Slider {
                 thumb_radius,
                 0.0,
                 Color::TRANSPARENT,
-                4.0, // motion blur stretch
+                4.0,
                 false,
                 0.0,
             );
         }
 
-        // Soft glow halo on hover/drag (Stripe / Vercel grade)
         let active_halo_t = hover_t.max(drag_t);
         if active_halo_t > 0.01 {
             let glow_size = thumb_current_size + 12.0 * active_halo_t;
@@ -311,5 +330,14 @@ impl StatefulWidget for Slider {
             value: self.default_value,
             ..Default::default()
         }
+    }
+}
+
+impl Accessible for Slider {
+    fn accessibility_id(&self) -> NodeId {
+        NodeId(hash_id(&self.id))
+    }
+    fn accessibility_role(&self) -> Role {
+        Role::Slider
     }
 }

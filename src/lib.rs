@@ -8,6 +8,7 @@
 //! Widgets are redrawn every frame, while interactive state is kept inside [`Ui`] and
 //! keyed by stable widget IDs.
 
+pub mod accessibility;
 pub mod alignment;
 pub mod animation;
 pub mod badge;
@@ -38,6 +39,7 @@ pub mod theme;
 pub mod ui;
 pub mod widget;
 
+pub use accessibility::*;
 pub use alignment::*;
 pub use animation::*;
 pub use badge::*;
@@ -68,6 +70,7 @@ pub use theme::*;
 pub use ui::*;
 pub use widget::*;
 
+use accesskit_winit::Adapter;
 use std::sync::Arc;
 use winit::application::ApplicationHandler;
 use winit::event::{ElementState, MouseButton, WindowEvent};
@@ -88,6 +91,9 @@ pub struct App<W: Widget> {
     root: W,
     update_fn: Option<UpdateFn<W>>,
     window_attributes: Option<winit::window::WindowAttributes>,
+    accessibility_enabled: bool,
+    accesskit_adapter: Option<Adapter>,
+    accessibility_tree: SharedTree,
 }
 
 impl<W: Widget> App<W> {
@@ -98,12 +104,25 @@ impl<W: Widget> App<W> {
             root,
             update_fn: None,
             window_attributes: None,
+            accessibility_enabled: false,
+            accesskit_adapter: None,
+            accessibility_tree: SharedTree::default(),
         }
     }
 
     /// Customizes initial window attributes (e.g. title, inner size).
     pub fn window_attributes(mut self, attributes: winit::window::WindowAttributes) -> Self {
         self.window_attributes = Some(attributes);
+        self
+    }
+
+    /// Enables or disables accessibility support (`accesskit`: AT-SPI on
+    /// Linux, UIA on Windows, NSAccessibility on macOS). Disabled by
+    /// default — call `.accessibility_enabled(true)` to stand up the
+    /// adapter and expose the widget tree to screen readers and other
+    /// assistive tools.
+    pub fn accessibility_enabled(mut self, enabled: bool) -> Self {
+        self.accessibility_enabled = enabled;
         self
     }
 
@@ -169,6 +188,21 @@ impl<W: Widget> ApplicationHandler for App<W> {
             }
         };
 
+        if self.accessibility_enabled {
+            let adapter = Adapter::with_direct_handlers(
+                event_loop,
+                &window,
+                AccessibilityActivationHandler {
+                    tree: SharedTree(self.accessibility_tree.0.clone()),
+                },
+                AccessibilityActionHandler,
+                AccessibilityDeactivationHandler,
+            );
+            self.accesskit_adapter = Some(adapter);
+        }
+
+        window.set_visible(true);
+
         let mut ui = pollster::block_on(Ui::new(window.clone()));
         self.root.on_start(&mut ui);
         self.window = Some(window);
@@ -176,6 +210,12 @@ impl<W: Widget> ApplicationHandler for App<W> {
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
+        if let Some(adapter) = &mut self.accesskit_adapter {
+            if let Some(window) = &self.window {
+                adapter.process_event(window, &event);
+            }
+        }
+
         let ui = match self.ui.as_mut() {
             Some(ui) => ui,
             None => return,
@@ -190,6 +230,17 @@ impl<W: Widget> ApplicationHandler for App<W> {
                     update_fn(&mut self.root);
                 }
                 let _ = self.root.ui(ui);
+
+                if self.accessibility_enabled {
+                    *self.accessibility_tree.0.lock().unwrap() = ui.accessibility_nodes();
+
+                    if let Some(adapter) = &mut self.accesskit_adapter {
+                        adapter.update_if_active(|| {
+                            self.accessibility_tree
+                                .build_update(ui.accessibility_focus())
+                        });
+                    }
+                }
 
                 if ui.key_pressed(Key::Named(NamedKey::Tab)) {
                     ui.advance_focus(ui.shift_held());

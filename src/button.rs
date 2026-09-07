@@ -6,8 +6,10 @@ use crate::interaction::Interaction;
 use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::theme::Theme;
 use crate::ui::Ui;
-use crate::widget::{Measurable, StatefulWidget, Widget};
+use crate::widget::{Accessible, Measurable, StatefulWidget, Widget, hash_id};
+use accesskit::{NodeId, Role};
 use std::default::Default;
+
 use winit::window::CursorIcon;
 
 pub type ButtonResponse = Interaction;
@@ -21,6 +23,7 @@ pub struct ButtonStyle {
     pub border_width: f32,
     pub border_color: Color,
     pub corner_radius: f32,
+    pub padding: [f32; 2],
     pub shadow: Option<ShadowStyle>,
     pub sharp: bool,
 }
@@ -35,6 +38,7 @@ impl Default for ButtonStyle {
             border_width: 1.0,
             border_color: Theme::BORDER,
             corner_radius: Theme::RADIUS_MD,
+            padding: [14.0, 8.0],
             shadow: Some(ShadowStyle::default()),
             sharp: false,
         }
@@ -42,7 +46,6 @@ impl Default for ButtonStyle {
 }
 
 impl ButtonStyle {
-    /// Primary accent button (Linear / Vercel CTA style).
     pub fn primary() -> Self {
         ButtonStyle {
             fill: Fill::Solid(Theme::ACTIVE),
@@ -52,6 +55,7 @@ impl ButtonStyle {
             border_width: 1.0,
             border_color: Color::WHITE.with_alpha(0.18),
             corner_radius: Theme::RADIUS_MD,
+            padding: [14.0, 8.0],
             shadow: Some(ShadowStyle {
                 color: Theme::ACTIVE.with_alpha(0.35),
                 blur_radius: 8.0,
@@ -61,7 +65,6 @@ impl ButtonStyle {
         }
     }
 
-    /// Outline button with transparent surface and prominent border.
     pub fn outline() -> Self {
         ButtonStyle {
             fill: Fill::Solid(Color::TRANSPARENT),
@@ -71,12 +74,12 @@ impl ButtonStyle {
             border_width: 1.0,
             border_color: Theme::BORDER_STRONG,
             corner_radius: Theme::RADIUS_MD,
+            padding: [14.0, 8.0],
             shadow: None,
             sharp: false,
         }
     }
 
-    /// Ghost / flat button without background or border until hovered.
     pub fn ghost() -> Self {
         ButtonStyle {
             fill: Fill::Solid(Color::TRANSPARENT),
@@ -86,12 +89,12 @@ impl ButtonStyle {
             border_width: 0.0,
             border_color: Color::TRANSPARENT,
             corner_radius: Theme::RADIUS_MD,
+            padding: [14.0, 8.0],
             shadow: None,
             sharp: false,
         }
     }
 
-    /// Destructive / danger button for high-consequence actions.
     pub fn danger() -> Self {
         ButtonStyle {
             fill: Fill::Solid(Theme::ERROR.with_alpha(0.14)),
@@ -101,6 +104,7 @@ impl ButtonStyle {
             border_width: 1.0,
             border_color: Theme::ERROR.with_alpha(0.35),
             corner_radius: Theme::RADIUS_MD,
+            padding: [14.0, 8.0],
             shadow: Some(ShadowStyle {
                 color: Theme::ERROR.with_alpha(0.25),
                 blur_radius: 6.0,
@@ -111,11 +115,8 @@ impl ButtonStyle {
     }
 }
 
-/// Per-button animation state -- persists between frames.
 pub struct ButtonState {
-    /// 0.0 = resting, 1.0 = fully hovered.
     pub hover_t: f32,
-    /// 0.0 = resting, 1.0 = fully pressed.
     pub press_t: f32,
 }
 
@@ -145,6 +146,9 @@ pub struct Button {
     variant: ButtonVariant,
     style: Option<ButtonStyle>,
     tooltip: Option<String>,
+    width: Option<f32>,
+    height: Option<f32>,
+    custom_padding: Option<[f32; 2]>,
 }
 
 impl Button {
@@ -156,7 +160,31 @@ impl Button {
             variant: ButtonVariant::Default,
             style: None,
             tooltip: None,
+            width: None,
+            height: None,
+            custom_padding: None,
         }
+    }
+
+    pub fn padding(mut self, padding: [f32; 2]) -> Self {
+        self.custom_padding = Some(padding);
+        self
+    }
+
+    pub fn width(mut self, width: f32) -> Self {
+        self.width = Some(width);
+        self
+    }
+
+    pub fn height(mut self, height: f32) -> Self {
+        self.height = Some(height);
+        self
+    }
+
+    pub fn size(mut self, size: [f32; 2]) -> Self {
+        self.width = Some(size[0]);
+        self.height = Some(size[1]);
+        self
     }
 
     pub fn style(mut self, style: ButtonStyle) -> Self {
@@ -168,25 +196,21 @@ impl Button {
         self.style = style;
     }
 
-    /// Applies the primary accent CTA style.
     pub fn primary(mut self) -> Self {
         self.variant = ButtonVariant::Primary;
         self
     }
 
-    /// Applies the outline style.
     pub fn outline(mut self) -> Self {
         self.variant = ButtonVariant::Outline;
         self
     }
 
-    /// Applies the ghost / flat style.
     pub fn ghost(mut self) -> Self {
         self.variant = ButtonVariant::Ghost;
         self
     }
 
-    /// Applies the danger / destructive style.
     pub fn danger(mut self) -> Self {
         self.variant = ButtonVariant::Danger;
         self
@@ -208,6 +232,20 @@ impl Button {
     pub fn clicked(&self) -> bool {
         self.interaction.clicked
     }
+
+    fn resolved_style(&self, theme: &Theme) -> ButtonStyle {
+        let mut style = self.style.clone().unwrap_or_else(|| match self.variant {
+            ButtonVariant::Default => theme.button_style(),
+            ButtonVariant::Primary => theme.primary_button_style(),
+            ButtonVariant::Outline => theme.outline_button_style(),
+            ButtonVariant::Ghost => theme.ghost_button_style(),
+            ButtonVariant::Danger => theme.danger_button_style(),
+        });
+        if let Some(p) = self.custom_padding {
+            style.padding = p;
+        }
+        style
+    }
 }
 
 impl Widget for Button {
@@ -221,7 +259,8 @@ impl Widget for Button {
 
 impl Measurable for Button {
     fn measure(&mut self, ui: &mut Ui) -> [f32; 2] {
-        let padding = [14.0, 8.0];
+        let theme = *ui.theme();
+        let style = self.resolved_style(&theme);
         let text_width = ui.measure_text_styled(
             &self.label,
             14.0,
@@ -229,22 +268,29 @@ impl Measurable for Button {
             crate::painter::FontWeight::Medium,
             false,
         );
-        [text_width + padding[0] * 2.0, 36.0]
+        [
+            self.width.unwrap_or(text_width + style.padding[0] * 2.0),
+            self.height.unwrap_or(style.padding[1] * 2.0 + 20.0),
+        ]
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) -> ButtonResponse {
         let theme = *ui.theme();
-        let style = self.style.clone().unwrap_or_else(|| match self.variant {
-            ButtonVariant::Default => theme.button_style(),
-            ButtonVariant::Primary => theme.primary_button_style(),
-            ButtonVariant::Outline => theme.outline_button_style(),
-            ButtonVariant::Ghost => theme.ghost_button_style(),
-            ButtonVariant::Danger => theme.danger_button_style(),
-        });
+        let style = self.resolved_style(&theme);
         let dt = ui.dt();
 
         let interaction = Interaction::update(position, size, style.corner_radius, ui);
         self.interaction = interaction;
+
+        ui.register_accessible(
+            self,
+            [
+                position[0],
+                position[1],
+                position[0] + size[0],
+                position[1] + size[1],
+            ],
+        );
 
         let state = ui.widget_state::<ButtonState>(&self.id);
 
@@ -255,7 +301,6 @@ impl Measurable for Button {
         let hover_t = state.hover_t;
         let press_t = state.press_t;
 
-        // Blend fill colors based on animation progress
         let color = if let (Fill::Solid(base), Fill::Solid(hov), Fill::Solid(prs)) =
             (&style.fill, &style.hover_fill, &style.pressed_fill)
         {
@@ -269,21 +314,19 @@ impl Measurable for Button {
             style.fill
         };
 
-        // Smooth subtle border brightening on hover
         let border_color = if hover_t > 0.01 {
             style.border_color.lerp(theme.border_strong, hover_t)
         } else {
             style.border_color
         };
 
-        // Micro-scale effect: subtle 1px press depth for tactile feel
-        let y_offset = press_t * 1.0;
+        let press_offset = 2.0;
+        let y_offset = press_t * press_offset;
         let draw_position = [position[0], position[1] + y_offset];
 
         if let Some(shadow) = &style.shadow {
-            // Shadow recedes slightly on press for tactile physical feedback
             let mut s = *shadow;
-            s.offset[1] -= press_t * 1.0;
+            s.offset[1] -= press_t * press_offset;
             s.blur_radius = (s.blur_radius - press_t * 2.0).max(1.0);
             draw_shadow(&s, draw_position, size, style.corner_radius, ui);
         }
@@ -340,10 +383,22 @@ impl StatefulWidget for Button {
     type State = ButtonState;
 
     fn state_id(&self) -> &str {
-        &self.label
+        &self.id
     }
 
     fn initial_state(&self) -> ButtonState {
         ButtonState::default()
+    }
+}
+
+impl Accessible for Button {
+    fn accessibility_id(&self) -> NodeId {
+        NodeId(hash_id(&self.id))
+    }
+    fn accessibility_role(&self) -> Role {
+        Role::Button
+    }
+    fn accessibility_label(&self) -> Option<String> {
+        Some(self.label.clone())
     }
 }

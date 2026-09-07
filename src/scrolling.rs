@@ -15,7 +15,7 @@ impl Default for ScrollConfig {
             padding: 2.0,
             thickness: 5.0,
             min_thumb: 20.0,
-            linger_seconds: 0.8,
+            linger_seconds: 0.5,
         }
     }
 }

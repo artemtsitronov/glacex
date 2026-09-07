@@ -4,7 +4,8 @@ use crate::interaction::Interaction;
 use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::theme::Theme;
 use crate::ui::Ui;
-use crate::widget::{Measurable, Widget};
+use crate::widget::{Accessible, Measurable, Widget, hash_id};
+use accesskit::{NodeId, Role};
 use winit::window::CursorIcon;
 
 use crate::animation::{Motion, animate_towards};
@@ -43,9 +44,7 @@ impl Default for RadioButtonStyle {
     }
 }
 
-/// Per-radio-button animation state.
 pub struct RadioButtonAnimState {
-    /// 0.0 = unselected, 1.0 = selected (dot fully visible)
     pub dot_t: f32,
     pub hover_t: f32,
 }
@@ -64,6 +63,8 @@ pub struct RadioButton {
     option_id: String,
     style: Option<RadioButtonStyle>,
     interaction: Interaction,
+    width: Option<f32>,
+    height: Option<f32>,
 }
 
 impl RadioButton {
@@ -73,7 +74,25 @@ impl RadioButton {
             option_id: option_id.into(),
             style: None,
             interaction: Interaction::default(),
+            width: None,
+            height: None,
         }
+    }
+
+    pub fn width(mut self, width: f32) -> Self {
+        self.width = Some(width);
+        self
+    }
+
+    pub fn height(mut self, height: f32) -> Self {
+        self.height = Some(height);
+        self
+    }
+
+    pub fn size(mut self, size: [f32; 2]) -> Self {
+        self.width = Some(size[0]);
+        self.height = Some(size[1]);
+        self
     }
 
     pub fn style(mut self, style: RadioButtonStyle) -> Self {
@@ -104,7 +123,7 @@ impl Widget for RadioButton {
 
 impl Measurable for RadioButton {
     fn measure(&mut self, _ui: &mut Ui) -> [f32; 2] {
-        [18.0, 18.0]
+        [self.width.unwrap_or(18.0), self.height.unwrap_or(18.0)]
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) -> RadioButtonResponse {
@@ -124,6 +143,16 @@ impl Measurable for RadioButton {
         let interaction = Interaction::update(position, size, style.corner_radius, ui);
         self.interaction = interaction;
 
+        ui.register_accessible(
+            self,
+            [
+                position[0],
+                position[1],
+                position[0] + size[0],
+                position[1] + size[1],
+            ],
+        );
+
         if interaction.hovered {
             ui.set_cursor_icon(CursorIcon::Pointer);
         }
@@ -133,7 +162,6 @@ impl Measurable for RadioButton {
         }
         let selected = ui.is_selected(&self.group_id, &self.option_id);
 
-        // Per-radio animation state with Motion curves
         let anim_id = format!("__radio_anim_{}_{}", self.group_id, self.option_id);
         let anim = ui.widget_state::<RadioButtonAnimState>(&anim_id);
         anim.dot_t = animate_towards(
@@ -151,7 +179,6 @@ impl Measurable for RadioButton {
         let dot_t = anim.dot_t;
         let hover_t = anim.hover_t;
 
-        // Blend background fill
         let fill = if let (Fill::Solid(idle), Fill::Solid(hov), Fill::Solid(sel)) =
             (&style.fill, &style.hover_fill, &style.selected_fill)
         {
@@ -189,7 +216,6 @@ impl Measurable for RadioButton {
             0.0,
         );
 
-        // Animated inner dot — scales from 0 to full size with fluid motion
         if dot_t > 0.01 {
             let max_inset = 5.0;
             let inset = max_inset + (1.0 - dot_t) * max_inset;
@@ -215,5 +241,17 @@ impl Measurable for RadioButton {
             clicked: interaction.clicked,
             hovered: interaction.hovered,
         }
+    }
+}
+
+impl Accessible for RadioButton {
+    fn accessibility_id(&self) -> NodeId {
+        NodeId(hash_id(&format!("{}_{}", self.group_id, self.option_id)))
+    }
+    fn accessibility_role(&self) -> Role {
+        Role::RadioButton
+    }
+    fn accessibility_label(&self) -> Option<String> {
+        Some(self.option_id.clone())
     }
 }

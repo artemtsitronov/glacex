@@ -29,14 +29,13 @@ impl Widget for ThemesApp {
         let current = themes[self.selected_theme % themes.len()];
         ui.set_theme(current);
 
-        // Header Title
-        let mut title = Label::new("Glacex Design Tokens & Themes Showcase");
+        let mut title = Label::new("title", "Glacex Design Tokens & Themes Showcase");
         let mut subtitle = Label::new(
+            "subtitle",
             "Toggle between 9 meticulously calibrated Unixporn & Apple-grade color palettes.",
         )
         .muted();
 
-        // Theme Switcher Buttons (Row 1 & Row 2)
         let mut btn_0 = Button::new("_a", "shadcn Light").outline();
         let mut btn_1 = Button::new("_b", "shadcn Dark").outline();
         let mut btn_2 = Button::new("_c", "Catppuccin Mocha").outline();
@@ -47,7 +46,6 @@ impl Widget for ThemesApp {
         let mut btn_7 = Button::new("_h", "Nord").outline();
         let mut btn_8 = Button::new("_i", "Rosé Pine").outline();
 
-        // Active Theme Indicator Badge
         let mut active_badge =
             Badge::new(format!("Active Theme: {}", current.name)).variant(BadgeVariant::Success);
         let mut mode_badge = Badge::new(if current.is_dark {
@@ -57,45 +55,53 @@ impl Widget for ThemesApp {
         })
         .variant(BadgeVariant::Outline);
 
-        // Component Showcase in Left & Right Cards
-        let mut left_heading = Label::new("Interactive Surface & Controls");
+        let mut left_heading = Label::new("left_heading", "Interactive Surface & Controls");
         let mut primary_btn = Button::new("_j", "Primary Action").primary();
         let mut outline_btn = Button::new("_k", "Outline Button").outline();
         let mut ghost_btn = Button::new("_l", "Ghost Button").ghost();
         let mut danger_btn = Button::new("_m", "Destructive Action").danger();
 
-        let mut input_label = Label::new("Input Field with Floating Focus").secondary();
-        let mut text_input = TextInput::new("showcase_input", 280.0)
+        let mut input_label =
+            Label::new("input_label", "Input Field with Floating Focus").secondary();
+        let mut text_input = TextInput::new("showcase_input")
+            .width(280.0)
             .placeholder("Enter text here...")
             .default_text("Glacex immediate UI");
 
-        let mut area_label = Label::new("Multi-line Text Surface").secondary();
-        let mut text_area = TextArea::new("showcase_area", 280.0, 75.0).default_text(
-            "Minimal design tokens.\nGPU-accelerated typography.\nSDF rounded corners.",
-        );
+        let mut area_label = Label::new("area_label", "Multi-line Text Surface").secondary();
+        let mut text_area = TextArea::new("showcase_area")
+            .size([280.0, 75.0])
+            .default_text(
+                "Minimal design tokens.\nGPU-accelerated typography.\nSDF rounded corners.",
+            );
 
-        // Right Card Components
-        let mut right_heading = Label::new("Toggles, Sliders & Badges");
+        let mut right_heading = Label::new("right_heading", "Toggles, Sliders & Badges");
         let mut switch = Switch::new("showcase_switch").default_enabled(self.switched);
-        let mut switch_label = Label::new("Hardware Acceleration");
+        let mut switch_label = Label::new("switch_label", "Hardware Acceleration");
 
         let mut check = Checkbox::new("showcase_check").default_checked(self.checked);
-        let mut check_label = Label::new("Sub-pixel Text Antialiasing");
+        let mut check_label = Label::new("check_label", "Sub-pixel Text Antialiasing");
 
-        let mut slider_label =
-            Label::new(format!("Surface Blur Radius: {:.0}px", self.slider_val)).secondary();
-        let mut slider =
-            Slider::new("showcase_slider", 0.0, 100.0, 280.0).default_value(self.slider_val);
+        let mut slider_label = Label::new(
+            "slider_label",
+            format!("Surface Blur Radius: {:.0}px", self.slider_val),
+        )
+        .secondary();
+        let mut slider = Slider::new("showcase_slider", 0.0, 100.0)
+            .width(280.0)
+            .default_value(self.slider_val);
         let slider_resp = slider.state(ui);
         self.slider_val = slider_resp.value;
 
-        let mut progress = ProgressBar::new(self.slider_val / 100.0, 280.0).id("showcase_prog");
+        let mut progress = ProgressBar::new(self.slider_val / 100.0)
+            .width(280.0)
+            .id("showcase_prog");
 
-        let mut radio_label = Label::new("Rendering Backend").secondary();
+        let mut radio_label = Label::new("radio_label", "Rendering Backend").secondary();
         let mut radio_wgpu = RadioButton::new("backend_group", "wgpu");
-        let mut radio_wgpu_lbl = Label::new("wgpu WebGPU / Vulkan");
+        let mut radio_wgpu_lbl = Label::new("radio_wgpu_lbl", "wgpu WebGPU / Vulkan");
         let mut radio_dx12 = RadioButton::new("backend_group", "metal");
-        let mut radio_dx12_lbl = Label::new("Metal / DirectX 12");
+        let mut radio_dx12_lbl = Label::new("radio_dx12_lbl", "Metal / DirectX 12");
 
         let mut div_1 = Divider::horizontal(700.0).faint();
         let mut div_2 = Divider::horizontal(700.0).faint();

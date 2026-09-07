@@ -4,7 +4,8 @@ use crate::geometry::center_text_in;
 use crate::painter::FontWeight;
 use crate::theme::Theme;
 use crate::ui::Ui;
-use crate::widget::{Measurable, Widget};
+use crate::widget::{Accessible, Measurable, Widget, hash_id};
+use accesskit::{NodeId, Role};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum BadgeVariant {
@@ -41,18 +42,52 @@ impl Default for BadgeStyle {
 }
 
 pub struct Badge {
+    id: Option<String>,
     text: String,
     variant: BadgeVariant,
     style: Option<BadgeStyle>,
+    width: Option<f32>,
+    height: Option<f32>,
+    custom_padding: Option<[f32; 2]>,
 }
 
 impl Badge {
     pub fn new(text: impl Into<String>) -> Self {
         Badge {
+            id: None,
             text: text.into(),
             variant: BadgeVariant::Default,
             style: None,
+            width: None,
+            height: None,
+            custom_padding: None,
         }
+    }
+
+    pub fn padding(mut self, padding: [f32; 2]) -> Self {
+        self.custom_padding = Some(padding);
+        self
+    }
+
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = Some(id.into());
+        self
+    }
+
+    pub fn width(mut self, width: f32) -> Self {
+        self.width = Some(width);
+        self
+    }
+
+    pub fn height(mut self, height: f32) -> Self {
+        self.height = Some(height);
+        self
+    }
+
+    pub fn size(mut self, size: [f32; 2]) -> Self {
+        self.width = Some(size[0]);
+        self.height = Some(size[1]);
+        self
     }
 
     pub fn variant(mut self, variant: BadgeVariant) -> Self {
@@ -95,6 +130,14 @@ impl Badge {
     }
 
     fn resolved_style(&self, theme: &Theme) -> BadgeStyle {
+        let mut style = self.base_style(theme);
+        if let Some(p) = self.custom_padding {
+            style.padding = p;
+        }
+        style
+    }
+
+    fn base_style(&self, theme: &Theme) -> BadgeStyle {
         if let Some(s) = &self.style {
             return s.clone();
         }
@@ -169,13 +212,23 @@ impl Measurable for Badge {
         let style = self.resolved_style(ui.theme());
         let text_width = ui.measure_text_styled(&self.text, 12.0, 16.0, FontWeight::Medium, false);
         [
-            text_width + style.padding[0] * 2.0,
-            20.0, // sleek 20px badge height
+            self.width.unwrap_or(text_width + style.padding[0] * 2.0),
+            self.height.unwrap_or(20.0),
         ]
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
         let style = self.resolved_style(ui.theme());
+
+        ui.register_accessible(
+            self,
+            [
+                position[0],
+                position[1],
+                position[0] + size[0],
+                position[1] + size[1],
+            ],
+        );
 
         ui.draw_rect(
             position,
@@ -207,5 +260,17 @@ impl Measurable for Badge {
             FontWeight::Medium,
             false,
         );
+    }
+}
+
+impl Accessible for Badge {
+    fn accessibility_id(&self) -> NodeId {
+        NodeId(hash_id(self.id.as_deref().unwrap_or(&self.text)))
+    }
+    fn accessibility_role(&self) -> Role {
+        Role::Label
+    }
+    fn accessibility_label(&self) -> Option<String> {
+        Some(self.text.clone())
     }
 }

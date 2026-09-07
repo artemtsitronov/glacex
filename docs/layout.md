@@ -37,6 +37,7 @@ Sets the pixel gap between adjacent children along the primary axis. Default is 
 Sets child alignment along the cross-axis:
 - `Alignment::Start`: Align to top (rows) or left (columns).
 - `Alignment::Center`: Center along the cross-axis.
+- `Alignment::End`: Align to bottom (rows) or right (columns).
 
 ### `.arrange_at(pos: [f32; 2], ui: &mut Ui)`
 Measures and positions the layout tree at the given screen coordinates `[x, y]`.

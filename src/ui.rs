@@ -2,7 +2,8 @@ use crate::color::Color;
 use crate::fill::Fill;
 use crate::painter::Painter;
 use crate::theme::Theme;
-use crate::widget::{FocusId, Widget};
+use crate::widget::{Accessible, FocusId, Widget};
+use accesskit::{Node, NodeId};
 use std::any::Any;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -16,6 +17,17 @@ fn intersect_rects(a: [f32; 4], b: [f32; 4]) -> [f32; 4] {
         a[1].max(b[1]),
         a[2].min(b[2]),
         a[3].min(b[3]),
+    ]
+}
+
+const CLIP_BORDER_OVERDRAW: f32 = 2.0;
+
+fn inflate_rect(rect: [f32; 4], amount: f32) -> [f32; 4] {
+    [
+        rect[0] - amount,
+        rect[1] - amount,
+        rect[2] + amount,
+        rect[3] + amount,
     ]
 }
 
@@ -60,6 +72,7 @@ pub struct Ui {
     mouse_middle_released_this_frame: bool,
     pending_tooltip: Option<(String, [f32; 2])>,
     theme: Theme,
+    accessibility_nodes: Vec<(NodeId, Node)>,
 }
 
 impl Ui {
@@ -111,7 +124,31 @@ impl Ui {
             mouse_middle_pressed_this_frame: false,
             mouse_middle_released_this_frame: false,
             pending_tooltip: None,
+            accessibility_nodes: Vec::new(),
         }
+    }
+
+    pub fn accessibility_nodes(&self) -> Vec<(NodeId, Node)> {
+        self.accessibility_nodes.clone()
+    }
+
+    pub fn accessibility_focus(&self) -> Option<accesskit::NodeId> {
+        self.focused.map(|id| NodeId(id.as_u64()))
+    }
+
+    pub fn register_accessible<W: Accessible>(&mut self, widget: &W, bounds: [f32; 4]) {
+        let mut node = accesskit::Node::new(widget.accessibility_role());
+        if let Some(label) = widget.accessibility_label() {
+            node.set_label(label);
+        }
+        node.set_bounds(accesskit::Rect {
+            x0: bounds[0] as f64,
+            y0: bounds[1] as f64,
+            x1: bounds[2] as f64,
+            y1: bounds[3] as f64,
+        });
+        self.accessibility_nodes
+            .push((widget.accessibility_id(), node));
     }
 
     pub fn select(&mut self, group_id: &str, option_id: &str) {
@@ -203,6 +240,7 @@ impl Ui {
 
     pub fn push_clip(&mut self, rect: [f32; 4]) {
         let current = self.current_clip();
+        let rect = inflate_rect(rect, CLIP_BORDER_OVERDRAW);
         self.clip_stack.push(intersect_rects(current, rect));
     }
 
@@ -307,6 +345,7 @@ impl Ui {
         self.focus_order.clear();
         self.clip_stack.clear();
         self.input_block_stack.clear();
+        self.accessibility_nodes.clear();
     }
 
     pub fn update_mouse_position(&mut self, x: f64, y: f64) {
