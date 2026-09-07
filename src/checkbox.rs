@@ -9,6 +9,7 @@ use crate::widget::{Accessible, Measurable, StatefulWidget, Widget, hash_id};
 use accesskit::{NodeId, Role};
 use winit::window::CursorIcon;
 
+#[derive(Debug, Clone, Copy)]
 pub struct CheckboxState {
     pub checked: bool,
     pub anim_progress: f32,

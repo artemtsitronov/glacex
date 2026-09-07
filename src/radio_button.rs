@@ -246,7 +246,7 @@ impl Measurable for RadioButton {
 
 impl Accessible for RadioButton {
     fn accessibility_id(&self) -> NodeId {
-        NodeId(hash_id(&format!("{}_{}", self.group_id, self.option_id)))
+        NodeId(hash_id(&format!("{}:{}", self.group_id, self.option_id)))
     }
     fn accessibility_role(&self) -> Role {
         Role::RadioButton

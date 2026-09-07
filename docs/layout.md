@@ -14,10 +14,10 @@ Glacex provides two declarative macros for layout:
 use glacex::{Alignment, Label, column, row};
 
 let mut root = column![
-    &mut Label::new("Header"),
+    &mut Label::new("header", "Header"),
     &mut row![
-        &mut Label::new("Left"),
-        &mut Label::new("Right")
+        &mut Label::new("left", "Left"),
+        &mut Label::new("right", "Right")
     ]
     .spacing(12.0)
     .align(Alignment::Center),
@@ -38,6 +38,22 @@ Sets child alignment along the cross-axis:
 - `Alignment::Start`: Align to top (rows) or left (columns).
 - `Alignment::Center`: Center along the cross-axis.
 - `Alignment::End`: Align to bottom (rows) or right (columns).
+
+By default a `row!`/`column!` hugs its content, so there's no extra cross-axis
+space for `.align()` to do anything with — it only becomes visible once the
+container is bigger than its content, e.g. via `.size()` below.
+
+### `.size([w, h]: [f32; 2])` / `.width(px: f32)` / `.height(px: f32)`
+Overrides the row/column's own width and/or height instead of hugging its
+content. `.size()` is shorthand for calling both. Useful together with
+`.align()` — a `row!` given a taller `.size()` than its content, for
+instance, can then vertically center its children in that extra space.
+
+### `.padding([x, y]: [f32; 2])`
+Insets children from the row/column's own bounds by `x` pixels on the left
+and right, and `y` pixels on the top and bottom. When no explicit `.size()`
+is set, padding is added on top of the hugged content size (so the children
+themselves aren't squeezed).
 
 ### `.arrange_at(pos: [f32; 2], ui: &mut Ui)`
 Measures and positions the layout tree at the given screen coordinates `[x, y]`.

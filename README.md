@@ -230,6 +230,8 @@ column![
 - `.align(Alignment::Start | Alignment::Center | Alignment::End)` sets cross-axis alignment.
 - `.spacing(px)` sets the gap between children.
 - `.arrange_at([x, y], ui)` measures and arranges the tree in one call.
+- `.size([w, h])` / `.width(px)` / `.height(px)` override the row/column's own size instead of hugging its content — pairs with `.align()` to center/end-align children in the extra space.
+- `.padding([x, y])` insets children from the row/column's own bounds.
 
 ## Widgets
 

@@ -26,6 +26,9 @@ macro_rules! row {
 pub struct Column<'a> {
     spacing: f32,
     align: Alignment,
+    width: Option<f32>,
+    height: Option<f32>,
+    padding: [f32; 2],
     children: Vec<Box<dyn AnyWidget + 'a>>,
     cached_child_sizes: Vec<[f32; 2]>,
 }
@@ -36,6 +39,9 @@ impl<'a> Column<'a> {
         Column {
             spacing: 8.0,
             align: Alignment::Center,
+            width: None,
+            height: None,
+            padding: [0.0, 0.0],
             children,
             cached_child_sizes,
         }
@@ -48,6 +54,31 @@ impl<'a> Column<'a> {
 
     pub fn align(mut self, align: Alignment) -> Self {
         self.align = align;
+        self
+    }
+
+    /// Overrides the column's own width — by default it hugs its content.
+    pub fn width(mut self, width: f32) -> Self {
+        self.width = Some(width);
+        self
+    }
+
+    /// Overrides the column's own height — by default it hugs its content.
+    pub fn height(mut self, height: f32) -> Self {
+        self.height = Some(height);
+        self
+    }
+
+    /// Shorthand for `.width(size[0]).height(size[1])`.
+    pub fn size(mut self, size: [f32; 2]) -> Self {
+        self.width = Some(size[0]);
+        self.height = Some(size[1]);
+        self
+    }
+
+    /// Insets children from the column's own bounds on every side.
+    pub fn padding(mut self, padding: [f32; 2]) -> Self {
+        self.padding = padding;
         self
     }
 
@@ -91,14 +122,26 @@ impl<'a> Measurable for Column<'a> {
                 height += self.spacing;
             }
         }
-        [width, height]
+        [
+            self.width.unwrap_or(width + self.padding[0] * 2.0),
+            self.height.unwrap_or(height + self.padding[1] * 2.0),
+        ]
     }
 
-    fn arrange(&mut self, position: [f32; 2], _size: [f32; 2], ui: &mut Ui) {
-        // _size (the parent-given size) is ignored — this container
-        // always sizes itself to its own content via taffy, using the
-        // sizes measure() already cached this frame. No child.measure()
-        // calls happen here at all.
+    fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
+        // `size` is whatever measure() returned this frame (an explicit
+        // `.width()`/`.height()` override, or the hugged content size) —
+        // inset by padding, it becomes the taffy root's own size, so
+        // `.align()` has a real cross-axis box to align children within
+        // once the column is bigger than its content. No child.measure()
+        // calls happen here at all; layout uses the sizes measure()
+        // already cached this frame.
+        let inner_position = [position[0] + self.padding[0], position[1] + self.padding[1]];
+        let inner_size = [
+            (size[0] - self.padding[0] * 2.0).max(0.0),
+            (size[1] - self.padding[1] * 2.0).max(0.0),
+        ];
+
         let mut tree: TaffyTree<()> = TaffyTree::new();
 
         let child_node_ids: Vec<NodeId> = self
@@ -119,6 +162,10 @@ impl<'a> Measurable for Column<'a> {
         let column_node = tree
             .new_with_children(
                 Style {
+                    size: Size {
+                        width: length(inner_size[0]),
+                        height: length(inner_size[1]),
+                    },
                     flex_direction: FlexDirection::Column,
                     align_items: Some(to_taffy_align(self.align)),
                     gap: Size {
@@ -136,8 +183,8 @@ impl<'a> Measurable for Column<'a> {
         for (child, node_id) in self.children.iter_mut().zip(child_node_ids.iter()) {
             let layout = tree.layout(*node_id).unwrap();
             let child_position = [
-                position[0] + layout.location.x,
-                position[1] + layout.location.y,
+                inner_position[0] + layout.location.x,
+                inner_position[1] + layout.location.y,
             ];
             let child_size = [layout.size.width, layout.size.height];
             child.arrange(child_position, child_size, ui);
@@ -149,6 +196,9 @@ impl<'a> Measurable for Column<'a> {
 pub struct Row<'a> {
     spacing: f32,
     align: Alignment,
+    width: Option<f32>,
+    height: Option<f32>,
+    padding: [f32; 2],
     children: Vec<Box<dyn AnyWidget + 'a>>,
     cached_child_sizes: Vec<[f32; 2]>,
 }
@@ -159,6 +209,9 @@ impl<'a> Row<'a> {
         Row {
             spacing: 8.0,
             align: Alignment::Center,
+            width: None,
+            height: None,
+            padding: [0.0, 0.0],
             children,
             cached_child_sizes,
         }
@@ -171,6 +224,31 @@ impl<'a> Row<'a> {
 
     pub fn align(mut self, align: Alignment) -> Self {
         self.align = align;
+        self
+    }
+
+    /// Overrides the row's own width — by default it hugs its content.
+    pub fn width(mut self, width: f32) -> Self {
+        self.width = Some(width);
+        self
+    }
+
+    /// Overrides the row's own height — by default it hugs its content.
+    pub fn height(mut self, height: f32) -> Self {
+        self.height = Some(height);
+        self
+    }
+
+    /// Shorthand for `.width(size[0]).height(size[1])`.
+    pub fn size(mut self, size: [f32; 2]) -> Self {
+        self.width = Some(size[0]);
+        self.height = Some(size[1]);
+        self
+    }
+
+    /// Insets children from the row's own bounds on every side.
+    pub fn padding(mut self, padding: [f32; 2]) -> Self {
+        self.padding = padding;
         self
     }
 
@@ -210,10 +288,22 @@ impl<'a> Measurable for Row<'a> {
                 width += self.spacing;
             }
         }
-        [width, height]
+        [
+            self.width.unwrap_or(width + self.padding[0] * 2.0),
+            self.height.unwrap_or(height + self.padding[1] * 2.0),
+        ]
     }
 
-    fn arrange(&mut self, position: [f32; 2], _size: [f32; 2], ui: &mut Ui) {
+    fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
+        // See Column::arrange — same reasoning: `size` is this frame's
+        // measure() result (override or hugged content), inset by padding
+        // to give the taffy root a real box for `.align()` to work within.
+        let inner_position = [position[0] + self.padding[0], position[1] + self.padding[1]];
+        let inner_size = [
+            (size[0] - self.padding[0] * 2.0).max(0.0),
+            (size[1] - self.padding[1] * 2.0).max(0.0),
+        ];
+
         let mut tree: TaffyTree<()> = TaffyTree::new();
 
         let child_node_ids: Vec<NodeId> = self
@@ -234,6 +324,10 @@ impl<'a> Measurable for Row<'a> {
         let row_node = tree
             .new_with_children(
                 Style {
+                    size: Size {
+                        width: length(inner_size[0]),
+                        height: length(inner_size[1]),
+                    },
                     flex_direction: FlexDirection::Row,
                     align_items: Some(to_taffy_align(self.align)),
                     gap: Size {
@@ -251,8 +345,8 @@ impl<'a> Measurable for Row<'a> {
         for (child, node_id) in self.children.iter_mut().zip(child_node_ids.iter()) {
             let layout = tree.layout(*node_id).unwrap();
             let child_position = [
-                position[0] + layout.location.x,
-                position[1] + layout.location.y,
+                inner_position[0] + layout.location.x,
+                inner_position[1] + layout.location.y,
             ];
             let child_size = [layout.size.width, layout.size.height];
             child.arrange(child_position, child_size, ui);

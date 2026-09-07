@@ -5,114 +5,53 @@ All notable changes to this project are documented in this file.
 ## [0.1.5]
 
 ### Added
-- Accessibility support via `AccessKit` (AT-SPI on Linux, UIA on Windows, NSAccessibility on macOS), opt-in via `App::accessibility_enabled(true)` (disabled by default).
-- Implemented overlaying system
-- Split `Painter` into two full render passes(normal, overlay)
+- Accessibility support via `AccessKit` (AT-SPI on Linux, UIA on Windows, NSAccessibility on macOS). Opt-in via `App::accessibility_enabled(true)`, off by default.
+- An overlay system — `Painter` is now split into two render passes (normal + overlay) so tooltips and other floating layers draw on top of everything else.
+- `.size()` / `.width()` / `.height()` and `.padding()` on `Row` and `Column`, matching the other widgets. A row/column still hugs its content by default; an explicit `.size()` gives `.align()` real cross-axis space to center/end-align children within.
+- Every widget now takes an id (optional or required, depending on the widget) so it can be addressed in the accessibility tree and by persistent state.
 
 ### Fixed
-- Fixed the removed bind_rect_pipeline
-- Glyphon rendering issues
-- State ID of Button
-- Removed borrows
-- Accessibility tree crashing on the first frame
-- Tooltip text not showing up
-
-### Changed
-- Every widget now has an ID as argument(optional or required)
-- Design decision: now the size of the widget can be changed, and also introduced padding.
+- `bind_rect_pipeline` was accidentally removed at some point — restored.
+- Assorted glyphon rendering glitches.
+- `Button`'s state id.
+- Accessibility tree crashing on the first frame.
+- Tooltip text not showing up.
+- `ScrollView`'s thumb was always visible whenever content overflowed, even though hover/drag/linger state was already tracked — visibility just wasn't gated on it. It now only shows while the pointer is on the track (or dragging), lingering for `ScrollConfig::linger_seconds` (0.5s, was 0.8s) after the pointer leaves. Same fix for `TextArea`'s scrollbar.
+- `TextInput`'s selection highlight and cursor weren't clipped to the field's bounds, so a selection in overflowing text could paint past the input's edges.
+- `Badge` rendered invisible (no background or border at all). The rounded-rect SDF shader never clamped `corner_radius` against the shape's own half-size, and `Badge` uses `Theme::RADIUS_FULL` (9999.0) as its "fully round" sentinel — uncapped, that blew up the distance field. Clamped the radius in `shader.wgsl` so an oversized radius degrades into a pill shape instead.
+- A few unnecessary borrows cleaned up along the way.
 
 ### Removed
-- `ROADMAP.md` — wasn't being kept up to date and drifted from what's actually planned.
+- `ROADMAP.md` — wasn't being kept up to date and had drifted from what's actually planned.
 
 ## [0.1.4]
 
 ### Added
-- Dynamic Theme Engine & 9 Built-in Presets (`src/theme.rs`):
-  - White-by-default Apple & shadcn-grade luxury aesthetic (`Theme::LIGHT`).
-  - 9 curated, pixel-perfect theme palettes:
-    - `Theme::LIGHT`
-    - `Theme::DARK`
-    - `Theme::CATPPUCCIN_MOCHA`
-    - `Theme::CATPPUCCIN_LATTE`
-    - `Theme::TOKYO_NIGHT`
-    - `Theme::GRUVBOX_DARK`
-    - `Theme::GRUVBOX_LIGHT`
-    - `Theme::NORD`
-    - `Theme::ROSE_PINE`
-  - Dynamic palette switching via `Ui::set_theme(theme)` and query via `Ui::theme()`.
-  - Component style factories on `Theme`: `.button_style()`, `.primary_button_style()`, `.outline_button_style()`, `.ghost_button_style()`, `.danger_button_style()`, `.card_style()`, `.card_subtle_style()`, `.card_elevated_style()`, `.checkbox_style()`, `.switch_style()`, `.slider_style()`, `.input_style()`, `.text_area_style()`.
-  - Dedicated `examples/themes.rs` demonstration showcasing all 9 palettes.
-- Complete design token system in `src/theme.rs`:
-  - 4-step surface ladder (`bg_canvas`, `surface`, `surface_subtle`, `surface_elevated`).
-  - Distinct `pressed` control state between hover and active.
-  - Semi-transparent border tokens (`border_faint`, `border`, `border_strong`, `focus_border`).
-  - Typography color hierarchy (`text_primary`, `text_secondary`, `text_muted`).
-  - Semantic status colors (`success`, `warning`, `error`).
-  - 4px base grid spacing constants and shadcn-aligned corner radius scale (`RADIUS_XS` through `RADIUS_LG`).
-- Multi-layer shadow system in `src/shadow.rs`:
-  - Ambient (wide, soft) + key light (tight, crisp) two-layer architecture.
-  - Named elevation presets: `Shadow::sm()`, `Shadow::md()`, `Shadow::lg()`, and `draw_shadow_layers`.
-- Text color rendering pipeline:
-  - `Ui::draw_text_colored` and `Painter::draw_text_colored` for custom per-widget text colors.
-  - Sub-pixel typography rendering with custom alpha blending in `glyphon`.
-- `Button` component enhancements:
-  - Style variants: `.primary()`, `.outline()`, `.ghost()`, `.danger()`.
-  - Tactile 1px press depth offset and shadow compression for physical elevation.
-  - Smooth border brightening to `theme.border_strong` on hover.
-- `Label` typography hierarchy:
-  - `.color(Color)`, `.secondary()`, `.muted()`, and `.accent()` builder methods.
-- `Badge` component enhancements:
-  - Role-tinted surfaces (12% alpha fill, 32% alpha border) with matching high-contrast text colors for `Success`, `Warning`, and `Error`.
-- `TextInput` and `TextArea` component enhancements:
-  - Animated focus-visible ring via `Motion::GENTLE` (border grows 0.5px, glow shadow blur expands 6px).
-  - Placeholder support on `TextInput` (`.placeholder("...")`) rendered in `Theme::TEXT_MUTED`.
-  - Configurable `text_color` and `placeholder_color`.
-- `ProgressBar` component enhancements:
-  - Smooth animated fill via `ProgressBarState` and `StatefulWidget` trait with stable `.id("...")`.
-  - Semantic status variants: `.success()`, `.warning()`, `.error()`.
-- `Card` component enhancements:
-  - Style variants: `.subtle()` (inset sub-panel) and `.elevated()` (floating modal/card).
-- `Divider` component enhancements:
-  - `.faint()` convenience builder for ultra-subtle hairline separators (`Theme::BORDER_FAINT`).
-- `Motion` design system in `src/animation.rs`:
-  - Named timing constants: `MICRO` (16ms), `INSTANT` (30ms), `SNAPPY` (45ms), `FLUID` (60ms), `GENTLE` (90ms).
-  - Physics spring presets: `standard_spring` (Framer 400/25), `snappy_spring` (450/32), `fluid_spring` (Apple 300/26).
-  - `EaseOutQuart` easing curve and `Spring::is_settled()` rest check.
-
-- Bundled Authentic Geist & Geist Mono Fonts (`assets/fonts/`, `src/painter.rs`):
-  - Bundled official Vercel Geist TTFs (`Geist-Regular.ttf`, `Geist-Medium.ttf`, `Geist-SemiBold.ttf`, `Geist-Bold.ttf`, `GeistMono-Regular.ttf`) embedded via `include_bytes!`.
-  - Configured explicit `include` in `Cargo.toml` so fonts are included for users in downstream applications as well as crates.io package archives.
-  - Multi-weight typography engine supporting `FontWeight::Regular`, `Medium`, `SemiBold`, and `Bold`.
-  - Monospace switching with `.mono()` helper on `Label`.
-  - Standardized font metrics: 14px font size with 20px line height (shadcn standard).
-- Full Dynamic Theme Reactivity:
-  - Eliminated static color caching on widget variants: `ButtonVariant`, `BadgeVariant`, `CardVariant`, `ProgressBarVariant`, and `LabelVariant` dynamically resolve colors against active `ui.theme()` in every `arrange()` pass.
-  - Theme-aware scrollbars in `ScrollView` and `TextArea`: dynamic thumb and dragging fills ensure scrollbars are crisp and visible across both dark and light modes.
-  - Added `.padding()` builder on `Card` to allow custom spacing without blowing away dynamic theme colors.
-- shadcn-Grade Floating Tooltip Engine:
-  - Redesigned with authentic Geist Medium 12px caption typography, 8px corner radius, theme-aware elevated surface, crisp border stroke, and 14px soft drop shadow.
-- Refactored `examples/demo.rs`:
-  - Authentic shadcn/ui KPI stat card layout with large metric numbers (`$1,250.00`, `1,234`, `45,678`, `4.5%`), trending growth indicator pills, and subtitle captions matching modern SaaS dashboards.
-  - Two-column configuration panels with switches, sliders, inputs, and Geist Mono diagnostic logs.
+- Theme engine with 9 built-in palettes (`src/theme.rs`): `LIGHT` (default), `DARK`, `CATPPUCCIN_MOCHA`, `CATPPUCCIN_LATTE`, `TOKYO_NIGHT`, `GRUVBOX_DARK`, `GRUVBOX_LIGHT`, `NORD`, `ROSE_PINE`. Switch at runtime with `Ui::set_theme()`, read back with `Ui::theme()`. Each theme exposes style factories (`.button_style()`, `.card_style()`, `.checkbox_style()`, etc.) and a full token set — surface ladder (`bg_canvas`/`surface`/`surface_subtle`/`surface_elevated`), border tokens, text color hierarchy, status colors, spacing, and radius scale. `examples/themes.rs` shows all 9 side by side.
+- Two-layer shadow system in `src/shadow.rs` (wide ambient layer + tight key light), with `Shadow::sm()/md()/lg()` presets.
+- `Ui::draw_text_colored` / `Painter::draw_text_colored` for per-widget text colors.
+- `Motion` timing constants in `src/animation.rs` — `MICRO`/`INSTANT`/`SNAPPY`/`FLUID`/`GENTLE` — plus spring presets (`standard_spring`, `snappy_spring`, `fluid_spring`) and an `EaseOutQuart` curve.
+- Bundled Geist and Geist Mono fonts (`assets/fonts/`), embedded via `include_bytes!` and included in the crates.io package via `Cargo.toml`'s `include`. `FontWeight::Regular/Medium/SemiBold/Bold`, `.mono()` on `Label`, 14px/20px line height metrics.
+- Style variants: `Button` gets `.primary()/.outline()/.ghost()/.danger()` plus a 1px press-depth offset; `Label` gets `.color()/.secondary()/.muted()/.accent()`; `Badge` gets tinted surfaces per status; `Card` gets `.subtle()`/`.elevated()`; `Divider` gets `.faint()`.
+- Focus-visible ring on `TextInput`/`TextArea` (border + glow, animated via `Motion::GENTLE`), plus `.placeholder()` on `TextInput`.
+- `ProgressBar` now animates its fill through `ProgressBarState` when given a stable `.id()`, and has `.success()/.warning()/.error()` variants.
+- Widget colors (`Button`, `Badge`, `Card`, `ProgressBar`, `Label` variants) now resolve against the active theme every frame instead of being cached, so `set_theme()` actually repaints everything, including scrollbars.
+- Redesigned floating tooltip: Geist Medium 12px, 8px radius, elevated surface, soft shadow.
+- Reworked `examples/demo.rs` into a stat-card dashboard layout with a two-column config panel.
 
 ## [0.1.2]
 
 ### Added
-- Physics and easing animation system (`src/animation.rs`): `animate_towards`, `Ease` curves, and `Spring`.
-- Per-frame delta time tracking in `Ui` (`ui.dt()`).
-- Window size builder and configuration on `App` (`.window_size(w, h)`).
-- Smooth interactive transitions across controls:
-  - `Button`: smooth color interpolation on hover and press.
-  - `Checkbox`: diagonal vector checkmark with animated progressive stroke drawing and smooth fill transitions.
-  - `RadioButton`: smooth animated dot scaling and background blend.
-  - `Switch`: gliding knob animation and smooth track color transitions.
-  - `Slider`: animated hover glow halo on thumb.
-- Window attributes builder and custom title configuration.
-- Issue and pull request templates under `.github/`.
+- Physics/easing animation system (`src/animation.rs`): `animate_towards`, `Ease` curves, `Spring`.
+- Per-frame delta time on `Ui` (`ui.dt()`).
+- Window size builder on `App` (`.window_size(w, h)`).
+- Hover/press animations across `Button`, `Checkbox` (animated stroke checkmark), `RadioButton`, `Switch`, `Slider`.
+- Window attributes builder and custom title.
+- Issue/PR templates under `.github/`.
 
 ### Changed
-- Refactored `demo.rs` for 1080p dashboard layout with dynamic cluster region status updates.
-- Refined and cleaned all documentation in `docs/` and `README.md`.
+- Refactored `demo.rs` for a 1080p dashboard layout with dynamic cluster status updates.
+- Cleaned up `docs/` and `README.md`.
 
 ## [0.1.1]
 
@@ -121,8 +60,7 @@ All notable changes to this project are documented in this file.
 - New color palette (Zinc/Indigo-inspired dark theme).
 
 ### Changed
-- Refactored `Button`, `Checkbox`, and `RadioButton` for consistent
-  styling and shadow support.
+- Refactored `Button`, `Checkbox`, and `RadioButton` for consistent styling and shadow support.
 - Updated `TextEditState` with `set_text`/`clear`.
 - Updated the example and screenshots.
 

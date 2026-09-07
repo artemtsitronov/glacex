@@ -58,8 +58,14 @@ const AA_FADE_WIDTH: f32 = 1.5;
 const AA_PADDING: f32 = 4.0;
 
 fn sd_rounded_box(p: vec2<f32>, half_size: vec2<f32>, radius: f32) -> f32 {
-    let q = abs(p) - half_size + vec2<f32>(radius);
-    return min(max(q.x, q.y), 0.0) + length(max(q, vec2<f32>(0.0))) - radius;
+    // Clamp to the box's own half-size so an intentionally huge radius (a
+    // "fully round / pill" sentinel like Theme::RADIUS_FULL) degrades into
+    // a stadium shape instead of blowing up the distance field — uncapped,
+    // `q` runs strongly positive even at the box's center, so the whole
+    // shape renders fully transparent.
+    let r = min(radius, min(half_size.x, half_size.y));
+    let q = abs(p) - half_size + vec2<f32>(r);
+    return min(max(q.x, q.y), 0.0) + length(max(q, vec2<f32>(0.0))) - r;
 }
 
 fn rotate(p: vec2<f32>, angle: f32) -> vec2<f32> {

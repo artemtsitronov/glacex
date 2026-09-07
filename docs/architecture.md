@@ -134,15 +134,13 @@ Each `WindowEvent::RedrawRequested`:
 Glacex ships 9 built-in theme presets, defaulting to a light, shadcn-inspired palette (`Theme::LIGHT`). Themes can be swapped at runtime with `ui.set_theme(theme)`.
 
 ### Presets Available
-- `Theme::LIGHT` (Default): Pure white `#ffffff` canvas with zinc borders and charcoal primary accent.
-- `Theme::DARK`: Linear/Vercel-grade deep `#09090b` canvas with `#4f46e5` electric indigo accent.
-- `Theme::CATPPUCCIN_MOCHA`: Soothing dark pastel warmth.
-- `Theme::CATPPUCCIN_LATTE`: Soft daylight pastel aesthetic.
-- `Theme::TOKYO_NIGHT`: Cyberpunk neon midnight.
-- `Theme::GRUVBOX_DARK`: Warm retro groove charcoal and orange.
-- `Theme::GRUVBOX_LIGHT`: Paper-textured retro light daylight.
-- `Theme::NORD`: Arctic slate and frost blue.
-- `Theme::ROSE_PINE`: Moody vintage rose aesthetic.
+- `Theme::LIGHT` (default): white `#ffffff` canvas, zinc borders, charcoal accent.
+- `Theme::DARK`: `#09090b` canvas, `#4f46e5` indigo accent.
+- `Theme::CATPPUCCIN_MOCHA` / `Theme::CATPPUCCIN_LATTE`: the Catppuccin dark and light palettes.
+- `Theme::TOKYO_NIGHT`: dark blue-purple canvas, `#7aa2f7` accent.
+- `Theme::GRUVBOX_DARK` / `Theme::GRUVBOX_LIGHT`: the Gruvbox palette, dark and light.
+- `Theme::NORD`: the Nord palette (slate canvas, frost-blue accent).
+- `Theme::ROSE_PINE`: the Rosé Pine palette.
 
 ### Surface Elevation Hierarchy
 - **Canvas (`theme.bg_canvas`)**: Root window backdrop.
