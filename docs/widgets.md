@@ -16,6 +16,18 @@ let mut toast = Toast::new("saved", "Changes saved");
 let mut heading = Typography::new("Project settings").variant(TypographyVariant::Heading);
 let mut field = Field::new("Repository name").description("Use a short, recognizable name.");
 let mut group = ButtonGroup::new("view", ["List", "Board", "Timeline"]);
+let mut crumbs = Breadcrumb::new(["Projects", "Glacex", "Settings"]);
+let mut pages = Pagination::new("projects-pages", 8);
+let mut table = Table::new("projects", ["Name", "Status"], [["glacex", "Ready"], ["docs", "Draft"]]);
+let mut carousel = Carousel::new("release-notes", ["Fast", "Native", "Accessible"]);
+let mut chart = Chart::new([12.0, 24.0, 18.0, 32.0, 28.0]);
+let mut commands = CommandPalette::new("command-menu", [
+    Command::new("new-project", "New project").hint("⌘ N"),
+    Command::new("settings", "Open settings"),
+]);
+let mut calendar = Calendar::new("release-date", CalendarDate { year: 2026, month: 9, day: 9 });
+let mut otp = InputOtp::new("verification-code", 6);
+let mut toggles = ToggleGroup::new("view-mode", ["List", "Board", "Timeline"]);
 ```
 
 API reference for all widgets provided by `glacex`.

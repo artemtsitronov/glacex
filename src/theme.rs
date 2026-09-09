@@ -1495,13 +1495,13 @@ impl Theme {
         [
             ShadowStyle {
                 color: self.shadow_ambient,
-                blur_radius: 3.0,
-                offset: [0.0, 1.0],
+                blur_radius: 4.0,
+                offset: [0.0, 1.5],
             },
             ShadowStyle {
                 color: self.shadow_key,
-                blur_radius: 6.0,
-                offset: [0.0, 2.0],
+                blur_radius: 8.0,
+                offset: [0.0, 3.0],
             },
         ]
     }
@@ -1511,13 +1511,13 @@ impl Theme {
         [
             ShadowStyle {
                 color: self.shadow_ambient,
-                blur_radius: 12.0,
-                offset: [0.0, 3.0],
+                blur_radius: 20.0,
+                offset: [0.0, 5.0],
             },
             ShadowStyle {
                 color: self.shadow_key,
-                blur_radius: 4.0,
-                offset: [0.0, 2.0],
+                blur_radius: 8.0,
+                offset: [0.0, 3.0],
             },
         ]
     }
@@ -1527,13 +1527,13 @@ impl Theme {
         [
             ShadowStyle {
                 color: self.shadow_ambient,
-                blur_radius: 24.0,
-                offset: [0.0, 6.0],
+                blur_radius: 36.0,
+                offset: [0.0, 10.0],
             },
             ShadowStyle {
                 color: self.shadow_key,
-                blur_radius: 8.0,
-                offset: [0.0, 3.0],
+                blur_radius: 14.0,
+                offset: [0.0, 5.0],
             },
         ]
     }
@@ -1635,10 +1635,10 @@ impl Theme {
         CardStyle {
             fill: Fill::Solid(self.surface),
             border_width: 1.0,
-            border_color: self.border,
-            corner_radius: 10.0,
+            border_color: self.border_strong,
+            corner_radius: 14.0,
             padding: [20.0, 20.0],
-            shadow: Some(self.shadow_sm()[0]),
+            shadow: Some(self.shadow_md()[0]),
         }
     }
 
@@ -1647,8 +1647,8 @@ impl Theme {
         CardStyle {
             fill: Fill::Solid(self.surface_subtle),
             border_width: 1.0,
-            border_color: self.border_faint,
-            corner_radius: 8.0,
+            border_color: self.border,
+            corner_radius: 10.0,
             padding: [16.0, 16.0],
             shadow: None,
         }
@@ -1660,9 +1660,9 @@ impl Theme {
             fill: Fill::Solid(self.surface_elevated),
             border_width: 1.0,
             border_color: self.border_strong,
-            corner_radius: 12.0,
-            padding: [20.0, 20.0],
-            shadow: Some(self.shadow_md()[0]),
+            corner_radius: 16.0,
+            padding: [24.0, 24.0],
+            shadow: Some(self.shadow_lg()[0]),
         }
     }
 

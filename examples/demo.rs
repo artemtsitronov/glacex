@@ -216,12 +216,11 @@ impl Widget for DemoApp {
                                             .placeholder("Here goes text."),
                                         &mut TextArea::new("text_area"),
                                     ]
-                                    .spacing(24.0)
+                                    .spacing(20.0)
                                 )
-                                .padding([12.0; 2])
+                                .padding([16.0; 2])
                             )
-                            .size([350.0, 400.0])
-                            .padding([0.0; 2]),
+                            .size([370.0, 420.0]),
                             &mut Card::new(
                                 &mut glacex::column![
                                     &mut row![&mut radio_button_group, &mut joke_label,]
@@ -240,8 +239,9 @@ impl Widget for DemoApp {
                                 .spacing(24.0)
                                 .align(Alignment::Center)
                             )
-                            .height(400.0)
-                        ],
+                            .height(420.0)
+                        ]
+                        .spacing(20.0),
                         &mut glacex::column![
                             &mut Label::new(
                                 "_36",
@@ -252,9 +252,9 @@ impl Widget for DemoApp {
                                 .size_preset(14.0),
                         ],
                     ]
-                    .padding([50.0; 2])
+                    .padding([60.0; 2])
                     .width(window_size[0])
-                    .spacing(30.0)
+                    .spacing(36.0)
                     .align(Alignment::Center)
                 )
                 .size([window_size[0], window_size[1]])

@@ -9,6 +9,10 @@ All notable changes to this project are documented in this file.
 - `Empty`, `Toggle`, `Tabs`, and `Accordion` with persistent immediate-mode state.
 - Overlay `Dialog` and timed `Toast` primitives using the existing overlay renderer and input blocking.
 - `Typography`, `AspectRatio`, `Field`, and `ButtonGroup` foundations for form, layout, and navigation components.
+- `Breadcrumb`, `Pagination`, and selectable `Table` primitives for application data surfaces.
+- `Carousel` and compact bar `Chart` primitives for demo and dashboard surfaces.
+- Keyboard-operable `CommandPalette` with query filtering, arrow navigation, Enter selection, and Escape dismissal.
+- `Calendar`, `DatePicker`, `InputOtp`, and `ToggleGroup` stateful controls with click and keyboard input.
 - `Ui::time()` for lightweight ambient motion.
 
 ### Changed
