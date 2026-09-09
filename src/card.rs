@@ -20,14 +20,14 @@ impl Default for CardStyle {
     fn default() -> Self {
         CardStyle {
             fill: Fill::Solid(Theme::SURFACE),
-            border_width: 1.0,
-            border_color: Theme::BORDER,
-            corner_radius: Theme::RADIUS_LG,
-            padding: [Theme::SPACE_4, Theme::SPACE_4],
+            border_width: 0.0,
+            border_color: Color::TRANSPARENT,
+            corner_radius: 16.0,
+            padding: [22.0, 22.0],
             shadow: Some(ShadowStyle {
                 color: Theme::SURFACE_SHADOW,
-                blur_radius: 12.0,
-                offset: [0.0, 3.0],
+                blur_radius: 24.0,
+                offset: [0.0, 6.0],
             }),
         }
     }
@@ -37,10 +37,10 @@ impl CardStyle {
     pub fn subtle() -> Self {
         CardStyle {
             fill: Fill::Solid(Theme::SURFACE_SUBTLE),
-            border_width: 1.0,
-            border_color: Theme::BORDER_FAINT,
-            corner_radius: Theme::RADIUS_MD,
-            padding: [Theme::SPACE_3, Theme::SPACE_3],
+            border_width: 0.0,
+            border_color: Color::TRANSPARENT,
+            corner_radius: 14.0,
+            padding: [18.0, 18.0],
             shadow: None,
         }
     }
@@ -48,14 +48,14 @@ impl CardStyle {
     pub fn elevated() -> Self {
         CardStyle {
             fill: Fill::Solid(Theme::SURFACE_ELEVATED),
-            border_width: 1.0,
-            border_color: Theme::BORDER_STRONG,
-            corner_radius: Theme::RADIUS_LG,
-            padding: [Theme::SPACE_4, Theme::SPACE_4],
+            border_width: 0.0,
+            border_color: Color::TRANSPARENT,
+            corner_radius: 20.0,
+            padding: [24.0, 24.0],
             shadow: Some(ShadowStyle {
                 color: Theme::SHADOW_KEY,
-                blur_radius: 18.0,
-                offset: [0.0, 6.0],
+                blur_radius: 32.0,
+                offset: [0.0, 10.0],
             }),
         }
     }

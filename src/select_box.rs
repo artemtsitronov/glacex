@@ -2,8 +2,8 @@
 //!
 //! Renders a trigger button that opens a spring-animated floating dropdown
 //! with keyboard navigation (↑/↓ arrow keys, Enter to select, Escape to
-//! close) and optional type-to-filter search.  Matches shadcn/ui / Radix UI
-//! quality and motion feel.
+//! close) and optional type-to-filter search.  Matches shadcn/ui / Apple HIG
+//! quality and motion feel — soft, borderless, neumorphic.
 
 use crate::animation::{Motion, Spring, animate_towards};
 use crate::color::Color;
@@ -35,7 +35,7 @@ pub struct SelectBoxStyle {
     pub text_color: Color,
     /// Placeholder text color (nothing selected yet).
     pub placeholder_color: Color,
-    /// Trigger border width.
+    /// Trigger border width (0 = borderless neumorphic style).
     pub border_width: f32,
     /// Trigger resting border color.
     pub border_color: Color,
@@ -96,25 +96,25 @@ pub struct SelectBoxStyle {
 impl Default for SelectBoxStyle {
     fn default() -> Self {
         SelectBoxStyle {
-            fill: Fill::Solid(Theme::SURFACE),
+            fill: Fill::Solid(Theme::SURFACE_SUBTLE),
             hover_fill: Fill::Solid(Theme::HOVERED),
-            focus_fill: Fill::Solid(Theme::SURFACE),
+            focus_fill: Fill::Solid(Theme::SURFACE_SUBTLE),
             text_color: Theme::TEXT_PRIMARY,
             placeholder_color: Theme::TEXT_MUTED,
-            border_width: 1.0,
-            border_color: Theme::BORDER_STRONG,
-            hover_border_color: Theme::BORDER_STRONG,
+            border_width: 0.0,
+            border_color: Color::TRANSPARENT,
+            hover_border_color: Color::TRANSPARENT,
             focus_border_color: Theme::FOCUS_BORDER,
-            corner_radius: Theme::RADIUS_MD,
-            height: 36.0,
-            padding_x: 12.0,
+            corner_radius: Theme::RADIUS_LG,
+            height: 38.0,
+            padding_x: 14.0,
 
             dropdown_fill: Fill::Solid(Theme::SURFACE_ELEVATED),
-            dropdown_border_width: 1.0,
-            dropdown_border_color: Theme::BORDER_STRONG,
-            dropdown_corner_radius: Theme::RADIUS_LG,
-            dropdown_gap: 4.0,
-            dropdown_max_height: 280.0,
+            dropdown_border_width: 0.0,
+            dropdown_border_color: Color::TRANSPARENT,
+            dropdown_corner_radius: 14.0,
+            dropdown_gap: 6.0,
+            dropdown_max_height: 300.0,
             dropdown_shadow: Some(ShadowStyle {
                 color: Color {
                     r: 0.0,
@@ -122,17 +122,17 @@ impl Default for SelectBoxStyle {
                     b: 0.0,
                     a: 0.14,
                 },
-                blur_radius: 20.0,
-                offset: [0.0, 6.0],
+                blur_radius: 28.0,
+                offset: [0.0, 8.0],
             }),
 
-            item_height: 32.0,
-            item_padding_x: 8.0,
+            item_height: 34.0,
+            item_padding_x: 10.0,
             item_text_color: Theme::TEXT_PRIMARY,
             item_hover_fill: Theme::SURFACE_SUBTLE,
-            item_active_fill: Theme::SURFACE_SUBTLE,
+            item_active_fill: Theme::HOVERED,
             item_active_text_color: Theme::TEXT_PRIMARY,
-            item_corner_radius: Theme::RADIUS_SM,
+            item_corner_radius: 9.0,
 
             searchable: false,
             search_height: 36.0,
@@ -146,42 +146,72 @@ impl SelectBoxStyle {
     /// Resolves a style from the active theme — the preferred way to style
     /// a `SelectBox` so it stays consistent with the rest of the UI.
     pub fn from_theme(theme: &Theme) -> Self {
+        // Soft, inset neumorphic look: slightly darker surface on light,
+        // slightly lighter on dark. No hard borders — depth via shadow only.
+        let trigger_fill = if theme.is_dark {
+            theme.surface_subtle
+        } else {
+            Color {
+                r: theme.surface_subtle.r * 0.975,
+                g: theme.surface_subtle.g * 0.975,
+                b: theme.surface_subtle.b * 0.975,
+                a: 1.0,
+            }
+        };
+        let hover_fill = theme.hovered;
+
         SelectBoxStyle {
-            fill: Fill::Solid(theme.surface),
-            hover_fill: Fill::Solid(theme.hovered),
-            focus_fill: Fill::Solid(theme.surface),
+            fill: Fill::Solid(trigger_fill),
+            hover_fill: Fill::Solid(hover_fill),
+            focus_fill: Fill::Solid(trigger_fill),
             text_color: theme.text_primary,
             placeholder_color: theme.text_muted,
-            border_color: theme.border_strong,
-            hover_border_color: theme.border_strong,
-            focus_border_color: theme.focus_border,
+            border_width: 0.0,
+            border_color: Color::TRANSPARENT,
+            hover_border_color: Color::TRANSPARENT,
+            focus_border_color: theme.focus_border.with_alpha(0.4),
+            corner_radius: Theme::RADIUS_LG,
+            height: 38.0,
+            padding_x: 14.0,
+
             dropdown_fill: Fill::Solid(theme.surface_elevated),
-            dropdown_border_color: theme.border_strong,
+            dropdown_border_width: 0.0,
+            dropdown_border_color: Color::TRANSPARENT,
+            dropdown_corner_radius: 14.0,
+            dropdown_gap: 6.0,
+            dropdown_max_height: 300.0,
             dropdown_shadow: Some(ShadowStyle {
                 color: if theme.is_dark {
                     Color {
                         r: 0.0,
                         g: 0.0,
                         b: 0.0,
-                        a: 0.55,
+                        a: 0.70,
                     }
                 } else {
                     Color {
                         r: 0.0,
                         g: 0.0,
                         b: 0.0,
-                        a: 0.14,
+                        a: 0.13,
                     }
                 },
-                blur_radius: 20.0,
-                offset: [0.0, 6.0],
+                blur_radius: 32.0,
+                offset: [0.0, 10.0],
             }),
+
+            item_height: 34.0,
+            item_padding_x: 10.0,
             item_text_color: theme.text_primary,
             item_hover_fill: theme.surface_subtle,
-            item_active_fill: theme.surface_subtle,
+            item_active_fill: theme.hovered,
             item_active_text_color: theme.text_primary,
+            item_corner_radius: 9.0,
+
+            searchable: false,
+            search_height: 36.0,
             search_fill: theme.surface_subtle,
-            ..SelectBoxStyle::default()
+            search_placeholder: "Search…",
         }
     }
 }
@@ -252,7 +282,7 @@ impl Default for SelectBoxState {
         SelectBoxState {
             selected: None,
             open_t: 0.0,
-            open_spring: Spring::with_physics(0.0, 380.0, 30.0),
+            open_spring: Spring::with_physics(0.0, 420.0, 28.0),
             hover_t: 0.0,
             item_hover_ts: Vec::new(),
             focus_t: 0.0,
@@ -431,7 +461,7 @@ impl Measurable for SelectBox {
         }
 
         // ------------------------------------------------------------------ //
-        // 2. Trigger hit-test
+        // 2. Trigger hit-test (only blocked by other overlays, not self)
         // ------------------------------------------------------------------ //
         let trigger_blocked = ui.is_input_blocked(mouse_pos) && !state.open;
         let in_clip = ui.point_in_current_clip(mouse_pos);
@@ -499,7 +529,7 @@ impl Measurable for SelectBox {
                 state.open = false;
                 state.keyboard_index = -1;
                 state.search_text.clear();
-                // Return focus upstream
+                state.scroll_offset = 0.0;
                 ui.clear_focus();
             }
         }
@@ -550,16 +580,18 @@ impl Measurable for SelectBox {
                 state.open = false;
                 state.keyboard_index = -1;
                 state.search_text.clear();
+                state.scroll_offset = 0.0;
             }
             if ui.key_pressed(Key::Named(NamedKey::Escape)) {
                 state.open = false;
                 state.keyboard_index = -1;
                 state.search_text.clear();
+                state.scroll_offset = 0.0;
             }
 
             // Type-to-search
             if style.searchable {
-                let typed = ui.typed_text();
+                let typed = ui.typed_text().to_owned();
                 for ch in typed.chars() {
                     if ch == '\x08' {
                         // Backspace
@@ -615,13 +647,13 @@ impl Measurable for SelectBox {
         state.focus_t = animate_towards(state.focus_t, focus_target, dt, Motion::GENTLE);
 
         // ------------------------------------------------------------------ //
-        // 8. Draw trigger button
+        // 8. Draw trigger button (neumorphic: soft shadow, no border)
         // ------------------------------------------------------------------ //
         let trigger_fill = if let (Fill::Solid(idle), Fill::Solid(hov), Fill::Solid(foc)) =
             (&style.fill, &style.hover_fill, &style.focus_fill)
         {
-            let blended = idle.lerp(*hov, state.hover_t);
-            Fill::Solid(blended.lerp(*foc, state.focus_t * open_ease))
+            let blended = idle.lerp(*hov, state.hover_t * 0.6);
+            Fill::Solid(blended.lerp(*foc, state.focus_t * open_ease * 0.3))
         } else if state.open || is_focused {
             style.focus_fill.clone()
         } else if trigger_hovered {
@@ -630,26 +662,19 @@ impl Measurable for SelectBox {
             style.fill.clone()
         };
 
-        let trigger_border = {
-            let base = style.border_color;
-            let hov = style.hover_border_color;
-            let foc = style.focus_border_color;
-            let hover_blended = base.lerp(hov, state.hover_t);
-            hover_blended.lerp(foc, state.focus_t)
-        };
-
-        // Focus glow ring (drawn behind trigger)
+        // Soft inset shadow for neumorphic depth (drawn before trigger rect)
         if state.focus_t > 0.01 {
-            let glow_size = [size[0] + 6.0, size[1] + 6.0];
-            let glow_pos = [position[0] - 3.0, position[1] - 3.0];
+            let ring_alpha = state.focus_t * 0.22;
+            let glow_size = [size[0] + 5.0, size[1] + 5.0];
+            let glow_pos = [position[0] - 2.5, position[1] - 2.5];
             ui.draw_rect(
                 glow_pos,
                 glow_size,
-                Fill::Solid(style.focus_border_color.with_alpha(0.18 * state.focus_t)),
-                style.corner_radius + 3.0,
+                Fill::Solid(style.focus_border_color.with_alpha(ring_alpha)),
+                style.corner_radius + 2.5,
                 0.0,
                 Color::TRANSPARENT,
-                0.0,
+                4.0,
                 false,
                 0.0,
             );
@@ -660,8 +685,8 @@ impl Measurable for SelectBox {
             size,
             trigger_fill,
             style.corner_radius,
-            style.border_width,
-            trigger_border,
+            0.0,
+            Color::TRANSPARENT,
             0.0,
             false,
             0.0,
@@ -718,7 +743,7 @@ impl Measurable for SelectBox {
 
             if clear_hovered {
                 ui.set_cursor_icon(CursorIcon::Pointer);
-                let hover_bg = style.border_color.with_alpha(0.1);
+                let hover_bg = style.text_color.with_alpha(0.08);
                 ui.draw_rect(
                     clear_pos,
                     clear_size,
@@ -739,11 +764,11 @@ impl Measurable for SelectBox {
             let x_color = if clear_hovered {
                 text_color
             } else {
-                text_color.with_alpha(0.5)
+                text_color.with_alpha(0.4)
             };
             let cx = clear_x + 8.0;
             let cy = clear_y + 8.0;
-            let x_size = 5.0;
+            let x_size = 3.2;
             draw_line(
                 ui,
                 [cx - x_size, cy - x_size],
@@ -764,17 +789,20 @@ impl Measurable for SelectBox {
             state.selected = None;
         }
 
+        // Chevron icon
+        let chevron_color =
+            text_color.with_alpha(if state.open || is_focused { 0.85 } else { 0.5 });
         draw_chevron(
             ui,
             position,
             size,
             style.padding_x,
             state.chevron_angle,
-            text_color,
+            chevron_color,
         );
 
         // ------------------------------------------------------------------ //
-        // 11. Tooltip
+        // 10. Tooltip
         // ------------------------------------------------------------------ //
         if trigger_hovered {
             ui.set_cursor_icon(CursorIcon::Pointer);
@@ -784,11 +812,13 @@ impl Measurable for SelectBox {
         }
 
         // ------------------------------------------------------------------ //
-        // 12. Dropdown overlay (only when open_ease > 0)
+        // 11. Dropdown overlay (only when open_ease > 0)
         // ------------------------------------------------------------------ //
         if open_ease > 0.001 {
             // Block normal-pass input for the dropdown area so underlying
             // widgets don't receive clicks while the dropdown is visible.
+            // NOTE: Items within this block do NOT use is_input_blocked(),
+            // since this widget IS the overlay receiving those interactions.
             ui.push_input_block([
                 dropdown_pos[0],
                 dropdown_pos[1],
@@ -821,18 +851,18 @@ impl Measurable for SelectBox {
                 dropdown_clip[3].min(window_size[1]),
             ];
 
-            // Ambient shadow
+            // Ambient shadow (large, diffuse — key to neumorphic feel)
             if let Some(shadow) = &style.dropdown_shadow {
                 let shadow_opacity = shadow.color.a * open_ease;
                 let shadow_color = shadow.color.with_alpha(shadow_opacity);
                 ui.draw_overlay_rect(
                     [
-                        dropdown_pos[0] + shadow.offset[0] - 6.0,
+                        dropdown_pos[0] + shadow.offset[0] - 8.0,
                         dropdown_pos[1] + shadow.offset[1] - 4.0,
                     ],
-                    [dropdown_size[0] + 12.0, dropdown_size[1] + 8.0],
+                    [dropdown_size[0] + 16.0, dropdown_size[1] + 16.0],
                     Fill::Solid(shadow_color),
-                    style.dropdown_corner_radius + 4.0,
+                    style.dropdown_corner_radius + 6.0,
                     0.0,
                     Color::TRANSPARENT,
                     shadow.blur_radius,
@@ -842,14 +872,14 @@ impl Measurable for SelectBox {
                 );
             }
 
-            // Dropdown card surface
+            // Dropdown card surface (no border — rely on shadow for depth)
             ui.draw_overlay_rect(
                 dropdown_pos,
                 dropdown_size,
                 style.dropdown_fill.clone(),
                 style.dropdown_corner_radius,
-                style.dropdown_border_width,
-                style.dropdown_border_color.with_alpha(open_ease),
+                0.0,
+                Color::TRANSPARENT,
                 0.0,
                 false,
                 dropdown_clip,
@@ -869,9 +899,9 @@ impl Measurable for SelectBox {
                     search_pos,
                     search_size,
                     Fill::Solid(style.search_fill),
-                    Theme::RADIUS_SM,
-                    1.0,
-                    style.dropdown_border_color.with_alpha(0.5 * open_ease),
+                    Theme::RADIUS_MD,
+                    0.0,
+                    Color::TRANSPARENT,
                     0.0,
                     false,
                     dropdown_clip,
@@ -899,46 +929,40 @@ impl Measurable for SelectBox {
                         search_pos[1] + search_size[1],
                     ],
                     search_color,
-                    13.0,
+                    13.5,
                     20.0,
                     FontWeight::Regular,
                     false,
                 );
 
-                content_y += style.search_height + 4.0;
+                content_y += style.search_height + 8.0;
             }
 
-            // ----------------------------------------------------------------
-            // Scroll clip for item list
-            // ----------------------------------------------------------------
-            let items_area_top = content_y;
-            let items_clip = [
-                dropdown_pos[0],
-                items_area_top.max(dropdown_clip[1]),
-                dropdown_pos[0] + dropdown_size[0],
-                (dropdown_pos[1] + dropdown_size[1]).min(dropdown_clip[3]),
-            ];
+            // Mouse wheel scroll handling
+            let scroll_delta = ui.scroll_delta_y();
+            let scroll_max = (content_h - dropdown_h).max(0.0);
+            if scroll_delta.abs() > 0.01 {
+                let in_dd = mouse_pos[0] >= dropdown_pos[0]
+                    && mouse_pos[0] <= dropdown_pos[0] + dropdown_size[0]
+                    && mouse_pos[1] >= dropdown_pos[1]
+                    && mouse_pos[1] <= dropdown_pos[1] + dropdown_size[1];
+                if in_dd {
+                    state.scroll_offset =
+                        (state.scroll_offset - scroll_delta * 24.0).clamp(0.0, scroll_max);
+                }
+            } else {
+                state.scroll_offset = state.scroll_offset.clamp(0.0, scroll_max);
+            }
 
             // ----------------------------------------------------------------
             // Items
             // ----------------------------------------------------------------
-            // Ensure the scroll offset is valid
-            let scroll_max =
-                (item_list_h + search_bar_h + inner_padding * 2.0 - dropdown_h).max(0.0);
-            state.scroll_offset = state.scroll_offset.clamp(0.0, scroll_max);
-
-            // Mouse scroll
-            let scroll_delta = ui.scroll_delta_y();
-            if scroll_delta != 0.0 {
-                let dd_hovered = mouse_pos[0] >= dropdown_pos[0]
-                    && mouse_pos[0] <= dropdown_pos[0] + dropdown_size[0]
-                    && mouse_pos[1] >= dropdown_pos[1]
-                    && mouse_pos[1] <= dropdown_pos[1] + dropdown_size[1];
-                if dd_hovered {
-                    state.scroll_offset =
-                        (state.scroll_offset - scroll_delta).clamp(0.0, scroll_max);
-                }
-            }
+            let items_clip = [
+                dropdown_pos[0] + 2.0,
+                content_y.max(dropdown_clip[1]),
+                dropdown_pos[0] + dropdown_size[0] - 2.0,
+                (dropdown_pos[1] + dropdown_size[1] - inner_padding).min(dropdown_clip[3]),
+            ];
 
             for (list_idx, &opt_idx) in filtered_indices.iter().enumerate() {
                 let item_y = content_y + list_idx as f32 * style.item_height - state.scroll_offset;
@@ -952,12 +976,15 @@ impl Measurable for SelectBox {
                 let item_pos = [dropdown_pos[0] + 4.0, item_y];
                 let item_size = [dropdown_size[0] - 8.0, style.item_height];
 
-                // Hit test against real mouse pos (overlay handles its own input)
+                // *** FIX: overlay items handle their OWN input — do NOT check
+                // is_input_blocked here since this widget pushed that block itself.
+                // We only need raw bounds hit-testing against the dropdown clip.
                 let item_hovered = mouse_pos[0] >= item_pos[0]
                     && mouse_pos[0] <= item_pos[0] + item_size[0]
                     && mouse_pos[1] >= item_pos[1]
                     && mouse_pos[1] <= item_pos[1] + item_size[1]
-                    && !ui.is_input_blocked(mouse_pos);
+                    && mouse_pos[1] >= items_clip[1]
+                    && mouse_pos[1] <= items_clip[3];
 
                 let is_keyboard_focused = state.keyboard_index == list_idx as i32;
                 let is_selected = state
@@ -988,20 +1015,26 @@ impl Measurable for SelectBox {
                     state.open = false;
                     state.keyboard_index = -1;
                     state.search_text.clear();
+                    state.scroll_offset = 0.0;
                 }
 
                 // Draw item background
-                let item_bg = if is_selected {
-                    style.item_active_fill.with_alpha(open_ease)
+                let bg_alpha = if is_selected {
+                    item_hover_t * 0.7 + 0.3
                 } else {
-                    style.item_hover_fill.with_alpha(item_hover_t * open_ease)
+                    item_hover_t
+                };
+                let item_bg_color = if is_selected {
+                    style.item_active_fill
+                } else {
+                    style.item_hover_fill
                 };
 
-                if item_bg.a > 0.005 {
+                if bg_alpha > 0.005 {
                     ui.draw_overlay_rect(
                         item_pos,
                         item_size,
-                        Fill::Solid(item_bg),
+                        Fill::Solid(item_bg_color.with_alpha(bg_alpha * open_ease)),
                         style.item_corner_radius,
                         0.0,
                         Color::TRANSPARENT,
@@ -1040,7 +1073,7 @@ impl Measurable for SelectBox {
                     false,
                 );
 
-                // Selected checkmark (drawn as two thin rects — chevron shape)
+                // Selected checkmark
                 if is_selected {
                     draw_check(
                         ui,
@@ -1048,7 +1081,7 @@ impl Measurable for SelectBox {
                             item_pos[0] + item_size[0] - style.item_padding_x - 14.0,
                             item_pos[1] + (style.item_height - 14.0) / 2.0,
                         ],
-                        style.item_active_text_color.with_alpha(open_ease),
+                        style.item_active_text_color.with_alpha(open_ease * 0.7),
                         items_clip,
                     );
                 }
@@ -1063,7 +1096,7 @@ impl Measurable for SelectBox {
         }
 
         // ------------------------------------------------------------------ //
-        // 13. Save state
+        // 12. Save state
         // ------------------------------------------------------------------ //
         ui.put_widget_state(&self.id, state);
     }
@@ -1081,48 +1114,41 @@ fn draw_chevron(
     angle_deg: f32,
     color: Color,
 ) {
-    let cx = position[0] + size[0] - padding_x - 8.0;
+    let cx = position[0] + size[0] - padding_x - 7.0;
     let cy = position[1] + size[1] / 2.0;
     let thickness = 1.8;
-    let arm_len = 4.5;
+    let arm_len = 3.8;
 
     let angle_rad = angle_deg.to_radians();
-    let base_angle = std::f32::consts::FRAC_PI_4;
+    let rot = |x: f32, y: f32| -> [f32; 2] {
+        let s = angle_rad.sin();
+        let c = angle_rad.cos();
+        [cx + x * c - y * s, cy + x * s + y * c]
+    };
 
-    let left_angle = base_angle - angle_rad;
-    let right_angle = -base_angle - angle_rad;
+    // When angle_rad = 0 (closed): chevron points downward 'v'
+    // Apex is at (0, 1.6), left tip at (-arm_len, -1.6), right tip at (arm_len, -1.6)
+    // When angle_rad = PI (open): rotates 180° around (cx, cy) to point upward '^'
+    let apex = rot(0.0, 1.6);
+    let left = rot(-arm_len, -1.6);
+    let right = rot(arm_len, -1.6);
 
-    let left_end_x = cx - arm_len * left_angle.cos();
-    let left_end_y = cy + arm_len * left_angle.sin();
-
-    let right_end_x = cx + arm_len * right_angle.cos();
-    let right_end_y = cy - arm_len * right_angle.sin();
-
-    draw_line(ui, [cx, cy], [left_end_x, left_end_y], thickness, color);
-    draw_line(ui, [cx, cy], [right_end_x, right_end_y], thickness, color);
+    draw_line(ui, left, apex, thickness, color);
+    draw_line(ui, right, apex, thickness, color);
 }
 
 fn draw_check(ui: &mut Ui, origin: [f32; 2], color: Color, clip: [f32; 4]) {
     let thickness = 1.8;
-    let x = origin[0];
-    let y = origin[1];
+    // origin is 14x14 box, center at (+7.0, +7.0)
+    let cx = origin[0] + 7.0;
+    let cy = origin[1] + 7.0;
 
-    draw_line_overlay(
-        ui,
-        [x + 2.0, y + 7.0],
-        [x + 5.0, y + 10.0],
-        thickness,
-        color,
-        clip,
-    );
-    draw_line_overlay(
-        ui,
-        [x + 5.0, y + 10.0],
-        [x + 11.0, y + 3.0],
-        thickness,
-        color,
-        clip,
-    );
+    let left = [cx - 3.8, cy + 0.3];
+    let valley = [cx - 1.0, cy + 3.2];
+    let right = [cx + 4.2, cy - 3.2];
+
+    draw_line_overlay(ui, left, valley, thickness, color, clip);
+    draw_line_overlay(ui, valley, right, thickness, color, clip);
 }
 
 fn draw_line(ui: &mut Ui, a: [f32; 2], b: [f32; 2], thickness: f32, color: Color) {
@@ -1132,7 +1158,8 @@ fn draw_line(ui: &mut Ui, a: [f32; 2], b: [f32; 2], thickness: f32, color: Color
     if len < 0.1 {
         return;
     }
-    let angle = dy.atan2(dx).to_degrees();
+    // RADIANS: The WGSL shader rotation takes radians
+    let angle_rad = dy.atan2(dx);
     let mid_x = (a[0] + b[0]) / 2.0;
     let mid_y = (a[1] + b[1]) / 2.0;
 
@@ -1145,7 +1172,7 @@ fn draw_line(ui: &mut Ui, a: [f32; 2], b: [f32; 2], thickness: f32, color: Color
         Color::TRANSPARENT,
         0.0,
         false,
-        angle,
+        angle_rad,
     );
 }
 
@@ -1163,7 +1190,8 @@ fn draw_line_overlay(
     if len < 0.1 {
         return;
     }
-    let angle = dy.atan2(dx).to_degrees();
+    // RADIANS: The WGSL shader rotation takes radians
+    let angle_rad = dy.atan2(dx);
     let mid_x = (a[0] + b[0]) / 2.0;
     let mid_y = (a[1] + b[1]) / 2.0;
 
@@ -1177,7 +1205,7 @@ fn draw_line_overlay(
         0.0,
         false,
         clip,
-        angle,
+        angle_rad,
     );
 }
 

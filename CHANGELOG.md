@@ -5,13 +5,19 @@ All notable changes to this project are documented in this file.
 ## [0.1.6]
 
 ### Added
-- `SelectBox` / Combobox widget (`src/select_box.rs`). Spring-animated dropdown (stiffness 380, damping 30) that slides open/closed with an ease-out-cubic curve on the clip rect. Features: trigger button with animated hover/focus states and a chevron icon that rotates 180° on open; keyboard navigation (↑/↓ arrow keys, Enter to select, Escape to close); optional type-to-filter search bar (`.searchable()`); scroll inside long option lists via mouse wheel or auto-scroll to keep the keyboard selection visible; outside-click-to-close; full theme integration via `SelectBoxStyle::from_theme()`; accessibility role `ComboBox`.
-- `SelectBoxStyle` with full customization of trigger, dropdown card, item rows, and search bar.
+- `SelectBox` / Combobox widget (`src/select_box.rs`). Spring-animated dropdown (stiffness 420, damping 28) that slides open/closed with an ease-out-cubic curve on the clip rect. Features: trigger button with animated hover/focus states and a chevron icon that rotates 180° on open; keyboard navigation (↑/↓ arrow keys, Enter to select, Escape to close); optional type-to-filter search bar (`.searchable()`); scroll inside long option lists via mouse wheel or auto-scroll to keep the keyboard selection visible; outside-click-to-close; full theme integration via `SelectBoxStyle::from_theme()`; accessibility role `ComboBox`.
+- `SelectBoxStyle` with full customization of trigger, dropdown card, item rows, and search bar. Defaults to a neumorphic zero-border design: soft surface fill, shadow-based depth, rounded corners (14px), no visible borders.
 - `SelectOption` — lightweight `{ value: String, label: String }` item type.
 - `SelectBoxState` — persistent widget state tracking `selected: Option<String>`, open/close spring, per-item hover animations, keyboard index, and search text.
 - `Ui::draw_overlay_rect` and `Ui::draw_overlay_text_styled` — public wrappers around the existing painter overlay pass so widgets like `SelectBox` can draw their own floating surfaces without a tooltip.
 
+### Fixed
+- **Critical SelectBox click bug**: dropdown items were never clickable because the widget called `push_input_block()` to protect the dropdown area from underlying widgets, but then the item hit-test checked `is_input_blocked()` — which returned `true` for the same area, causing every item hover and click to be silently ignored. The overlay item hit-test now directly tests mouse position bounds against the items clip rect (the overlay widget owns those interactions).
+- SelectBox trigger text, chevron color, and focus ring opacity all polish-tuned for softer, premium feel.
+- Demo rebuilt with soft neumorphic cards — no harsh border colors, clean typography hierarchy, SelectBox-based theme picker embedded in the header.
+
 ## [0.1.5]
+
 
 ### Added
 - Accessibility support via `AccessKit` (AT-SPI on Linux, UIA on Windows, NSAccessibility on macOS). Opt-in via `App::accessibility_enabled(true)`, off by default.

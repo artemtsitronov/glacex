@@ -141,3 +141,25 @@ Completion bar.
 - **Variants**: `.success()`, `.warning()`, `.error()`
 - **Builder methods**: `.id("stable_id")`, `.size([w, h])`, `.style(ProgressBarStyle)`
 - **Animation**: `ProgressBarState` animates `animated_progress` via `Motion::FLUID` — but only if you gave it a stable `.id(...)`. Without one it just snaps to the raw ratio each frame.
+
+---
+
+## 4. Inputs (Continued)
+
+### SelectBox (Combobox)
+
+A spring-animated floating dropdown for selecting a single value from a list. Matches shadcn/ui and Apple HIG quality — soft neumorphic styling with no visible borders, shadow-based depth, and responsive spring physics.
+
+- **Constructor**: `SelectBox::new("id", options)` where `options: Vec<SelectOption>`
+- **Builder methods**:
+  - `.placeholder("Choose…")` — text shown when nothing is selected
+  - `.width(220.0)` — trigger button width
+  - `.searchable()` — adds a type-to-filter search bar at the top of the dropdown
+  - `.show_clear(true)` — adds a × button to clear the selection
+  - `.style(SelectBoxStyle)` — full visual override
+  - `.tooltip("hint text")` — tooltip on trigger hover
+- **Creating options**: `SelectOption::new("value", "Display Label")`
+- **Reading the selection**: After `arrange`, read state via `ui.widget_state::<SelectBoxState>("id").selected`
+- **Keyboard navigation**: ↑/↓ to move, Enter to confirm, Escape to close
+- **Interaction model**: clicking the trigger toggles open/closed; clicking outside the dropdown closes it; pushing a `push_input_block` internally protects underlying widgets from receiving clicks while the dropdown is visible
+- **Design**: zero border-width by default, large diffuse drop shadow for depth, 14px corner radius, subtle surface fill, smooth spring animations (stiffness 420, damping 28)

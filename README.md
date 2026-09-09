@@ -446,37 +446,37 @@ ui.set_theme(Theme::ROSE_PINE);
 
 #### Presets
 
-| Preset | Mode | Canvas | Accent |
-|---|---|---|---|
-| `Theme::LIGHT` *(default)* | Light | `#ffffff` | `#18181b` |
-| `Theme::DARK` | Dark | `#09090b` | `#4f46e5` |
-| `Theme::CATPPUCCIN_MOCHA` | Dark | `#1e1e2e` | `#cba6f7` |
-| `Theme::CATPPUCCIN_LATTE` | Light | `#eff1f5` | `#8839ef` |
-| `Theme::TOKYO_NIGHT` | Dark | `#1a1b26` | `#7aa2f7` |
-| `Theme::GRUVBOX_DARK` | Dark | `#282828` | `#fe8019` |
-| `Theme::GRUVBOX_LIGHT` | Light | `#fbf1c7` | `#af3a03` |
-| `Theme::NORD` | Dark | `#2e3440` | `#88c0d0` |
-| `Theme::ROSE_PINE` | Dark | `#191724` | `#eb6f92` |
+| Preset | Mode | Canvas | Card Surface | Accent |
+|---|---|---|---|---|
+| `Theme::LIGHT` *(default)* | Light | `#f3f4f7` | `#ffffff` | `#4f46e5` (Electric Indigo) |
+| `Theme::DARK` | Dark | `#000000` | `#0e0f13` | `#ffffff` (Pure White) |
+| `Theme::CATPPUCCIN_MOCHA` | Dark | `#11111b` | `#1e1e2e` | `#cba6f7` (Mauve) |
+| `Theme::CATPPUCCIN_LATTE` | Light | `#dce0e8` | `#eff1f5` | `#8839ef` (Mauve) |
+| `Theme::TOKYO_NIGHT` | Dark | `#16161e` | `#1f2335` | `#7aa2f7` (Electric Blue) |
+| `Theme::GRUVBOX_DARK` | Dark | `#1d2021` | `#282828` | `#fabd2f` (Yellow) |
+| `Theme::GRUVBOX_LIGHT` | Light | `#ebdbb2` | `#fbf1c7` | `#af3a03` (Rust) |
+| `Theme::NORD` | Dark | `#242933` | `#2e3440` | `#88c0d0` (Frost Cyan) |
+| `Theme::ROSE_PINE` | Dark | `#14121e` | `#1f1d2e` | `#eb6f92` (Love / Rose) |
 
 #### Design tokens
 
 | Token | Default (`LIGHT`) | Used for |
 |---|---|---|
-| `bg_canvas` | `#ffffff` | Window background |
-| `surface` | `#ffffff` | Cards, panels |
-| `surface_subtle` | `#f4f4f5` | Inset panels, control tracks |
-| `surface_elevated`| `#ffffff` | Modals, tooltips, dropdowns |
-| `idle` | `#f4f4f5` | Resting button/control fill |
-| `hovered` | `#e4e4e7` | Hover state |
-| `pressed` | `#d4d4d8` | Pressed state |
-| `active` | `#18181b` | Primary action |
-| `border_faint` | `rgba(0,0,0,0.04)` | Hairline dividers |
-| `border` | `rgba(0,0,0,0.08)` | Standard borders |
-| `border_strong` | `rgba(0,0,0,0.16)` | Focused/emphasized borders |
-| `text_primary` | `#09090b` | Body text |
-| `text_secondary`| `#71717a` | Captions |
-| `text_muted` | `#a1a1aa` | Placeholders, metadata |
-| `success` | `#16a34a` | Success state |
+| `bg_canvas` | `#f3f4f7` | Window background |
+| `surface` | `#ffffff` | Elevated cards, panels |
+| `surface_subtle` | `#ebedf2` | Inset panels, control tracks, inputs |
+| `surface_elevated`| `#ffffff` | Floating dropdowns, overlays, popovers |
+| `idle` | `#ebedf2` | Resting button/control fill |
+| `hovered` | `#e2e5ec` | Hover state |
+| `pressed` | `#d8dce4` | Pressed state |
+| `active` | `#4f46e5` | Primary action (Electric Indigo) |
+| `border_faint` | `transparent` | Hairline dividers |
+| `border` | `transparent` | Borderless neumorphic depth |
+| `border_strong` | `transparent` | High-contrast boundaries |
+| `text_primary` | `#0f172a` | Slate 900 high-clarity typography |
+| `text_secondary`| `#475569` | Subheadings & labels |
+| `text_muted` | `#94a3b8` | Placeholders, captions, metadata |
+| `success` | `#10b981` | Emerald 500 status |
 | `warning` | `#d97706` | Warning state |
 | `error` | `#e11d48` | Error state |
 

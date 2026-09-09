@@ -97,148 +97,133 @@ impl Theme {
     // Built-in Theme Presets
     // =========================================================================
 
-    /// Pristine White / Light Theme (Default -- Apple & shadcn/ui style).
-    /// Pure white canvas, delicate zinc borders, and deep charcoal primary action.
+    /// Pristine White / Light Theme (Default -- Apple & Linear style).
+    /// Soft platinum canvas, pure white elevated cards, and electric indigo primary action.
     pub const LIGHT: Theme = Theme {
         name: "shadcn-light",
         is_dark: false,
         bg_canvas: Color {
-            r: 1.0,
-            g: 1.0,
-            b: 1.0,
+            r: 243.0 / 255.0,
+            g: 244.0 / 255.0,
+            b: 247.0 / 255.0,
             a: 1.0,
-        }, // #ffffff
+        }, // #f3f4f7 (macOS Sonoma / Linear Light Canvas)
         surface: Color {
             r: 1.0,
             g: 1.0,
             b: 1.0,
             a: 1.0,
-        }, // #ffffff
+        }, // #ffffff (Pure White floating cards)
         surface_subtle: Color {
-            r: 244.0 / 255.0,
-            g: 244.0 / 255.0,
-            b: 245.0 / 255.0,
+            r: 235.0 / 255.0,
+            g: 237.0 / 255.0,
+            b: 242.0 / 255.0,
             a: 1.0,
-        }, // #f4f4f5 (Zinc 100)
+        }, // #ebedf2 (Soft inset controls/inputs)
         surface_elevated: Color {
             r: 1.0,
             g: 1.0,
             b: 1.0,
             a: 1.0,
-        }, // #ffffff
+        }, // #ffffff (Elevated overlays)
         idle: Color {
-            r: 244.0 / 255.0,
-            g: 244.0 / 255.0,
-            b: 245.0 / 255.0,
+            r: 235.0 / 255.0,
+            g: 237.0 / 255.0,
+            b: 242.0 / 255.0,
             a: 1.0,
-        }, // #f4f4f5 (Zinc 100)
+        },
         hovered: Color {
-            r: 228.0 / 255.0,
-            g: 228.0 / 255.0,
-            b: 231.0 / 255.0,
+            r: 226.0 / 255.0,
+            g: 229.0 / 255.0,
+            b: 236.0 / 255.0,
             a: 1.0,
-        }, // #e4e4e7 (Zinc 200)
+        }, // #e2e5ec
         pressed: Color {
-            r: 212.0 / 255.0,
-            g: 212.0 / 255.0,
-            b: 216.0 / 255.0,
+            r: 216.0 / 255.0,
+            g: 220.0 / 255.0,
+            b: 228.0 / 255.0,
             a: 1.0,
-        }, // #d4d4d8 (Zinc 300)
+        }, // #d8dce4
         active: Color {
-            r: 24.0 / 255.0,
-            g: 24.0 / 255.0,
-            b: 27.0 / 255.0,
+            r: 79.0 / 255.0,
+            g: 70.0 / 255.0,
+            b: 229.0 / 255.0,
             a: 1.0,
-        }, // #18181b (Zinc 900)
+        }, // #4f46e5 (Electric Indigo)
         active_hover: Color {
-            r: 39.0 / 255.0,
-            g: 39.0 / 255.0,
-            b: 42.0 / 255.0,
+            r: 67.0 / 255.0,
+            g: 56.0 / 255.0,
+            b: 202.0 / 255.0,
             a: 1.0,
-        }, // #27272a (Zinc 800)
-        border_faint: Color {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-            a: 0.04,
-        },
-        border: Color {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-            a: 0.08,
-        },
-        border_strong: Color {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-            a: 0.16,
-        },
+        }, // #4338ca
+        border_faint: Color::TRANSPARENT,
+        border: Color::TRANSPARENT,
+        border_strong: Color::TRANSPARENT,
         focus_border: Color {
-            r: 24.0 / 255.0,
-            g: 24.0 / 255.0,
-            b: 27.0 / 255.0,
-            a: 0.85,
+            r: 79.0 / 255.0,
+            g: 70.0 / 255.0,
+            b: 229.0 / 255.0,
+            a: 0.50,
         },
         text_primary: Color {
-            r: 9.0 / 255.0,
-            g: 9.0 / 255.0,
+            r: 15.0 / 255.0,
+            g: 23.0 / 255.0,
+            b: 42.0 / 255.0,
+            a: 1.0,
+        }, // #0f172a (Slate 900)
+        text_secondary: Color {
+            r: 71.0 / 255.0,
+            g: 85.0 / 255.0,
+            b: 105.0 / 255.0,
+            a: 1.0,
+        }, // #475569 (Slate 600)
+        text_muted: Color {
+            r: 148.0 / 255.0,
+            g: 163.0 / 255.0,
+            b: 184.0 / 255.0,
+            a: 1.0,
+        }, // #94a3b8 (Slate 400)
+        success: Color {
+            r: 16.0 / 255.0,
+            g: 185.0 / 255.0,
+            b: 129.0 / 255.0,
+            a: 1.0,
+        }, // Emerald 500
+        warning: Color {
+            r: 245.0 / 255.0,
+            g: 158.0 / 255.0,
             b: 11.0 / 255.0,
             a: 1.0,
-        }, // #09090b (Zinc 950)
-        text_secondary: Color {
-            r: 113.0 / 255.0,
-            g: 113.0 / 255.0,
-            b: 122.0 / 255.0,
-            a: 1.0,
-        }, // #71717a (Zinc 500)
-        text_muted: Color {
-            r: 161.0 / 255.0,
-            g: 161.0 / 255.0,
-            b: 170.0 / 255.0,
-            a: 1.0,
-        }, // #a1a1aa (Zinc 400)
-        success: Color {
-            r: 22.0 / 255.0,
-            g: 163.0 / 255.0,
-            b: 74.0 / 255.0,
-            a: 1.0,
-        }, // Emerald 600
-        warning: Color {
-            r: 217.0 / 255.0,
-            g: 119.0 / 255.0,
-            b: 6.0 / 255.0,
-            a: 1.0,
-        }, // Amber 600
+        }, // Amber 500
         error: Color {
-            r: 225.0 / 255.0,
-            g: 29.0 / 255.0,
-            b: 72.0 / 255.0,
+            r: 244.0 / 255.0,
+            g: 63.0 / 255.0,
+            b: 94.0 / 255.0,
             a: 1.0,
-        }, // Rose 600
+        }, // Rose 500
         shadow_ambient: Color {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-            a: 0.03,
+            r: 15.0 / 255.0,
+            g: 23.0 / 255.0,
+            b: 42.0 / 255.0,
+            a: 0.06,
         },
         shadow_key: Color {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-            a: 0.07,
+            r: 15.0 / 255.0,
+            g: 23.0 / 255.0,
+            b: 42.0 / 255.0,
+            a: 0.12,
         },
         selection: Color {
-            r: 24.0 / 255.0,
-            g: 24.0 / 255.0,
-            b: 27.0 / 255.0,
-            a: 0.12,
+            r: 79.0 / 255.0,
+            g: 70.0 / 255.0,
+            b: 229.0 / 255.0,
+            a: 0.15,
         },
     };
 
-    /// Pure Pitch-Black OLED / shadcn Pure Dark Theme.
-    /// Deep pure black canvas (#000000), rich elevated zinc cards (#09090b, #121215),
-    /// crisp subtle borders and razor-sharp contrast.
+    /// Pure Pitch-Black OLED / Linear Dark Theme.
+    /// Deep pure black canvas (#000000), rich elevated obsidian cards (#0e0f13, #16171d),
+    /// zero borders and radiant high-contrast actions.
     pub const DARK: Theme = Theme {
         name: "shadcn-dark",
         is_dark: true,
@@ -247,97 +232,82 @@ impl Theme {
             g: 0.0,
             b: 0.0,
             a: 1.0,
-        }, // #000000 (Pure Black)
+        }, // #000000 (Pure Pitch Black OLED)
         surface: Color {
-            r: 9.0 / 255.0,
-            g: 9.0 / 255.0,
-            b: 11.0 / 255.0,
+            r: 14.0 / 255.0,
+            g: 15.0 / 255.0,
+            b: 19.0 / 255.0,
             a: 1.0,
-        }, // #09090b (Zinc 950)
+        }, // #0e0f13 (Obsidian Zinc)
         surface_subtle: Color {
-            r: 18.0 / 255.0,
-            g: 18.0 / 255.0,
-            b: 21.0 / 255.0,
+            r: 22.0 / 255.0,
+            g: 23.0 / 255.0,
+            b: 29.0 / 255.0,
             a: 1.0,
-        }, // #121215 (Zinc 900)
+        }, // #16171d
         surface_elevated: Color {
-            r: 24.0 / 255.0,
-            g: 24.0 / 255.0,
-            b: 27.0 / 255.0,
+            r: 30.0 / 255.0,
+            g: 32.0 / 255.0,
+            b: 40.0 / 255.0,
             a: 1.0,
-        }, // #18181b (Zinc 850)
+        }, // #1e2028
         idle: Color {
-            r: 18.0 / 255.0,
-            g: 18.0 / 255.0,
-            b: 21.0 / 255.0,
+            r: 22.0 / 255.0,
+            g: 23.0 / 255.0,
+            b: 29.0 / 255.0,
             a: 1.0,
         },
         hovered: Color {
             r: 32.0 / 255.0,
-            g: 32.0 / 255.0,
-            b: 36.0 / 255.0,
+            g: 34.0 / 255.0,
+            b: 43.0 / 255.0,
             a: 1.0,
-        }, // #202024
+        }, // #20222b
         pressed: Color {
-            r: 39.0 / 255.0,
-            g: 39.0 / 255.0,
-            b: 42.0 / 255.0,
+            r: 42.0 / 255.0,
+            g: 45.0 / 255.0,
+            b: 57.0 / 255.0,
             a: 1.0,
-        }, // #27272a
+        }, // #2a2d39
         active: Color {
-            r: 250.0 / 255.0,
-            g: 250.0 / 255.0,
-            b: 250.0 / 255.0,
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
             a: 1.0,
-        }, // #fafafa (Pure White high-contrast shadcn dark button)
+        }, // #ffffff (Pure White radiant action)
         active_hover: Color {
-            r: 228.0 / 255.0,
-            g: 228.0 / 255.0,
-            b: 231.0 / 255.0,
+            r: 240.0 / 255.0,
+            g: 240.0 / 255.0,
+            b: 245.0 / 255.0,
             a: 1.0,
-        }, // #e4e4e7
-        border_faint: Color {
-            r: 1.0,
-            g: 1.0,
-            b: 1.0,
-            a: 0.08,
-        },
-        border: Color {
-            r: 1.0,
-            g: 1.0,
-            b: 1.0,
-            a: 0.14,
-        },
-        border_strong: Color {
-            r: 1.0,
-            g: 1.0,
-            b: 1.0,
-            a: 0.25,
-        },
+        }, // #f0f0f5
+        border_faint: Color::TRANSPARENT,
+        border: Color::TRANSPARENT,
+        border_strong: Color::TRANSPARENT,
         focus_border: Color {
-            r: 250.0 / 255.0,
-            g: 250.0 / 255.0,
-            b: 250.0 / 255.0,
-            a: 0.85,
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 0.60,
         },
         text_primary: Color {
-            r: 250.0 / 255.0,
+            r: 248.0 / 255.0,
             g: 250.0 / 255.0,
-            b: 250.0 / 255.0,
+            b: 252.0 / 255.0,
             a: 1.0,
-        }, // #fafafa (Zinc 50)
+        }, // #f8fafc (Pure White)
         text_secondary: Color {
-            r: 161.0 / 255.0,
-            g: 161.0 / 255.0,
-            b: 170.0 / 255.0,
+            r: 148.0 / 255.0,
+            g: 163.0 / 255.0,
+            b: 184.0 / 255.0,
             a: 1.0,
-        }, // #a1a1aa (Zinc 400)
+        }, // #94a3b8
         text_muted: Color {
-            r: 113.0 / 255.0,
-            g: 113.0 / 255.0,
-            b: 122.0 / 255.0,
+            r: 100.0 / 255.0,
+            g: 116.0 / 255.0,
+            b: 139.0 / 255.0,
             a: 1.0,
-        }, // #71717a (Zinc 500)
+        }, // #64748b
         success: Color {
             r: 34.0 / 255.0,
             g: 197.0 / 255.0,
@@ -360,13 +330,13 @@ impl Theme {
             r: 0.0,
             g: 0.0,
             b: 0.0,
-            a: 0.28,
+            a: 0.65,
         },
         shadow_key: Color {
             r: 0.0,
             g: 0.0,
             b: 0.0,
-            a: 0.40,
+            a: 0.85,
         },
         selection: Color {
             r: 99.0 / 255.0,
@@ -381,17 +351,17 @@ impl Theme {
         name: "catppuccin-mocha",
         is_dark: true,
         bg_canvas: Color {
+            r: 17.0 / 255.0,
+            g: 17.0 / 255.0,
+            b: 27.0 / 255.0,
+            a: 1.0,
+        }, // #11111b (Crust)
+        surface: Color {
             r: 30.0 / 255.0,
             g: 30.0 / 255.0,
             b: 46.0 / 255.0,
             a: 1.0,
         }, // #1e1e2e (Base)
-        surface: Color {
-            r: 24.0 / 255.0,
-            g: 24.0 / 255.0,
-            b: 37.0 / 255.0,
-            a: 1.0,
-        }, // #181825 (Mantle)
         surface_subtle: Color {
             r: 49.0 / 255.0,
             g: 50.0 / 255.0,
@@ -409,19 +379,19 @@ impl Theme {
             g: 50.0 / 255.0,
             b: 68.0 / 255.0,
             a: 1.0,
-        }, // Surface 0
+        },
         hovered: Color {
             r: 69.0 / 255.0,
             g: 71.0 / 255.0,
             b: 90.0 / 255.0,
             a: 1.0,
-        }, // Surface 1
+        },
         pressed: Color {
             r: 88.0 / 255.0,
             g: 91.0 / 255.0,
             b: 112.0 / 255.0,
             a: 1.0,
-        }, // Surface 2
+        },
         active: Color {
             r: 203.0 / 255.0,
             g: 166.0 / 255.0,
@@ -434,29 +404,14 @@ impl Theme {
             b: 254.0 / 255.0,
             a: 1.0,
         }, // #b4befe (Lavender)
-        border_faint: Color {
-            r: 205.0 / 255.0,
-            g: 214.0 / 255.0,
-            b: 244.0 / 255.0,
-            a: 0.06,
-        },
-        border: Color {
-            r: 205.0 / 255.0,
-            g: 214.0 / 255.0,
-            b: 244.0 / 255.0,
-            a: 0.10,
-        },
-        border_strong: Color {
-            r: 205.0 / 255.0,
-            g: 214.0 / 255.0,
-            b: 244.0 / 255.0,
-            a: 0.20,
-        },
+        border_faint: Color::TRANSPARENT,
+        border: Color::TRANSPARENT,
+        border_strong: Color::TRANSPARENT,
         focus_border: Color {
             r: 203.0 / 255.0,
             g: 166.0 / 255.0,
             b: 247.0 / 255.0,
-            a: 1.0,
+            a: 0.60,
         },
         text_primary: Color {
             r: 205.0 / 255.0,
@@ -495,16 +450,16 @@ impl Theme {
             a: 1.0,
         }, // #f38ba8 (Red)
         shadow_ambient: Color {
-            r: 17.0 / 255.0,
-            g: 17.0 / 255.0,
-            b: 27.0 / 255.0,
-            a: 0.35,
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.45,
         },
         shadow_key: Color {
-            r: 17.0 / 255.0,
-            g: 17.0 / 255.0,
-            b: 27.0 / 255.0,
-            a: 0.55,
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.70,
         },
         selection: Color {
             r: 203.0 / 255.0,
@@ -519,23 +474,23 @@ impl Theme {
         name: "catppuccin-latte",
         is_dark: false,
         bg_canvas: Color {
+            r: 220.0 / 255.0,
+            g: 224.0 / 255.0,
+            b: 232.0 / 255.0,
+            a: 1.0,
+        }, // #dce0e8 (Crust)
+        surface: Color {
             r: 239.0 / 255.0,
             g: 241.0 / 255.0,
             b: 245.0 / 255.0,
             a: 1.0,
-        }, // #eff1f5 (Base)
-        surface: Color {
-            r: 1.0,
-            g: 1.0,
-            b: 1.0,
-            a: 1.0,
-        }, // Pure white cards on latte
+        }, // #eff1f5 (Base - floating cards)
         surface_subtle: Color {
-            r: 230.0 / 255.0,
-            g: 233.0 / 255.0,
-            b: 239.0 / 255.0,
+            r: 204.0 / 255.0,
+            g: 208.0 / 255.0,
+            b: 218.0 / 255.0,
             a: 1.0,
-        }, // #e6e9ef (Mantle)
+        }, // #ccd0da (Surface 0)
         surface_elevated: Color {
             r: 1.0,
             g: 1.0,
@@ -543,23 +498,23 @@ impl Theme {
             a: 1.0,
         },
         idle: Color {
-            r: 230.0 / 255.0,
-            g: 233.0 / 255.0,
-            b: 239.0 / 255.0,
-            a: 1.0,
-        },
-        hovered: Color {
             r: 204.0 / 255.0,
             g: 208.0 / 255.0,
             b: 218.0 / 255.0,
             a: 1.0,
-        }, // #ccd0da (Surface 0)
-        pressed: Color {
+        },
+        hovered: Color {
             r: 188.0 / 255.0,
             g: 192.0 / 255.0,
             b: 204.0 / 255.0,
             a: 1.0,
-        }, // #bcc0cc (Surface 1)
+        },
+        pressed: Color {
+            r: 172.0 / 255.0,
+            g: 176.0 / 255.0,
+            b: 190.0 / 255.0,
+            a: 1.0,
+        },
         active: Color {
             r: 136.0 / 255.0,
             g: 57.0 / 255.0,
@@ -572,29 +527,14 @@ impl Theme {
             b: 253.0 / 255.0,
             a: 1.0,
         }, // #7287fd (Lavender)
-        border_faint: Color {
-            r: 76.0 / 255.0,
-            g: 79.0 / 255.0,
-            b: 105.0 / 255.0,
-            a: 0.05,
-        },
-        border: Color {
-            r: 76.0 / 255.0,
-            g: 79.0 / 255.0,
-            b: 105.0 / 255.0,
-            a: 0.10,
-        },
-        border_strong: Color {
-            r: 76.0 / 255.0,
-            g: 79.0 / 255.0,
-            b: 105.0 / 255.0,
-            a: 0.20,
-        },
+        border_faint: Color::TRANSPARENT,
+        border: Color::TRANSPARENT,
+        border_strong: Color::TRANSPARENT,
         focus_border: Color {
             r: 136.0 / 255.0,
             g: 57.0 / 255.0,
             b: 239.0 / 255.0,
-            a: 0.90,
+            a: 0.60,
         },
         text_primary: Color {
             r: 76.0 / 255.0,
@@ -636,13 +576,13 @@ impl Theme {
             r: 76.0 / 255.0,
             g: 79.0 / 255.0,
             b: 105.0 / 255.0,
-            a: 0.04,
+            a: 0.06,
         },
         shadow_key: Color {
             r: 76.0 / 255.0,
             g: 79.0 / 255.0,
             b: 105.0 / 255.0,
-            a: 0.08,
+            a: 0.12,
         },
         selection: Color {
             r: 136.0 / 255.0,
@@ -657,47 +597,47 @@ impl Theme {
         name: "tokyo-night",
         is_dark: true,
         bg_canvas: Color {
-            r: 26.0 / 255.0,
-            g: 27.0 / 255.0,
-            b: 38.0 / 255.0,
+            r: 22.0 / 255.0,
+            g: 22.0 / 255.0,
+            b: 30.0 / 255.0,
             a: 1.0,
-        }, // #1a1b26 (Night)
+        }, // #16161e (Night)
         surface: Color {
-            r: 36.0 / 255.0,
-            g: 40.0 / 255.0,
-            b: 59.0 / 255.0,
-            a: 1.0,
-        }, // #24283b (Storm)
-        surface_subtle: Color {
             r: 31.0 / 255.0,
             g: 35.0 / 255.0,
             b: 53.0 / 255.0,
             a: 1.0,
-        }, // #1f2335
-        surface_elevated: Color {
+        }, // #1f2335 (Storm)
+        surface_subtle: Color {
             r: 41.0 / 255.0,
             g: 46.0 / 255.0,
             b: 66.0 / 255.0,
             a: 1.0,
         }, // #292e42
+        surface_elevated: Color {
+            r: 52.0 / 255.0,
+            g: 59.0 / 255.0,
+            b: 88.0 / 255.0,
+            a: 1.0,
+        }, // #343b58
         idle: Color {
-            r: 36.0 / 255.0,
-            g: 40.0 / 255.0,
-            b: 59.0 / 255.0,
+            r: 41.0 / 255.0,
+            g: 46.0 / 255.0,
+            b: 66.0 / 255.0,
             a: 1.0,
         },
         hovered: Color {
-            r: 47.0 / 255.0,
-            g: 53.0 / 255.0,
-            b: 77.0 / 255.0,
+            r: 52.0 / 255.0,
+            g: 59.0 / 255.0,
+            b: 88.0 / 255.0,
             a: 1.0,
-        }, // #2f354d
+        },
         pressed: Color {
-            r: 59.0 / 255.0,
-            g: 66.0 / 255.0,
-            b: 97.0 / 255.0,
+            r: 65.0 / 255.0,
+            g: 74.0 / 255.0,
+            b: 110.0 / 255.0,
             a: 1.0,
-        }, // #3b4261
+        },
         active: Color {
             r: 122.0 / 255.0,
             g: 162.0 / 255.0,
@@ -710,29 +650,14 @@ impl Theme {
             b: 247.0 / 255.0,
             a: 1.0,
         }, // #bb9af7 (Magenta)
-        border_faint: Color {
-            r: 192.0 / 255.0,
-            g: 202.0 / 255.0,
-            b: 245.0 / 255.0,
-            a: 0.06,
-        },
-        border: Color {
-            r: 192.0 / 255.0,
-            g: 202.0 / 255.0,
-            b: 245.0 / 255.0,
-            a: 0.10,
-        },
-        border_strong: Color {
-            r: 192.0 / 255.0,
-            g: 202.0 / 255.0,
-            b: 245.0 / 255.0,
-            a: 0.20,
-        },
+        border_faint: Color::TRANSPARENT,
+        border: Color::TRANSPARENT,
+        border_strong: Color::TRANSPARENT,
         focus_border: Color {
             r: 122.0 / 255.0,
             g: 162.0 / 255.0,
             b: 247.0 / 255.0,
-            a: 1.0,
+            a: 0.60,
         },
         text_primary: Color {
             r: 192.0 / 255.0,
@@ -741,11 +666,11 @@ impl Theme {
             a: 1.0,
         }, // #c0caf5
         text_secondary: Color {
-            r: 169.0 / 255.0,
-            g: 177.0 / 255.0,
-            b: 214.0 / 255.0,
+            r: 154.0 / 255.0,
+            g: 165.0 / 255.0,
+            b: 206.0 / 255.0,
             a: 1.0,
-        }, // #a9b1d6
+        }, // #9aa5ce
         text_muted: Color {
             r: 86.0 / 255.0,
             g: 95.0 / 255.0,
@@ -771,16 +696,16 @@ impl Theme {
             a: 1.0,
         }, // #f7768e
         shadow_ambient: Color {
-            r: 15.0 / 255.0,
-            g: 15.0 / 255.0,
-            b: 23.0 / 255.0,
-            a: 0.35,
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.45,
         },
         shadow_key: Color {
-            r: 15.0 / 255.0,
-            g: 15.0 / 255.0,
-            b: 23.0 / 255.0,
-            a: 0.55,
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.70,
         },
         selection: Color {
             r: 122.0 / 255.0,
@@ -795,101 +720,86 @@ impl Theme {
         name: "gruvbox-dark",
         is_dark: true,
         bg_canvas: Color {
+            r: 29.0 / 255.0,
+            g: 32.0 / 255.0,
+            b: 33.0 / 255.0,
+            a: 1.0,
+        }, // #1d2021 (Hard Dark)
+        surface: Color {
             r: 40.0 / 255.0,
             g: 40.0 / 255.0,
             b: 40.0 / 255.0,
             a: 1.0,
-        }, // #282828 (bg0)
-        surface: Color {
+        }, // #282828 (Medium Dark)
+        surface_subtle: Color {
             r: 50.0 / 255.0,
             g: 48.0 / 255.0,
             b: 47.0 / 255.0,
             a: 1.0,
-        }, // #32302f (dark0_soft)
-        surface_subtle: Color {
-            r: 60.0 / 255.0,
-            g: 56.0 / 255.0,
-            b: 54.0 / 255.0,
-            a: 1.0,
-        }, // #3c3836 (bg1)
+        }, // #32302f
         surface_elevated: Color {
-            r: 80.0 / 255.0,
-            g: 73.0 / 255.0,
-            b: 69.0 / 255.0,
-            a: 1.0,
-        }, // #504945 (bg2)
-        idle: Color {
             r: 60.0 / 255.0,
             g: 56.0 / 255.0,
             b: 54.0 / 255.0,
+            a: 1.0,
+        }, // #3c3836
+        idle: Color {
+            r: 50.0 / 255.0,
+            g: 48.0 / 255.0,
+            b: 47.0 / 255.0,
             a: 1.0,
         },
         hovered: Color {
+            r: 60.0 / 255.0,
+            g: 56.0 / 255.0,
+            b: 54.0 / 255.0,
+            a: 1.0,
+        },
+        pressed: Color {
             r: 80.0 / 255.0,
             g: 73.0 / 255.0,
             b: 69.0 / 255.0,
             a: 1.0,
         },
-        pressed: Color {
-            r: 102.0 / 255.0,
-            g: 92.0 / 255.0,
-            b: 84.0 / 255.0,
-            a: 1.0,
-        }, // #665c54
         active: Color {
-            r: 254.0 / 255.0,
-            g: 128.0 / 255.0,
-            b: 25.0 / 255.0,
-            a: 1.0,
-        }, // #fe8019 (Orange)
-        active_hover: Color {
             r: 250.0 / 255.0,
             g: 189.0 / 255.0,
             b: 47.0 / 255.0,
             a: 1.0,
         }, // #fabd2f (Yellow)
-        border_faint: Color {
-            r: 251.0 / 255.0,
-            g: 241.0 / 255.0,
-            b: 199.0 / 255.0,
-            a: 0.06,
-        },
-        border: Color {
-            r: 251.0 / 255.0,
-            g: 241.0 / 255.0,
-            b: 199.0 / 255.0,
-            a: 0.10,
-        },
-        border_strong: Color {
-            r: 251.0 / 255.0,
-            g: 241.0 / 255.0,
-            b: 199.0 / 255.0,
-            a: 0.20,
-        },
-        focus_border: Color {
+        active_hover: Color {
             r: 254.0 / 255.0,
             g: 128.0 / 255.0,
             b: 25.0 / 255.0,
             a: 1.0,
+        }, // #fe8019 (Orange)
+        border_faint: Color::TRANSPARENT,
+        border: Color::TRANSPARENT,
+        border_strong: Color::TRANSPARENT,
+        focus_border: Color {
+            r: 250.0 / 255.0,
+            g: 189.0 / 255.0,
+            b: 47.0 / 255.0,
+            a: 0.60,
         },
         text_primary: Color {
-            r: 251.0 / 255.0,
-            g: 241.0 / 255.0,
-            b: 199.0 / 255.0,
-            a: 1.0,
-        }, // #fbf1c7 (fg0)
-        text_secondary: Color {
             r: 235.0 / 255.0,
             g: 219.0 / 255.0,
             b: 178.0 / 255.0,
             a: 1.0,
-        }, // #ebdbb2 (fg1)
+        }, // #ebdbb2
+        text_secondary: Color {
+            r: 213.0 / 255.0,
+            g: 196.0 / 255.0,
+            b: 161.0 / 255.0,
+            a: 1.0,
+        }, // #d5c4a1
         text_muted: Color {
             r: 146.0 / 255.0,
             g: 131.0 / 255.0,
             b: 116.0 / 255.0,
             a: 1.0,
-        }, // #928374 (gray)
+        }, // #928374
         success: Color {
             r: 184.0 / 255.0,
             g: 187.0 / 255.0,
@@ -909,21 +819,21 @@ impl Theme {
             a: 1.0,
         }, // #fb4934 (Red)
         shadow_ambient: Color {
-            r: 29.0 / 255.0,
-            g: 32.0 / 255.0,
-            b: 33.0 / 255.0,
-            a: 0.35,
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.45,
         },
         shadow_key: Color {
-            r: 29.0 / 255.0,
-            g: 32.0 / 255.0,
-            b: 33.0 / 255.0,
-            a: 0.55,
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.70,
         },
         selection: Color {
-            r: 254.0 / 255.0,
-            g: 128.0 / 255.0,
-            b: 25.0 / 255.0,
+            r: 250.0 / 255.0,
+            g: 189.0 / 255.0,
+            b: 47.0 / 255.0,
             a: 0.25,
         },
     };
@@ -933,47 +843,47 @@ impl Theme {
         name: "gruvbox-light",
         is_dark: false,
         bg_canvas: Color {
-            r: 251.0 / 255.0,
-            g: 241.0 / 255.0,
-            b: 199.0 / 255.0,
-            a: 1.0,
-        }, // #fbf1c7 (bg0)
-        surface: Color {
-            r: 249.0 / 255.0,
-            g: 245.0 / 255.0,
-            b: 215.0 / 255.0,
-            a: 1.0,
-        }, // #f9f5d7 (light0_hard)
-        surface_subtle: Color {
             r: 235.0 / 255.0,
             g: 219.0 / 255.0,
             b: 178.0 / 255.0,
             a: 1.0,
         }, // #ebdbb2
+        surface: Color {
+            r: 251.0 / 255.0,
+            g: 241.0 / 255.0,
+            b: 199.0 / 255.0,
+            a: 1.0,
+        }, // #fbf1c7 (Floating cards)
+        surface_subtle: Color {
+            r: 242.0 / 255.0,
+            g: 229.0 / 255.0,
+            b: 188.0 / 255.0,
+            a: 1.0,
+        }, // #f2e5bc
         surface_elevated: Color {
-            r: 249.0 / 255.0,
-            g: 245.0 / 255.0,
-            b: 215.0 / 255.0,
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
             a: 1.0,
         },
         idle: Color {
-            r: 235.0 / 255.0,
-            g: 219.0 / 255.0,
-            b: 178.0 / 255.0,
+            r: 242.0 / 255.0,
+            g: 229.0 / 255.0,
+            b: 188.0 / 255.0,
             a: 1.0,
         },
         hovered: Color {
-            r: 213.0 / 255.0,
-            g: 196.0 / 255.0,
-            b: 161.0 / 255.0,
+            r: 224.0 / 255.0,
+            g: 209.0 / 255.0,
+            b: 168.0 / 255.0,
             a: 1.0,
-        }, // #d5c4a1
+        },
         pressed: Color {
-            r: 189.0 / 255.0,
-            g: 174.0 / 255.0,
-            b: 147.0 / 255.0,
+            r: 204.0 / 255.0,
+            g: 189.0 / 255.0,
+            b: 148.0 / 255.0,
             a: 1.0,
-        }, // #bdae93
+        },
         active: Color {
             r: 175.0 / 255.0,
             g: 58.0 / 255.0,
@@ -985,43 +895,28 @@ impl Theme {
             g: 93.0 / 255.0,
             b: 14.0 / 255.0,
             a: 1.0,
-        }, // #d65d0e
-        border_faint: Color {
-            r: 40.0 / 255.0,
-            g: 40.0 / 255.0,
-            b: 40.0 / 255.0,
-            a: 0.06,
         },
-        border: Color {
-            r: 40.0 / 255.0,
-            g: 40.0 / 255.0,
-            b: 40.0 / 255.0,
-            a: 0.12,
-        },
-        border_strong: Color {
-            r: 40.0 / 255.0,
-            g: 40.0 / 255.0,
-            b: 40.0 / 255.0,
-            a: 0.22,
-        },
+        border_faint: Color::TRANSPARENT,
+        border: Color::TRANSPARENT,
+        border_strong: Color::TRANSPARENT,
         focus_border: Color {
             r: 175.0 / 255.0,
             g: 58.0 / 255.0,
             b: 3.0 / 255.0,
-            a: 0.90,
+            a: 0.60,
         },
         text_primary: Color {
             r: 40.0 / 255.0,
             g: 40.0 / 255.0,
             b: 40.0 / 255.0,
             a: 1.0,
-        }, // #282828 (fg0)
+        }, // #282828
         text_secondary: Color {
-            r: 60.0 / 255.0,
-            g: 56.0 / 255.0,
-            b: 54.0 / 255.0,
+            r: 80.0 / 255.0,
+            g: 73.0 / 255.0,
+            b: 69.0 / 255.0,
             a: 1.0,
-        }, // #3c3836 (fg1)
+        }, // #504945
         text_muted: Color {
             r: 124.0 / 255.0,
             g: 111.0 / 255.0,
@@ -1033,30 +928,30 @@ impl Theme {
             g: 116.0 / 255.0,
             b: 14.0 / 255.0,
             a: 1.0,
-        }, // Green
+        },
         warning: Color {
             r: 181.0 / 255.0,
             g: 118.0 / 255.0,
             b: 20.0 / 255.0,
             a: 1.0,
-        }, // Yellow
+        },
         error: Color {
             r: 157.0 / 255.0,
             g: 0.0 / 255.0,
             b: 6.0 / 255.0,
             a: 1.0,
-        }, // Red
+        },
         shadow_ambient: Color {
             r: 40.0 / 255.0,
             g: 40.0 / 255.0,
             b: 40.0 / 255.0,
-            a: 0.04,
+            a: 0.06,
         },
         shadow_key: Color {
             r: 40.0 / 255.0,
             g: 40.0 / 255.0,
             b: 40.0 / 255.0,
-            a: 0.08,
+            a: 0.12,
         },
         selection: Color {
             r: 175.0 / 255.0,
@@ -1071,29 +966,29 @@ impl Theme {
         name: "nord",
         is_dark: true,
         bg_canvas: Color {
+            r: 36.0 / 255.0,
+            g: 41.0 / 255.0,
+            b: 51.0 / 255.0,
+            a: 1.0,
+        }, // #242933 (Deep Polar Night)
+        surface: Color {
             r: 46.0 / 255.0,
             g: 52.0 / 255.0,
             b: 64.0 / 255.0,
             a: 1.0,
-        }, // #2e3440 (Polar Night 0)
-        surface: Color {
+        }, // #2e3440 (Nord 0 - floating cards)
+        surface_subtle: Color {
             r: 59.0 / 255.0,
             g: 66.0 / 255.0,
             b: 82.0 / 255.0,
             a: 1.0,
-        }, // #3b4252 (Polar Night 1)
-        surface_subtle: Color {
+        }, // #3b4252 (Nord 1)
+        surface_elevated: Color {
             r: 67.0 / 255.0,
             g: 76.0 / 255.0,
             b: 94.0 / 255.0,
             a: 1.0,
-        }, // #434c5e (Polar Night 2)
-        surface_elevated: Color {
-            r: 76.0 / 255.0,
-            g: 86.0 / 255.0,
-            b: 106.0 / 255.0,
-            a: 1.0,
-        }, // #4c566a (Polar Night 3)
+        }, // #434c5e (Nord 2)
         idle: Color {
             r: 59.0 / 255.0,
             g: 66.0 / 255.0,
@@ -1124,48 +1019,33 @@ impl Theme {
             b: 193.0 / 255.0,
             a: 1.0,
         }, // #81a1c1 (Frost Blue)
-        border_faint: Color {
-            r: 216.0 / 255.0,
-            g: 222.0 / 255.0,
-            b: 233.0 / 255.0,
-            a: 0.12,
-        },
-        border: Color {
-            r: 216.0 / 255.0,
-            g: 222.0 / 255.0,
-            b: 233.0 / 255.0,
-            a: 0.22,
-        },
-        border_strong: Color {
-            r: 216.0 / 255.0,
-            g: 222.0 / 255.0,
-            b: 233.0 / 255.0,
-            a: 0.38,
-        },
+        border_faint: Color::TRANSPARENT,
+        border: Color::TRANSPARENT,
+        border_strong: Color::TRANSPARENT,
         focus_border: Color {
             r: 136.0 / 255.0,
             g: 192.0 / 255.0,
             b: 208.0 / 255.0,
-            a: 1.0,
+            a: 0.60,
         },
         text_primary: Color {
             r: 236.0 / 255.0,
             g: 239.0 / 255.0,
             b: 244.0 / 255.0,
             a: 1.0,
-        }, // #eceff4 (Snow Storm 0)
+        }, // #eceff4 (Snow Storm)
         text_secondary: Color {
             r: 216.0 / 255.0,
             g: 222.0 / 255.0,
             b: 233.0 / 255.0,
             a: 1.0,
-        }, // #d8dee9 (Snow Storm 2)
+        }, // #d8dee9
         text_muted: Color {
-            r: 165.0 / 255.0,
-            g: 178.0 / 255.0,
-            b: 202.0 / 255.0,
+            r: 123.0 / 255.0,
+            g: 136.0 / 255.0,
+            b: 161.0 / 255.0,
             a: 1.0,
-        }, // #a5b2ca (Soft, high-readability Nord muted)
+        }, // #7b88a1
         success: Color {
             r: 163.0 / 255.0,
             g: 190.0 / 255.0,
@@ -1185,16 +1065,16 @@ impl Theme {
             a: 1.0,
         }, // #bf616a (Red)
         shadow_ambient: Color {
-            r: 36.0 / 255.0,
-            g: 41.0 / 255.0,
-            b: 51.0 / 255.0,
-            a: 0.35,
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.45,
         },
         shadow_key: Color {
-            r: 36.0 / 255.0,
-            g: 41.0 / 255.0,
-            b: 51.0 / 255.0,
-            a: 0.55,
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.70,
         },
         selection: Color {
             r: 136.0 / 255.0,
@@ -1209,11 +1089,11 @@ impl Theme {
         name: "rose-pine",
         is_dark: true,
         bg_canvas: Color {
-            r: 25.0 / 255.0,
-            g: 23.0 / 255.0,
-            b: 36.0 / 255.0,
+            r: 20.0 / 255.0,
+            g: 18.0 / 255.0,
+            b: 30.0 / 255.0,
             a: 1.0,
-        }, // #191724 (Base)
+        }, // #14121e (Deep Base)
         surface: Color {
             r: 31.0 / 255.0,
             g: 29.0 / 255.0,
@@ -1227,11 +1107,11 @@ impl Theme {
             a: 1.0,
         }, // #26233a (Overlay)
         surface_elevated: Color {
-            r: 42.0 / 255.0,
-            g: 40.0 / 255.0,
-            b: 62.0 / 255.0,
+            r: 50.0 / 255.0,
+            g: 46.0 / 255.0,
+            b: 71.0 / 255.0,
             a: 1.0,
-        },
+        }, // #322e47
         idle: Color {
             r: 38.0 / 255.0,
             g: 35.0 / 255.0,
@@ -1239,15 +1119,15 @@ impl Theme {
             a: 1.0,
         },
         hovered: Color {
-            r: 49.0 / 255.0,
-            g: 47.0 / 255.0,
-            b: 72.0 / 255.0,
+            r: 50.0 / 255.0,
+            g: 46.0 / 255.0,
+            b: 71.0 / 255.0,
             a: 1.0,
         },
         pressed: Color {
-            r: 57.0 / 255.0,
-            g: 53.0 / 255.0,
-            b: 82.0 / 255.0,
+            r: 64.0 / 255.0,
+            g: 59.0 / 255.0,
+            b: 90.0 / 255.0,
             a: 1.0,
         },
         active: Color {
@@ -1262,29 +1142,14 @@ impl Theme {
             b: 231.0 / 255.0,
             a: 1.0,
         }, // #c4a7e7 (Iris)
-        border_faint: Color {
-            r: 224.0 / 255.0,
-            g: 222.0 / 255.0,
-            b: 244.0 / 255.0,
-            a: 0.06,
-        },
-        border: Color {
-            r: 224.0 / 255.0,
-            g: 222.0 / 255.0,
-            b: 244.0 / 255.0,
-            a: 0.10,
-        },
-        border_strong: Color {
-            r: 224.0 / 255.0,
-            g: 222.0 / 255.0,
-            b: 244.0 / 255.0,
-            a: 0.20,
-        },
+        border_faint: Color::TRANSPARENT,
+        border: Color::TRANSPARENT,
+        border_strong: Color::TRANSPARENT,
         focus_border: Color {
             r: 235.0 / 255.0,
             g: 111.0 / 255.0,
             b: 146.0 / 255.0,
-            a: 1.0,
+            a: 0.60,
         },
         text_primary: Color {
             r: 224.0 / 255.0,
@@ -1323,16 +1188,16 @@ impl Theme {
             a: 1.0,
         }, // #eb6f92 (Love)
         shadow_ambient: Color {
-            r: 20.0 / 255.0,
-            g: 18.0 / 255.0,
-            b: 30.0 / 255.0,
-            a: 0.35,
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.45,
         },
         shadow_key: Color {
-            r: 20.0 / 255.0,
-            g: 18.0 / 255.0,
-            b: 30.0 / 255.0,
-            a: 0.55,
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.70,
         },
         selection: Color {
             r: 235.0 / 255.0,
@@ -1545,11 +1410,15 @@ impl Theme {
             hover_fill: Fill::Solid(self.hovered),
             pressed_fill: Fill::Solid(self.pressed),
             text_color: self.text_primary,
-            border_width: 1.0,
-            border_color: self.border,
-            corner_radius: 6.0,
-            padding: [14.0, 8.0],
-            shadow: Some(self.shadow_sm()[0]),
+            border_width: 0.0,
+            border_color: Color::TRANSPARENT,
+            corner_radius: 12.0,
+            padding: [16.0, 9.0],
+            shadow: Some(ShadowStyle {
+                color: self.shadow_ambient,
+                blur_radius: 8.0,
+                offset: [0.0, 2.0],
+            }),
             sharp: false,
         }
     }
@@ -1565,14 +1434,14 @@ impl Theme {
             } else {
                 Color::WHITE
             },
-            border_width: 1.0,
-            border_color: Color::WHITE.with_alpha(0.15),
-            corner_radius: 6.0,
-            padding: [14.0, 8.0],
+            border_width: 0.0,
+            border_color: Color::TRANSPARENT,
+            corner_radius: 12.0,
+            padding: [16.0, 9.0],
             shadow: Some(ShadowStyle {
-                color: self.active.with_alpha(0.20),
-                blur_radius: 4.0,
-                offset: [0.0, 1.5],
+                color: self.active.with_alpha(0.28),
+                blur_radius: 12.0,
+                offset: [0.0, 3.0],
             }),
             sharp: false,
         }
@@ -1581,15 +1450,19 @@ impl Theme {
     /// Constructs an outline button style customized for this theme.
     pub fn outline_button_style(&self) -> ButtonStyle {
         ButtonStyle {
-            fill: Fill::Solid(Color::TRANSPARENT),
-            hover_fill: Fill::Solid(self.surface_subtle),
-            pressed_fill: Fill::Solid(self.hovered),
+            fill: Fill::Solid(self.surface_subtle),
+            hover_fill: Fill::Solid(self.hovered),
+            pressed_fill: Fill::Solid(self.pressed),
             text_color: self.text_primary,
-            border_width: 1.0,
-            border_color: self.border_strong,
-            corner_radius: 6.0,
-            padding: [14.0, 8.0],
-            shadow: Some(self.shadow_sm()[0]),
+            border_width: 0.0,
+            border_color: Color::TRANSPARENT,
+            corner_radius: 12.0,
+            padding: [16.0, 9.0],
+            shadow: Some(ShadowStyle {
+                color: self.shadow_ambient,
+                blur_radius: 6.0,
+                offset: [0.0, 1.5],
+            }),
             sharp: false,
         }
     }
@@ -1603,8 +1476,8 @@ impl Theme {
             text_color: self.text_secondary,
             border_width: 0.0,
             border_color: Color::TRANSPARENT,
-            corner_radius: 6.0,
-            padding: [14.0, 8.0],
+            corner_radius: 12.0,
+            padding: [16.0, 9.0],
             shadow: None,
             sharp: false,
         }
@@ -1617,14 +1490,14 @@ impl Theme {
             hover_fill: Fill::Solid(self.error.lighten(0.08)),
             pressed_fill: Fill::Solid(self.error.darken(0.12)),
             text_color: Color::WHITE,
-            border_width: 1.0,
-            border_color: self.error.darken(0.15),
-            corner_radius: 6.0,
-            padding: [14.0, 8.0],
+            border_width: 0.0,
+            border_color: Color::TRANSPARENT,
+            corner_radius: 12.0,
+            padding: [16.0, 9.0],
             shadow: Some(ShadowStyle {
-                color: self.error.with_alpha(0.25),
-                blur_radius: 4.0,
-                offset: [0.0, 1.5],
+                color: self.error.with_alpha(0.30),
+                blur_radius: 12.0,
+                offset: [0.0, 3.0],
             }),
             sharp: false,
         }
@@ -1634,11 +1507,15 @@ impl Theme {
     pub fn card_style(&self) -> CardStyle {
         CardStyle {
             fill: Fill::Solid(self.surface),
-            border_width: 1.0,
-            border_color: self.border,
-            corner_radius: 10.0,
-            padding: [20.0, 20.0],
-            shadow: Some(self.shadow_sm()[0]),
+            border_width: 0.0,
+            border_color: Color::TRANSPARENT,
+            corner_radius: 16.0,
+            padding: [22.0, 22.0],
+            shadow: Some(ShadowStyle {
+                color: self.shadow_ambient,
+                blur_radius: 24.0,
+                offset: [0.0, 6.0],
+            }),
         }
     }
 
@@ -1646,10 +1523,10 @@ impl Theme {
     pub fn card_subtle_style(&self) -> CardStyle {
         CardStyle {
             fill: Fill::Solid(self.surface_subtle),
-            border_width: 1.0,
-            border_color: self.border_faint,
-            corner_radius: 8.0,
-            padding: [16.0, 16.0],
+            border_width: 0.0,
+            border_color: Color::TRANSPARENT,
+            corner_radius: 14.0,
+            padding: [18.0, 18.0],
             shadow: None,
         }
     }
@@ -1658,33 +1535,37 @@ impl Theme {
     pub fn card_elevated_style(&self) -> CardStyle {
         CardStyle {
             fill: Fill::Solid(self.surface_elevated),
-            border_width: 1.0,
-            border_color: self.border_strong,
-            corner_radius: 12.0,
-            padding: [20.0, 20.0],
-            shadow: Some(self.shadow_md()[0]),
+            border_width: 0.0,
+            border_color: Color::TRANSPARENT,
+            corner_radius: 20.0,
+            padding: [24.0, 24.0],
+            shadow: Some(ShadowStyle {
+                color: self.shadow_key,
+                blur_radius: 32.0,
+                offset: [0.0, 10.0],
+            }),
         }
     }
 
     /// Constructs a checkbox style customized for this theme.
     pub fn checkbox_style(&self) -> CheckboxStyle {
         CheckboxStyle {
-            fill: Fill::Solid(if self.is_dark {
-                self.surface
-            } else {
-                Color::WHITE
-            }),
-            hover_fill: Fill::Solid(self.surface_subtle),
+            fill: Fill::Solid(self.surface_subtle),
+            hover_fill: Fill::Solid(self.hovered),
             checked_fill: Fill::Solid(self.active),
             check_color: if self.is_dark && self.active.r > 0.8 && self.active.g > 0.8 {
                 Color::BLACK
             } else {
                 Color::WHITE
             },
-            border_width: 1.0,
-            border_color: self.border_strong,
-            corner_radius: 4.0,
-            shadow: Some(self.shadow_sm()[0]),
+            border_width: 0.0,
+            border_color: Color::TRANSPARENT,
+            corner_radius: 7.0,
+            shadow: Some(ShadowStyle {
+                color: self.shadow_ambient,
+                blur_radius: 6.0,
+                offset: [0.0, 2.0],
+            }),
             sharp: false,
         }
     }
@@ -1692,44 +1573,52 @@ impl Theme {
     /// Constructs a switch toggle style customized for this theme.
     pub fn switch_style(&self) -> SwitchStyle {
         SwitchStyle {
-            track_off_fill: Fill::Solid(self.hovered),
+            track_off_fill: Fill::Solid(self.surface_subtle),
             track_on_fill: Fill::Solid(self.active),
             thumb_fill: Fill::Solid(Color::WHITE),
-            border_width: 1.0,
-            border_color: self.border,
-            corner_radius: 11.0,
-            shadow: Some(self.shadow_sm()[0]),
+            border_width: 0.0,
+            border_color: Color::TRANSPARENT,
+            corner_radius: 999.0,
+            shadow: Some(ShadowStyle {
+                color: self.shadow_ambient,
+                blur_radius: 8.0,
+                offset: [0.0, 2.0],
+            }),
         }
     }
 
     /// Constructs a slider style customized for this theme.
     pub fn slider_style(&self) -> SliderStyle {
         SliderStyle {
-            track_fill: Fill::Solid(self.hovered),
+            track_fill: Fill::Solid(self.surface_subtle),
             filled_fill: Fill::Solid(self.active),
             thumb_fill: Fill::Solid(Color::WHITE),
-            border_width: 1.5,
-            border_color: self.border_strong,
-            track_height: 4.0,
-            thumb_size: 16.0,
-            shadow: Some(self.shadow_sm()[0]),
+            border_width: 0.0,
+            border_color: Color::TRANSPARENT,
+            track_height: 6.0,
+            thumb_size: 18.0,
+            shadow: Some(ShadowStyle {
+                color: self.shadow_ambient,
+                blur_radius: 8.0,
+                offset: [0.0, 2.0],
+            }),
         }
     }
 
     /// Constructs a text input style customized for this theme.
     pub fn input_style(&self) -> TextInputStyle {
         TextInputStyle {
-            fill: Fill::Solid(self.surface),
+            fill: Fill::Solid(self.surface_subtle),
             text_color: self.text_primary,
             placeholder_color: self.text_muted,
-            border_width: 1.0,
-            border_color: self.border_strong,
+            border_width: 0.0,
+            border_color: Color::TRANSPARENT,
             focus_border_color: self.focus_border,
-            corner_radius: 6.0,
-            padding: [10.0, 10.0],
+            corner_radius: 12.0,
+            padding: [14.0, 10.0],
             selection_color: self.selection,
             cursor_color: self.active,
-            shadow: Some(self.shadow_sm()[0]),
+            shadow: None,
             sharp: false,
         }
     }
@@ -1737,18 +1626,18 @@ impl Theme {
     /// Constructs a text area editor style customized for this theme.
     pub fn text_area_style(&self) -> TextAreaStyle {
         TextAreaStyle {
-            fill: Fill::Solid(self.surface),
+            fill: Fill::Solid(self.surface_subtle),
             text_color: self.text_primary,
-            border_width: 1.0,
-            border_color: self.border_strong,
+            border_width: 0.0,
+            border_color: Color::TRANSPARENT,
             focus_border_color: self.focus_border,
-            corner_radius: 6.0,
-            padding: [10.0, 10.0],
+            corner_radius: 12.0,
+            padding: [14.0, 12.0],
             selection_color: self.selection,
             cursor_color: self.active,
             thumb_fill: Fill::Solid(self.text_muted.with_alpha(0.35)),
             thumb_dragging_fill: Fill::Solid(self.text_muted.with_alpha(0.65)),
-            shadow: Some(self.shadow_sm()[0]),
+            shadow: None,
             sharp: false,
         }
     }
