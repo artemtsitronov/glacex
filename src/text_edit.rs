@@ -162,8 +162,6 @@ impl TextEditState {
         char_idx
     }
 
-    /// Char index of the start of the line `index` is on — scans backward
-    /// to the nearest '\n' (or the start of the text).
     pub fn line_start(&self, index: usize) -> usize {
         let byte_idx = self.byte_index_for(index);
         let mut char_idx = index;
@@ -178,10 +176,6 @@ impl TextEditState {
         char_idx
     }
 
-    /// Char index of the end of the line `index` is on — scans forward to
-    /// the nearest '\n' (or the end of the text). The returned index points
-    /// AT the '\n' itself (or text.len()), not past it — i.e. it's where
-    /// the cursor sits when you press End on this line.
     pub fn line_end(&self, index: usize) -> usize {
         let byte_idx = self.byte_index_for(index);
         let mut char_idx = index;
@@ -196,28 +190,20 @@ impl TextEditState {
         char_idx
     }
 
-    /// How many characters into its own line `index` is.
     pub fn column_of(&self, index: usize) -> usize {
         index - self.line_start(index)
     }
 
-    /// Total number of lines (a string with no '\n' at all still counts as
-    /// one line).
     pub fn line_count(&self) -> usize {
         self.text.matches('\n').count() + 1
     }
 
-    /// Moves the cursor up one line, landing at `preferred_column` (or the
-    /// cursor's current column if None) — clamped to the previous line's
-    /// actual length. Returns the resulting cursor index; does not mutate
-    /// self.cursor itself, since the caller needs the value before deciding
-    /// whether to update preferred_column too.
     pub fn move_cursor_up(&self, preferred_column: Option<usize>) -> usize {
         let current_line_start = self.line_start(self.cursor);
         if current_line_start == 0 {
-            return self.cursor; // already on the first line, nowhere to go
+            return self.cursor;
         }
-        let prev_line_end = current_line_start - 1; // the '\n' just before this line
+        let prev_line_end = current_line_start - 1;
         let prev_line_start = self.line_start(prev_line_end);
         let prev_line_length = prev_line_end - prev_line_start;
 
@@ -225,15 +211,13 @@ impl TextEditState {
         prev_line_start + column.min(prev_line_length)
     }
 
-    /// Moves the cursor down one line, same column-preservation logic as
-    /// move_cursor_up.
     pub fn move_cursor_down(&self, preferred_column: Option<usize>) -> usize {
         let current_line_end = self.line_end(self.cursor);
         let char_count = self.text.chars().count();
         if current_line_end >= char_count {
-            return self.cursor; // already on the last line
+            return self.cursor;
         }
-        let next_line_start = current_line_end + 1; // skip past the '\n'
+        let next_line_start = current_line_end + 1;
         let next_line_end = self.line_end(next_line_start);
         let next_line_length = next_line_end - next_line_start;
 
@@ -241,9 +225,6 @@ impl TextEditState {
         next_line_start + column.min(next_line_length)
     }
 
-    /// Inserts a real newline at the cursor — deliberately bypasses the
-    /// is_control() filter that keeps '\n' out of single-line TextInput;
-    /// only TextArea should call this.
     pub fn insert_newline(&mut self) {
         let idx = self.byte_index();
         self.text.insert(idx, '\n');

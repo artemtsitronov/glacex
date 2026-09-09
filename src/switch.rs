@@ -1,4 +1,3 @@
-use crate::animation::{Motion, animate_towards};
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::interaction::Interaction;
@@ -9,6 +8,8 @@ use crate::widget::{Accessible, Measurable, StatefulWidget, Widget, hash_id};
 use accesskit::{NodeId, Role};
 use winit::window::CursorIcon;
 
+use crate::animation::{Motion, animate_towards};
+
 #[derive(Default)]
 pub struct SwitchState {
     pub enabled: bool,
@@ -16,8 +17,6 @@ pub struct SwitchState {
     pub hover_t: f32,
     pub initialized: bool,
     pub prev_progress: f32,
-    /// Glow halo intensity (0 = none, 1 = full). Pulses in when enabled.
-    pub glow_t: f32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -147,49 +146,32 @@ impl Measurable for Switch {
         }
 
         let dt = ui.dt();
-        let state = ui.widget_state_or::<SwitchState>(&self.id, self.initial_state());
+        let (enabled, progress, hover_t, knob_velocity) = {
+            let state = ui.widget_state_or::<SwitchState>(&self.id, self.initial_state());
 
-        if !state.initialized {
-            state.anim_progress = if state.enabled { 1.0 } else { 0.0 };
-            state.initialized = true;
-            state.prev_progress = state.anim_progress;
-            state.glow_t = state.anim_progress;
-        }
+            if !state.initialized {
+                state.anim_progress = if state.enabled { 1.0 } else { 0.0 };
+                state.initialized = true;
+                state.prev_progress = state.anim_progress;
+            }
 
-        if interaction.clicked {
-            state.enabled = !state.enabled;
-        }
+            if interaction.clicked {
+                state.enabled = !state.enabled;
+            }
+            let enabled = state.enabled;
+            let target_progress = if enabled { 1.0 } else { 0.0 };
+            state.anim_progress =
+                animate_towards(state.anim_progress, target_progress, dt, Motion::FLUID);
+            let hover_target = if interaction.hovered { 1.0f32 } else { 0.0 };
+            state.hover_t = animate_towards(state.hover_t, hover_target, dt, Motion::SNAPPY);
 
-        let enabled = state.enabled;
-        let target_progress = if enabled { 1.0 } else { 0.0 };
+            let progress = state.anim_progress;
+            let velocity = (progress - state.prev_progress).abs();
+            state.prev_progress = progress;
 
-        // Knob flip uses SNAPPY (45ms half-life) — crisp, physical, no overshoot.
-        state.anim_progress =
-            animate_towards(state.anim_progress, target_progress, dt, Motion::SNAPPY);
-
-        let hover_target = if interaction.hovered { 1.0f32 } else { 0.0 };
-        state.hover_t = animate_towards(state.hover_t, hover_target, dt, Motion::SNAPPY);
-
-        // Glow fades in when enabled (FLUID = 60ms, intentionally slower than
-        // the knob so the glow "blooms" behind the movement).
-        let glow_target = if enabled { 1.0f32 } else { 0.0 };
-        state.glow_t = animate_towards(state.glow_t, glow_target, dt, Motion::FLUID);
-
-        let progress = state.anim_progress;
-        let velocity = (progress - state.prev_progress) / dt.max(0.001);
-        state.prev_progress = progress;
-
-        let hover_t = state.hover_t;
-        let glow_t = state.glow_t;
-
-        // Extract the "on" color for the glow halo before track_fill consumes it
-        let on_color = if let Fill::Solid(c) = &style.track_on_fill {
-            *c
-        } else {
-            theme.active
+            (enabled, progress, state.hover_t, velocity)
         };
 
-        // Track color cross-fade
         let track_fill = if let (Fill::Solid(off_col), Fill::Solid(on_col)) =
             (&style.track_off_fill, &style.track_on_fill)
         {
@@ -233,20 +215,17 @@ impl Measurable for Switch {
         let knob_pos = [knob_x, position[1] + padding];
         let knob_radius = knob_size / 2.0;
 
-        // Motion-blur stretch trail: widens in the direction of travel
-        let speed = velocity.abs();
-        if speed > 8.0 {
-            let stretch_amount = (speed * 0.010).min(10.0);
-            let stretch_w = knob_size + stretch_amount;
-            let stretch_x = if velocity > 0.0 {
-                knob_x - stretch_amount
+        if knob_velocity > 0.005 {
+            let stretch_w = knob_size + knob_velocity * 12.0;
+            let stretch_x = if progress > 0.5 {
+                knob_x - (stretch_w - knob_size)
             } else {
                 knob_x
             };
             ui.draw_rect(
                 [stretch_x, position[1] + padding],
                 [stretch_w, knob_size],
-                Fill::Solid(Color::WHITE.with_alpha(0.22)),
+                Fill::Solid(Color::WHITE.with_alpha(0.20)),
                 knob_radius,
                 0.0,
                 Color::TRANSPARENT,
@@ -256,28 +235,10 @@ impl Measurable for Switch {
             );
         }
 
-        // Active glow halo behind the knob (only visible when enabled)
-        if glow_t > 0.01 {
-            let halo_size = knob_size + 10.0 * glow_t;
-            let halo_offset = (halo_size - knob_size) / 2.0;
-            ui.draw_rect(
-                [knob_x - halo_offset, position[1] + padding - halo_offset],
-                [halo_size, halo_size],
-                Fill::Solid(on_color.with_alpha(0.30 * glow_t)),
-                halo_size / 2.0,
-                0.0,
-                Color::TRANSPARENT,
-                4.0,
-                false,
-                0.0,
-            );
-        }
-
-        // Thumb drop-shadow
         let thumb_shadow = ShadowStyle {
-            color: Color::rgba(0, 0, 0, 0.28),
-            blur_radius: 3.0,
-            offset: [0.0, 1.0],
+            color: Color::rgba(0, 0, 0, 0.35),
+            blur_radius: 4.0,
+            offset: [0.0, 1.5],
         };
         draw_shadow(
             &thumb_shadow,
@@ -321,7 +282,6 @@ impl StatefulWidget for Switch {
             hover_t: 0.0,
             initialized: true,
             prev_progress: if self.default_enabled { 1.0 } else { 0.0 },
-            glow_t: if self.default_enabled { 1.0 } else { 0.0 },
         }
     }
 }

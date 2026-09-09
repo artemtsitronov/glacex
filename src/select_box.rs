@@ -1,10 +1,3 @@
-//! Animated premium SelectBox / Combobox widget.
-//!
-//! Renders a trigger button that opens a spring-animated floating dropdown
-//! with keyboard navigation (↑/↓ arrow keys, Enter to select, Escape to
-//! close) and optional type-to-filter search.  Matches shadcn/ui / Apple HIG
-//! quality and motion feel — soft, borderless, neumorphic.
-
 use crate::animation::{Motion, Spring, animate_towards};
 use crate::color::Color;
 use crate::fill::Fill;
@@ -18,78 +11,40 @@ use accesskit::{NodeId, Role};
 use winit::keyboard::{Key, NamedKey};
 use winit::window::CursorIcon;
 
-// ---------------------------------------------------------------------------
-// Style
-// ---------------------------------------------------------------------------
-
-/// Visual style configuration for a [`SelectBox`].
 #[derive(Debug, Clone)]
 pub struct SelectBoxStyle {
-    /// Trigger button resting fill.
     pub fill: Fill,
-    /// Trigger button hover fill.
     pub hover_fill: Fill,
-    /// Trigger button focused / open fill.
     pub focus_fill: Fill,
-    /// Text color for the selected value label.
     pub text_color: Color,
-    /// Placeholder text color (nothing selected yet).
     pub placeholder_color: Color,
-    /// Trigger border width (0 = borderless neumorphic style).
     pub border_width: f32,
-    /// Trigger resting border color.
     pub border_color: Color,
-    /// Trigger hover border color.
     pub hover_border_color: Color,
-    /// Trigger focus/open border color.
     pub focus_border_color: Color,
-    /// Trigger corner radius.
     pub corner_radius: f32,
-    /// Trigger height.
     pub height: f32,
-    /// Horizontal padding inside the trigger.
     pub padding_x: f32,
 
-    // Dropdown card
-    /// Dropdown surface fill.
     pub dropdown_fill: Fill,
-    /// Dropdown border width.
     pub dropdown_border_width: f32,
-    /// Dropdown border color.
     pub dropdown_border_color: Color,
-    /// Dropdown corner radius.
     pub dropdown_corner_radius: f32,
-    /// Vertical gap between trigger bottom and dropdown top.
     pub dropdown_gap: f32,
-    /// Maximum visible dropdown height before it clips/scrolls.
     pub dropdown_max_height: f32,
-    /// Soft drop shadow on the dropdown card.
     pub dropdown_shadow: Option<ShadowStyle>,
 
-    // Items
-    /// Per-item height.
     pub item_height: f32,
-    /// Horizontal padding inside items.
     pub item_padding_x: f32,
-    /// Item resting text color.
     pub item_text_color: Color,
-    /// Hovered item background.
     pub item_hover_fill: Color,
-    /// Selected / active item background.
     pub item_active_fill: Color,
-    /// Selected item text color.
     pub item_active_text_color: Color,
-    /// Item corner radius.
     pub item_corner_radius: f32,
 
-    // Search bar
-    /// Show a search / filter input at the top of the dropdown.
     pub searchable: bool,
-    /// Search bar height.
     pub search_height: f32,
-    /// Search field background.
     pub search_fill: Color,
-    /// Search placeholder text.
     pub search_placeholder: &'static str,
 }
 
@@ -143,11 +98,7 @@ impl Default for SelectBoxStyle {
 }
 
 impl SelectBoxStyle {
-    /// Resolves a style from the active theme — the preferred way to style
-    /// a `SelectBox` so it stays consistent with the rest of the UI.
     pub fn from_theme(theme: &Theme) -> Self {
-        // Soft, inset neumorphic look: slightly darker surface on light,
-        // slightly lighter on dark. No hard borders — depth via shadow only.
         let trigger_fill = if theme.is_dark {
             theme.surface_subtle
         } else {
@@ -216,16 +167,9 @@ impl SelectBoxStyle {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Option item
-// ---------------------------------------------------------------------------
-
-/// A single option entry inside a [`SelectBox`] dropdown.
 #[derive(Debug, Clone)]
 pub struct SelectOption {
-    /// Machine-readable value (used as the selected identifier).
     pub value: String,
-    /// Human-readable display label.
     pub label: String,
 }
 
@@ -238,42 +182,23 @@ impl SelectOption {
     }
 }
 
-// ---------------------------------------------------------------------------
-// State
-// ---------------------------------------------------------------------------
-
-/// Per-widget persistent state for a [`SelectBox`].
 #[derive(Clone)]
 pub struct SelectBoxState {
-    /// Currently selected value, if any.
     pub selected: Option<String>,
 
-    // Animation
-    /// `0.0` = closed, `1.0` = fully open.
     pub open_t: f32,
-    /// Spring driving the open/close scale + opacity.
     pub open_spring: Spring,
-    /// Hover interpolation on the trigger button.
     pub hover_t: f32,
-    /// Per-item hover animation values (keyed by index).
     pub item_hover_ts: Vec<f32>,
-    /// Focus ring glow intensity.
     pub focus_t: f32,
-    /// Chevron rotation animation (degrees, 0 = down, -180 = up).
     pub chevron_angle: f32,
 
-    // Keyboard / interaction
-    /// Whether the dropdown is currently open.
     pub open: bool,
-    /// Keyboard-highlighted item index (−1 = none).
     pub keyboard_index: i32,
 
-    // Search
     pub search_text: String,
-    /// Animation for search bar fade-in.
     pub search_focus_t: f32,
 
-    // Scroll offset inside the dropdown (pixels from top)
     pub scroll_offset: f32,
 }
 
@@ -296,34 +221,6 @@ impl Default for SelectBoxState {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Widget
-// ---------------------------------------------------------------------------
-
-/// Premium animated select / combobox widget.
-///
-/// # Example
-/// ```no_run
-/// use glacex::{SelectBox, SelectOption, Ui};
-///
-/// fn build(ui: &mut Ui) {
-///     let options = vec![
-///         SelectOption::new("light", "Light"),
-///         SelectOption::new("dark", "Dark"),
-///         SelectOption::new("mocha", "Catppuccin Mocha"),
-///     ];
-///
-///     let mut sel = SelectBox::new("theme_picker", options)
-///         .placeholder("Choose a theme…")
-///         .width(220.0);
-///
-///     sel.arrange_at([40.0, 40.0], ui);
-///
-///     if let Some(val) = sel.selected() {
-///         println!("selected: {val}");
-///     }
-/// }
-/// ```
 pub struct SelectBox {
     id: String,
     options: Vec<SelectOption>,
@@ -336,7 +233,6 @@ pub struct SelectBox {
 }
 
 impl SelectBox {
-    /// Create a new `SelectBox` with a stable id and a list of options.
     pub fn new(id: impl Into<String>, options: Vec<SelectOption>) -> Self {
         SelectBox {
             id: id.into(),
@@ -350,19 +246,16 @@ impl SelectBox {
         }
     }
 
-    /// Override the placeholder text shown when nothing is selected.
     pub fn placeholder(mut self, placeholder: impl Into<String>) -> Self {
         self.placeholder = placeholder.into();
         self
     }
 
-    /// Override the trigger width.
     pub fn width(mut self, width: f32) -> Self {
         self.width = width;
         self
     }
 
-    /// Enable type-to-filter search inside the dropdown.
     pub fn searchable(mut self) -> Self {
         self.searchable = true;
         self
@@ -378,28 +271,14 @@ impl SelectBox {
         self
     }
 
-    /// Show a tooltip when the trigger is hovered.
     pub fn tooltip(mut self, tooltip: impl Into<String>) -> Self {
         self.tooltip = Some(tooltip.into());
         self
     }
 
-    // -----------------------------------------------------------------------
-    // Read-back helpers — call after `ui()` / `arrange()`
-    // -----------------------------------------------------------------------
-
-    /// Returns the currently selected value, if any.
     pub fn selected(&self) -> Option<&str> {
-        // We can't hold a reference into state after calling `arrange`, so the
-        // caller should read directly via `ui.widget_state::<SelectBoxState>(id).selected`.
-        // This is a convenience shim that always returns `None` on the widget
-        // struct; use the state API for the real value.
         None
     }
-
-    // -----------------------------------------------------------------------
-    // Internal helpers
-    // -----------------------------------------------------------------------
 
     fn focus_id(&self) -> FocusId {
         FocusId::new(&self.id)
@@ -416,7 +295,6 @@ impl SelectBox {
         s
     }
 
-    /// Convenience arrange-at entry-point matching other widgets.
     pub fn arrange_at(&mut self, position: [f32; 2], ui: &mut Ui) {
         let size = self.measure(ui);
         self.arrange(position, size, ui);
@@ -448,27 +326,19 @@ impl Measurable for SelectBox {
         let mouse_pressed_frame = ui.mouse_pressed_this_frame();
         let window_size = ui.window_size();
 
-        // ------------------------------------------------------------------ //
-        // 1. Load state
-        // ------------------------------------------------------------------ //
         let mut state =
             ui.take_widget_state_or::<SelectBoxState>(&self.id, SelectBoxState::default());
 
-        // Grow item_hover_ts if more options were added
         let num_options = self.options.len();
         while state.item_hover_ts.len() < num_options {
             state.item_hover_ts.push(0.0);
         }
 
-        // ------------------------------------------------------------------ //
-        // 2. Trigger hit-test (only blocked by other overlays, not self)
-        // ------------------------------------------------------------------ //
         let trigger_blocked = ui.is_input_blocked(mouse_pos) && !state.open;
         let in_clip = ui.point_in_current_clip(mouse_pos);
         let trigger_hovered =
             !trigger_blocked && in_clip && contains(position, size, style.corner_radius, mouse_pos);
 
-        // Register focus
         ui.register_focusable(self.focus_id());
         ui.register_accessible(
             self,
@@ -480,16 +350,12 @@ impl Measurable for SelectBox {
             ],
         );
 
-        // ------------------------------------------------------------------ //
-        // 3. Dropdown geometry (computed early so we can hit-test it)
-        // ------------------------------------------------------------------ //
         let search_bar_h = if style.searchable {
-            style.search_height + 8.0 // bar height + bottom padding
+            style.search_height + 8.0
         } else {
             0.0
         };
 
-        // Filter options by search text
         let search_lower = state.search_text.to_lowercase();
         let filtered_indices: Vec<usize> = (0..self.options.len())
             .filter(|&i| {
@@ -503,11 +369,10 @@ impl Measurable for SelectBox {
             .collect();
 
         let item_list_h = filtered_indices.len() as f32 * style.item_height;
-        let inner_padding = 6.0; // top+bottom padding inside card
+        let inner_padding = 6.0;
         let content_h = search_bar_h + item_list_h + inner_padding * 2.0;
         let dropdown_h = content_h.min(style.dropdown_max_height);
 
-        // Position: prefer below trigger, fall back to above if not enough room
         let gap = style.dropdown_gap;
         let below_y = position[1] + size[1] + gap;
         let above_y = position[1] - gap - dropdown_h;
@@ -516,9 +381,6 @@ impl Measurable for SelectBox {
         let dropdown_pos = [position[0], dropdown_y];
         let dropdown_size = [size[0], dropdown_h];
 
-        // ------------------------------------------------------------------ //
-        // 4. Click-outside-to-close
-        // ------------------------------------------------------------------ //
         if state.open && mouse_pressed_frame {
             let in_trigger = contains(position, size, style.corner_radius, mouse_pos);
             let in_dropdown = mouse_pos[0] >= dropdown_pos[0]
@@ -534,9 +396,6 @@ impl Measurable for SelectBox {
             }
         }
 
-        // ------------------------------------------------------------------ //
-        // 5. Trigger click → toggle open / close
-        // ------------------------------------------------------------------ //
         if trigger_hovered && mouse_pressed_frame {
             if state.open {
                 state.open = false;
@@ -550,9 +409,6 @@ impl Measurable for SelectBox {
             }
         }
 
-        // ------------------------------------------------------------------ //
-        // 6. Keyboard navigation (only when focused/open)
-        // ------------------------------------------------------------------ //
         let is_focused = ui.is_focused(self.focus_id());
         if is_focused && state.open {
             let count = filtered_indices.len() as i32;
@@ -589,12 +445,10 @@ impl Measurable for SelectBox {
                 state.scroll_offset = 0.0;
             }
 
-            // Type-to-search
             if style.searchable {
                 let typed = ui.typed_text().to_owned();
                 for ch in typed.chars() {
                     if ch == '\x08' {
-                        // Backspace
                         state.search_text.pop();
                     } else if !ch.is_control() {
                         state.search_text.push(ch);
@@ -602,7 +456,6 @@ impl Measurable for SelectBox {
                 }
             }
 
-            // Scroll to keep keyboard selection visible
             if state.keyboard_index >= 0 && count > 0 {
                 let ki = state.keyboard_index as f32;
                 let item_top = search_bar_h + inner_padding + ki * style.item_height;
@@ -618,24 +471,18 @@ impl Measurable for SelectBox {
             }
         }
 
-        // ------------------------------------------------------------------ //
-        // 7. Open/close spring animation
-        // ------------------------------------------------------------------ //
         state
             .open_spring
             .set_target(if state.open { 1.0 } else { 0.0 });
         state.open_spring.update(dt);
         let open_t = state.open_spring.value.clamp(0.0, 1.0);
 
-        // Ease the open_t through a snappy cubic curve for even crisper feel
-        let open_ease = 1.0 - (1.0 - open_t).powi(3); // ease-out-cubic
+        let open_ease = 1.0 - (1.0 - open_t).powi(3);
 
-        // Chevron angle: 0° = pointing down (closed), 180° = pointing up (open)
         let chevron_target = if state.open { 180.0f32 } else { 0.0 };
         state.chevron_angle =
             animate_towards(state.chevron_angle, chevron_target, dt, Motion::SNAPPY);
 
-        // Trigger animations
         let hover_target = if trigger_hovered { 1.0f32 } else { 0.0 };
         state.hover_t = animate_towards(state.hover_t, hover_target, dt, Motion::SNAPPY);
 
@@ -646,9 +493,6 @@ impl Measurable for SelectBox {
         };
         state.focus_t = animate_towards(state.focus_t, focus_target, dt, Motion::GENTLE);
 
-        // ------------------------------------------------------------------ //
-        // 8. Draw trigger button (neumorphic: soft shadow, no border)
-        // ------------------------------------------------------------------ //
         let trigger_fill = if let (Fill::Solid(idle), Fill::Solid(hov), Fill::Solid(foc)) =
             (&style.fill, &style.hover_fill, &style.focus_fill)
         {
@@ -662,7 +506,6 @@ impl Measurable for SelectBox {
             style.fill.clone()
         };
 
-        // Soft inset shadow for neumorphic depth (drawn before trigger rect)
         if state.focus_t > 0.01 {
             let ring_alpha = state.focus_t * 0.22;
             let glow_size = [size[0] + 5.0, size[1] + 5.0];
@@ -692,9 +535,6 @@ impl Measurable for SelectBox {
             0.0,
         );
 
-        // ------------------------------------------------------------------ //
-        // 9. Trigger label text
-        // ------------------------------------------------------------------ //
         let label_text = state
             .selected
             .as_deref()
@@ -711,7 +551,6 @@ impl Measurable for SelectBox {
         let text_clip = [
             position[0] + style.padding_x,
             position[1],
-            // Reserve space for chevron (16px icon + 8px gap + padding_x)
             position[0] + size[0] - style.padding_x - 24.0,
             position[1] + size[1],
         ];
@@ -789,7 +628,6 @@ impl Measurable for SelectBox {
             state.selected = None;
         }
 
-        // Chevron icon
         let chevron_color =
             text_color.with_alpha(if state.open || is_focused { 0.85 } else { 0.5 });
         draw_chevron(
@@ -801,9 +639,6 @@ impl Measurable for SelectBox {
             chevron_color,
         );
 
-        // ------------------------------------------------------------------ //
-        // 10. Tooltip
-        // ------------------------------------------------------------------ //
         if trigger_hovered {
             ui.set_cursor_icon(CursorIcon::Pointer);
             if let Some(tip) = &self.tooltip {
@@ -811,14 +646,7 @@ impl Measurable for SelectBox {
             }
         }
 
-        // ------------------------------------------------------------------ //
-        // 11. Dropdown overlay (only when open_ease > 0)
-        // ------------------------------------------------------------------ //
         if open_ease > 0.001 {
-            // Block normal-pass input for the dropdown area so underlying
-            // widgets don't receive clicks while the dropdown is visible.
-            // NOTE: Items within this block do NOT use is_input_blocked(),
-            // since this widget IS the overlay receiving those interactions.
             ui.push_input_block([
                 dropdown_pos[0],
                 dropdown_pos[1],
@@ -828,11 +656,8 @@ impl Measurable for SelectBox {
 
             let full_clip = [0.0, 0.0, window_size[0], window_size[1]];
 
-            // Animated clip: the dropdown "slides in" by revealing from top
-            // (or bottom if opening upwards).
             let visible_h = dropdown_size[1] * open_ease;
             let clip_top = if opens_upward {
-                // Slide upward: reveal from bottom edge
                 dropdown_pos[1] + dropdown_size[1] - visible_h
             } else {
                 dropdown_pos[1]
@@ -843,7 +668,6 @@ impl Measurable for SelectBox {
                 dropdown_pos[0] + dropdown_size[0] + 2.0,
                 dropdown_pos[1] + dropdown_size[1] + 2.0,
             ];
-            // Intersect with full viewport
             let dropdown_clip = [
                 dropdown_clip[0].max(0.0),
                 dropdown_clip[1].max(0.0),
@@ -851,7 +675,6 @@ impl Measurable for SelectBox {
                 dropdown_clip[3].min(window_size[1]),
             ];
 
-            // Ambient shadow (large, diffuse — key to neumorphic feel)
             if let Some(shadow) = &style.dropdown_shadow {
                 let shadow_opacity = shadow.color.a * open_ease;
                 let shadow_color = shadow.color.with_alpha(shadow_opacity);
@@ -872,7 +695,6 @@ impl Measurable for SelectBox {
                 );
             }
 
-            // Dropdown card surface (no border — rely on shadow for depth)
             ui.draw_overlay_rect(
                 dropdown_pos,
                 dropdown_size,
@@ -886,9 +708,6 @@ impl Measurable for SelectBox {
                 0.0,
             );
 
-            // ----------------------------------------------------------------
-            // Search bar (optional)
-            // ----------------------------------------------------------------
             let mut content_y = dropdown_pos[1] + inner_padding;
 
             if style.searchable {
@@ -938,7 +757,6 @@ impl Measurable for SelectBox {
                 content_y += style.search_height + 8.0;
             }
 
-            // Mouse wheel scroll handling
             let scroll_delta = ui.scroll_delta_y();
             let scroll_max = (content_h - dropdown_h).max(0.0);
             if scroll_delta.abs() > 0.01 {
@@ -954,9 +772,6 @@ impl Measurable for SelectBox {
                 state.scroll_offset = state.scroll_offset.clamp(0.0, scroll_max);
             }
 
-            // ----------------------------------------------------------------
-            // Items
-            // ----------------------------------------------------------------
             let items_clip = [
                 dropdown_pos[0] + 2.0,
                 content_y.max(dropdown_clip[1]),
@@ -967,7 +782,6 @@ impl Measurable for SelectBox {
             for (list_idx, &opt_idx) in filtered_indices.iter().enumerate() {
                 let item_y = content_y + list_idx as f32 * style.item_height - state.scroll_offset;
 
-                // Skip items fully outside the clip
                 if item_y + style.item_height < items_clip[1] - 1.0 || item_y > items_clip[3] + 1.0
                 {
                     continue;
@@ -976,9 +790,6 @@ impl Measurable for SelectBox {
                 let item_pos = [dropdown_pos[0] + 4.0, item_y];
                 let item_size = [dropdown_size[0] - 8.0, style.item_height];
 
-                // *** FIX: overlay items handle their OWN input — do NOT check
-                // is_input_blocked here since this widget pushed that block itself.
-                // We only need raw bounds hit-testing against the dropdown clip.
                 let item_hovered = mouse_pos[0] >= item_pos[0]
                     && mouse_pos[0] <= item_pos[0] + item_size[0]
                     && mouse_pos[1] >= item_pos[1]
@@ -993,7 +804,6 @@ impl Measurable for SelectBox {
                     .map(|s| s == self.options[opt_idx].value)
                     .unwrap_or(false);
 
-                // Hover animation
                 let item_hover_target = if item_hovered || is_keyboard_focused {
                     1.0f32
                 } else {
@@ -1009,7 +819,6 @@ impl Measurable for SelectBox {
                 }
                 let item_hover_t = state.item_hover_ts.get(opt_idx).copied().unwrap_or(0.0);
 
-                // Click to select
                 if item_hovered && mouse_pressed_frame {
                     state.selected = Some(self.options[opt_idx].value.clone());
                     state.open = false;
@@ -1018,7 +827,6 @@ impl Measurable for SelectBox {
                     state.scroll_offset = 0.0;
                 }
 
-                // Draw item background
                 let bg_alpha = if is_selected {
                     item_hover_t * 0.7 + 0.3
                 } else {
@@ -1045,7 +853,6 @@ impl Measurable for SelectBox {
                     );
                 }
 
-                // Draw item text
                 let item_text_color = if is_selected {
                     style.item_active_text_color.with_alpha(open_ease)
                 } else {
@@ -1073,7 +880,6 @@ impl Measurable for SelectBox {
                     false,
                 );
 
-                // Selected checkmark
                 if is_selected {
                     draw_check(
                         ui,
@@ -1086,7 +892,6 @@ impl Measurable for SelectBox {
                     );
                 }
 
-                // Set pointer cursor when hovering items
                 if item_hovered {
                     ui.set_cursor_icon(CursorIcon::Pointer);
                 }
@@ -1095,16 +900,9 @@ impl Measurable for SelectBox {
             ui.pop_input_block();
         }
 
-        // ------------------------------------------------------------------ //
-        // 12. Save state
-        // ------------------------------------------------------------------ //
         ui.put_widget_state(&self.id, state);
     }
 }
-
-// ---------------------------------------------------------------------------
-// Helpers: chevron + checkmark drawn from primitive rects
-// ---------------------------------------------------------------------------
 
 fn draw_chevron(
     ui: &mut Ui,
@@ -1126,9 +924,6 @@ fn draw_chevron(
         [cx + x * c - y * s, cy + x * s + y * c]
     };
 
-    // When angle_rad = 0 (closed): chevron points downward 'v'
-    // Apex is at (0, 1.6), left tip at (-arm_len, -1.6), right tip at (arm_len, -1.6)
-    // When angle_rad = PI (open): rotates 180° around (cx, cy) to point upward '^'
     let apex = rot(0.0, 1.6);
     let left = rot(-arm_len, -1.6);
     let right = rot(arm_len, -1.6);
@@ -1139,7 +934,6 @@ fn draw_chevron(
 
 fn draw_check(ui: &mut Ui, origin: [f32; 2], color: Color, clip: [f32; 4]) {
     let thickness = 1.8;
-    // origin is 14x14 box, center at (+7.0, +7.0)
     let cx = origin[0] + 7.0;
     let cy = origin[1] + 7.0;
 
@@ -1158,7 +952,6 @@ fn draw_line(ui: &mut Ui, a: [f32; 2], b: [f32; 2], thickness: f32, color: Color
     if len < 0.1 {
         return;
     }
-    // RADIANS: The WGSL shader rotation takes radians
     let angle_rad = dy.atan2(dx);
     let mid_x = (a[0] + b[0]) / 2.0;
     let mid_y = (a[1] + b[1]) / 2.0;
@@ -1190,7 +983,6 @@ fn draw_line_overlay(
     if len < 0.1 {
         return;
     }
-    // RADIANS: The WGSL shader rotation takes radians
     let angle_rad = dy.atan2(dx);
     let mid_x = (a[0] + b[0]) / 2.0;
     let mid_y = (a[1] + b[1]) / 2.0;
@@ -1208,10 +1000,6 @@ fn draw_line_overlay(
         angle_rad,
     );
 }
-
-// ---------------------------------------------------------------------------
-// StatefulWidget + Accessible
-// ---------------------------------------------------------------------------
 
 impl StatefulWidget for SelectBox {
     type State = SelectBoxState;

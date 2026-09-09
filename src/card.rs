@@ -177,10 +177,6 @@ impl<'a> Measurable for Card<'a> {
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
         let style = self.resolved_style(ui.theme());
 
-        // Cards have no identity beyond their `.id(..)`; without one, every
-        // un-identified card in the frame would hash to the same node id and
-        // collide in the accessibility tree, so only register those the
-        // caller has explicitly named.
         if self.id.is_some() {
             ui.register_accessible(
                 self,

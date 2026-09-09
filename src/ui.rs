@@ -301,9 +301,7 @@ impl Ui {
         };
 
         self.focused = Some(self.focus_order[next_index]);
-        self.focus_requested_this_frame = true; // Tab counts as a focus request too,
-        // so the empty-click-clears-focus
-        // check doesn't fight with it
+        self.focus_requested_this_frame = true;
     }
 
     pub fn copy_to_clipboard(&mut self, text: &str) {
@@ -368,8 +366,8 @@ impl Ui {
             let now = Instant::now();
             let position = self.mouse_position;
 
-            const DOUBLE_CLICK_TIME: f32 = 0.4; // seconds
-            const DOUBLE_CLICK_DISTANCE: f32 = 5.0; // pixels
+            const DOUBLE_CLICK_TIME: f32 = 0.4;
+            const DOUBLE_CLICK_DISTANCE: f32 = 5.0;
 
             let is_repeat_click = match self.last_click_time {
                 Some(last_time) => {
@@ -555,12 +553,10 @@ impl Ui {
         self.painter.set_bgcolor(color);
     }
 
-    /// Returns the currently active theme.
     pub fn theme(&self) -> &Theme {
         &self.theme
     }
 
-    /// Sets the active theme and updates the window clear color.
     pub fn set_theme(&mut self, theme: Theme) {
         self.set_bgcolor(theme.bg_canvas);
         self.theme = theme;
@@ -570,7 +566,6 @@ impl Ui {
         self.painter.window_size()
     }
 
-    /// Sets the native window title.
     pub fn set_title(&self, title: &str) {
         self.window.set_title(title);
     }
@@ -656,8 +651,6 @@ impl Ui {
         );
     }
 
-    /// Draws a rect on the overlay pass (renders on top of all normal-pass content).
-    /// Use this for dropdowns, popovers, and other floating surfaces.
     #[allow(clippy::too_many_arguments)]
     pub fn draw_overlay_rect(
         &mut self,
@@ -686,8 +679,6 @@ impl Ui {
         );
     }
 
-    /// Draws text on the overlay pass (renders on top of all normal-pass content).
-    /// Use this for dropdown text, popover labels, etc.
     #[allow(clippy::too_many_arguments)]
     pub fn draw_overlay_text_styled(
         &mut self,
@@ -718,7 +709,6 @@ impl Ui {
 
     pub fn render(&mut self) {
         if let Some((text, pos)) = self.pending_tooltip.take() {
-            // Measure with Geist 12px (caption scale) — same font used by Label::caption()
             let text_width = self.painter.measure_text_styled(
                 &text,
                 12.0,
@@ -729,12 +719,10 @@ impl Ui {
             let pad_x = 10.0;
             let pad_y = 6.0;
             let width = (text_width + pad_x * 2.0).max(60.0);
-            let height = 18.0 + pad_y * 2.0; // 18px line height + vertical padding
+            let height = 18.0 + pad_y * 2.0;
 
             let window_size = self.painter.window_size();
-            // Offset tooltip 10px to the right and 20px below the cursor
             let mut tooltip_pos = [pos[0] + 10.0, pos[1] + 20.0];
-            // Clamp to viewport with 6px margin
             if tooltip_pos[0] + width > window_size[0] - 6.0 {
                 tooltip_pos[0] = (pos[0] - width - 8.0).max(6.0);
             }
@@ -744,7 +732,6 @@ impl Ui {
 
             let full_clip = [0.0, 0.0, window_size[0], window_size[1]];
 
-            // Ambient shadow behind tooltip card (rendered on overlay pass)
             self.painter.draw_overlay_rect(
                 [tooltip_pos[0] - 4.0, tooltip_pos[1] - 4.0],
                 [width + 8.0, height + 8.0],
@@ -757,13 +744,12 @@ impl Ui {
                 12.0,
                 0.0,
                 Color::TRANSPARENT,
-                14.0, // blur — soft ambient
+                14.0,
                 0.0,
                 full_clip,
                 0.0,
             );
 
-            // Tooltip surface card (rendered on overlay pass)
             self.painter.draw_overlay_rect(
                 tooltip_pos,
                 [width, height],

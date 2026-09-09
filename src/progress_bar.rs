@@ -145,9 +145,6 @@ impl Measurable for ProgressBar {
         });
         let dt = ui.dt();
 
-        // Same reasoning as `Card`/`Container`/`Divider`: without an
-        // explicit `.id(..)`, every anonymous progress bar in the frame
-        // would collide under the shared fallback id.
         if self.id.is_some() {
             ui.register_accessible(
                 self,
@@ -199,9 +196,6 @@ impl Measurable for ProgressBar {
                 0.0,
             );
 
-            // Leading-edge glow: a soft bright cap at the right end of the fill.
-            // Width is 2× the bar height, opacity scales with progress so it
-            // fades in gracefully from zero.
             let glow_w = (size[1] * 2.5).min(filled_width);
             let glow_x = position[0] + filled_width - glow_w;
             let glow_color = if let Fill::Solid(c) = &style.progress_fill {
@@ -216,7 +210,7 @@ impl Measurable for ProgressBar {
                 style.corner_radius,
                 0.0,
                 Color::TRANSPARENT,
-                glow_w * 0.6, // blur spreads outward
+                glow_w * 0.6,
                 false,
                 0.0,
             );

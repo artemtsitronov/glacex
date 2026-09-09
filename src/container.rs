@@ -69,9 +69,6 @@ impl<'a> Measurable for Container<'a> {
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
-        // Same reasoning as `Card`/`Divider`: an un-identified container has
-        // no unique identity, so every anonymous one in the frame would
-        // collide under the shared "container" fallback id.
         if self.id.is_some() {
             ui.register_accessible(
                 self,

@@ -51,7 +51,7 @@ pub struct ScrollGeometry {
     pub max_scroll: f32,
     pub thumb_size: f32,
     pub thumb_travel: f32,
-    pub thumb_position_along_track: f32, // 0.0 = start of track, grows with thumb_travel
+    pub thumb_position_along_track: f32,
 }
 
 pub fn compute_geometry(
@@ -91,9 +91,9 @@ pub fn compute_geometry(
 #[allow(clippy::too_many_arguments)]
 pub fn handle_drag(
     axis_state: &mut ScrollAxisState,
-    thumb_track_start: f32, // position[axis] + padding, in screen space
+    thumb_track_start: f32,
     mouse_pos_along_axis: f32,
-    thumb_start_in_screen: f32, // where the thumb currently starts, in screen space
+    thumb_start_in_screen: f32,
     mouse_pressed_this_frame: bool,
     mouse_pressed: bool,
     thumb_hovered: bool,

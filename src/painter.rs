@@ -23,9 +23,6 @@ use wgpu::{
 };
 use winit::window::Window;
 
-/// Walks the stop list, finds the two stops `t` falls between, and mixes
-/// them — the same interpolation the shader does per-fragment, just run
-/// once here while baking the ramp texture.
 fn sample_stops(stops: &[GradientStop], t: f32) -> Color {
     if stops.is_empty() {
         return Color::TRANSPARENT;
@@ -46,8 +43,6 @@ fn sample_stops(stops: &[GradientStop], t: f32) -> Color {
 fn hash_gradient(gradient: &Gradient) -> u64 {
     use std::hash::{Hash, Hasher};
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    // Hash each stop's position + color bytes — f32 doesn't implement Hash
-    // directly (NaN issues), so hash the bit pattern instead.
     for stop in &gradient.stops {
         stop.position.to_bits().hash(&mut hasher);
         stop.color.r.to_bits().hash(&mut hasher);
@@ -103,7 +98,7 @@ impl GradientAtlas {
     fn bake_ramp(&mut self, queue: &wgpu::Queue, stops: &[GradientStop]) -> GradientHandle {
         const ATLAS_ROWS: u32 = 64;
         let row = self.rows_used % ATLAS_ROWS;
-        let mut pixels = [0u8; 256 * 4]; // one row, RGBA bytes
+        let mut pixels = [0u8; 256 * 4];
 
         for x in 0..256 {
             let t = x as f32 / 255.0;
@@ -154,9 +149,6 @@ struct WindowSize {
     height: f32,
 }
 
-/// Owns every GPU and font-rendering detail. Knows nothing about buttons,
-/// labels, hit-testing, or layout — its entire job is "draw a rectangle" /
-/// "draw some text", queued per frame, uploaded and submitted once.
 pub struct Painter {
     surface: Surface<'static>,
     surface_config: SurfaceConfiguration,
@@ -501,7 +493,7 @@ impl Painter {
                 let handle = self.gradient_atlas.bake_cached(&self.queue, &gradient);
                 let row = match handle {
                     GradientHandle::Ramp { row } => row as f32,
-                    GradientHandle::Mesh { .. } => 0.0, // not handled yet
+                    GradientHandle::Mesh { .. } => 0.0,
                 };
                 let (kind, param0, center) = match &gradient.kind {
                     GradientKind::Linear { angle } => (1.0, *angle, [0.0, 0.0]),
@@ -695,7 +687,6 @@ impl Painter {
             });
         }
 
-        // Upload instances: base rects followed by overlay rects
         let mut instances: Vec<RectInstance> = self.pending_rects.iter().map(|(_, r)| *r).collect();
         instances.extend(self.pending_overlay_rects.iter().map(|(_, r)| *r));
         self.queue.write_buffer(
@@ -819,10 +810,6 @@ impl Painter {
             render_pass.set_bind_group(0, &self.bind_group, &[]);
             render_pass.set_bind_group(1, &self.gradient_bind_group, &[]);
 
-            // Group consecutive rects sharing the same clip rect into one
-            // draw call each, setting the scissor rect before every group.
-            // Submission order is preserved — only the *batching* changes,
-            // never the paint order.
             let surface_w = self.surface_config.width;
             let surface_h = self.surface_config.height;
 
@@ -836,9 +823,6 @@ impl Painter {
                     range_end += 1;
                 }
 
-                // Clip rect -> scissor rect, clamped into the surface bounds.
-                // wgpu panics on a scissor rect that extends past the render
-                // target or has zero/negative size, so both are guarded here.
                 let x = clip[0].max(0.0) as u32;
                 let y = clip[1].max(0.0) as u32;
                 let right = (clip[2].max(0.0) as u32).min(surface_w);
@@ -851,20 +835,12 @@ impl Painter {
                         range_start as u32..range_end as u32,
                     );
                 }
-                // else: this group's clip rect is fully offscreen/degenerate
-                // (e.g. scrolled entirely out of view) — correctly skipped,
-                // not drawn at all.
 
                 range_start = range_end;
             }
 
-            // Text clipping is handled per text area via glyphon's own
-            // `TextBounds`, not the pass's scissor rect — reset the scissor
-            // to the full surface first, or text would inherit whatever
-            // scissor the last base-rect group happened to leave behind.
             render_pass.set_scissor_rect(0, 0, surface_w, surface_h);
 
-            // Render base text
             self.text_renderer
                 .render(&self.text_atlas, &self.viewport, &mut render_pass)
                 .expect("failed to render text");
@@ -875,11 +851,6 @@ impl Painter {
             render_pass.set_bind_group(0, &self.bind_group, &[]);
             render_pass.set_bind_group(1, &self.gradient_bind_group, &[]);
 
-            // --- OVERLAY PASS (Tooltips, Popovers, Modals) ---
-            // Rendered strictly on top of all base geometry and base text.
-            // Overlay rects (card + shadow) draw first, then overlay text on
-            // top of them — the other way around and the rect fill paints
-            // straight over the text.
             if !self.pending_overlay_rects.is_empty() {
                 let overlay_offset = self.pending_rects.len();
                 let mut range_start = 0usize;

@@ -1,13 +1,3 @@
-//! GPU-rendered UI library built with `wgpu`, `winit`, and `taffy`.
-//!
-//! The crate exposes a custom widget system centered around three core pieces:
-//! - [`App`], which owns the native window and event loop
-//! - [`Ui`], which stores frame state, input state, and per-widget persistent state
-//! - [`Widget`], implemented by widgets that render themselves each frame
-//!
-//! Widgets are redrawn every frame, while interactive state is kept inside [`Ui`] and
-//! keyed by stable widget IDs.
-
 pub mod accessibility;
 pub mod alignment;
 pub mod animation;
@@ -82,11 +72,6 @@ use winit::window::{Window, WindowId};
 
 type UpdateFn<W> = Box<dyn FnMut(&mut W)>;
 
-/// Entry point for a client app. Call `App::new(root_widget).run()`.
-/// `root` is built once and lives for the whole app; it's re-drawn every
-/// frame. An optional `update` callback runs first each frame, with
-/// mutable access to `root`, so it can react to input (e.g. button clicks)
-/// before drawing happens.
 pub struct App<W: Widget> {
     window: Option<Arc<Window>>,
     ui: Option<Ui>,
@@ -112,23 +97,16 @@ impl<W: Widget> App<W> {
         }
     }
 
-    /// Customizes initial window attributes (e.g. title, inner size).
     pub fn window_attributes(mut self, attributes: winit::window::WindowAttributes) -> Self {
         self.window_attributes = Some(attributes);
         self
     }
 
-    /// Enables or disables accessibility support (`accesskit`: AT-SPI on
-    /// Linux, UIA on Windows, NSAccessibility on macOS). Disabled by
-    /// default — call `.accessibility_enabled(true)` to stand up the
-    /// adapter and expose the widget tree to screen readers and other
-    /// assistive tools.
     pub fn accessibility_enabled(mut self, enabled: bool) -> Self {
         self.accessibility_enabled = enabled;
         self
     }
 
-    /// Sets the initial window size in logical pixels.
     pub fn window_size(mut self, width: u32, height: u32) -> Self {
         let size = winit::dpi::LogicalSize::new(width, height);
         let attrs = self
@@ -139,7 +117,6 @@ impl<W: Widget> App<W> {
         self
     }
 
-    /// Sets the initial window title.
     pub fn title(mut self, title: impl Into<String>) -> Self {
         let attrs = self
             .window_attributes
@@ -149,9 +126,6 @@ impl<W: Widget> App<W> {
         self
     }
 
-    /// Registers a callback that runs once per frame, before drawing.
-    /// Use `Column::get_mut`/`Row::get_mut` inside it to pull concrete
-    /// widgets (e.g. a `Button`) back out of the tree and check state.
     pub fn update(mut self, f: impl FnMut(&mut W) + 'static) -> Self {
         self.update_fn = Some(Box::new(f));
         self

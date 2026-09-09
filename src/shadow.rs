@@ -1,6 +1,5 @@
 use crate::{Color, Fill, Ui};
 
-/// Soft drop shadow configuration for a single shadow layer.
 #[derive(Debug, Clone, Copy)]
 pub struct ShadowStyle {
     pub color: Color,
@@ -18,7 +17,6 @@ impl Default for ShadowStyle {
     }
 }
 
-/// Draws a single shadow layer quad behind a surface.
 pub fn draw_shadow(
     style: &ShadowStyle,
     position: [f32; 2],
@@ -43,7 +41,6 @@ pub fn draw_shadow(
     );
 }
 
-/// Draws a two-layer shadow (ambient + key) for richer, more natural depth.
 pub fn draw_shadow_layers(
     layers: &[ShadowStyle; 2],
     position: [f32; 2],

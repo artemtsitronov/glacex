@@ -184,9 +184,6 @@ impl<'a> Measurable for ScrollView<'a> {
             0.0,
             ui.mouse_position(),
         );
-        // Keep resetting the "last activity" clock while the pointer is on
-        // the track, so the linger countdown only starts once it actually
-        // leaves — not from whatever scroll/drag last happened.
         if track_hovered_y {
             state.y.mark_activity();
         }
@@ -291,9 +288,6 @@ impl<'a> Measurable for ScrollView<'a> {
         let active_y = track_hovered_y || state.y.dragging || state.y.recently_active(&self.config);
         let active_x = track_hovered_x || state.x.dragging || state.x.recently_active(&self.config);
 
-        // Thumb only shows up once the pointer actually touches the track
-        // (or while dragging), then lingers for `config.linger_seconds`
-        // after the pointer leaves before hiding again.
         let show_y = has_scroll_y && active_y;
         let show_x = has_scroll_x && active_x;
 

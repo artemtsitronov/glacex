@@ -12,11 +12,8 @@ use winit::window::CursorIcon;
 #[derive(Debug, Clone, Copy)]
 pub struct CheckboxState {
     pub checked: bool,
-    /// 0 = unchecked, 1 = fully checked (drives checkmark draw and box fill).
     pub anim_progress: f32,
-    /// 0 = resting, 1 = hovering.
     pub hover_t: f32,
-    /// 0 = baseline, 1 = fully popped (used for scale-pop spring on check).
     pub pop_t: f32,
     pub initialized: bool,
 }
@@ -137,21 +134,16 @@ impl Widget for Checkbox {
     }
 }
 
-/// Draws the animated checkmark as two strokes that "draw on" in sequence.
-/// `t` goes 0 → 1: left arm draws first (0..0.40), right arm follows (0.30..1.0).
-/// Using a cubic ease on each arm gives a natural pen-stroke deceleration.
 fn draw_checkmark(cx: f32, cy: f32, t: f32, color: Color, size: f32, ui: &mut Ui) {
-    let scale = size / 18.0; // normalize to the default 18px box
+    let scale = size / 18.0;
     let alpha = t.clamp(0.0, 1.0);
     let c = color.with_alpha(color.a * alpha);
     let stroke_w = 2.0 * scale;
 
-    // Anchor points (designed for a 18px box centered at cx, cy)
     let left = [cx - 4.0 * scale, cy + 0.5 * scale];
     let valley = [cx - 1.2 * scale, cy + 3.2 * scale];
     let right = [cx + 4.6 * scale, cy - 3.4 * scale];
 
-    // Left arm: t ∈ 0..0.42 — ease-out-cubic so it starts fast, decelerates
     let left_t_raw = (t / 0.42).clamp(0.0, 1.0);
     let left_t = ease_out_cubic(left_t_raw);
     if left_t > 0.01 {
@@ -159,7 +151,6 @@ fn draw_checkmark(cx: f32, cy: f32, t: f32, color: Color, size: f32, ui: &mut Ui
         draw_stroke(left, end, stroke_w, c, ui);
     }
 
-    // Right arm: t ∈ 0.32..1.0 — same curve
     if t > 0.32 {
         let right_t_raw = ((t - 0.32) / 0.68).clamp(0.0, 1.0);
         let right_t = ease_out_cubic(right_t_raw);
@@ -238,31 +229,23 @@ impl Measurable for Checkbox {
 
         if interaction.clicked {
             state.checked = !state.checked;
-            // Kick the pop spring: push pop_t to 1, it will decay back
             state.pop_t = 1.0;
         }
 
         let checked = state.checked;
 
-        // Check-draw animation: FLUID half-life feels like ink flowing onto paper
         let target_anim = if checked { 1.0 } else { 0.0 };
         state.anim_progress = animate_towards(state.anim_progress, target_anim, dt, Motion::FLUID);
 
-        // Hover
         let hover_target = if interaction.hovered { 1.0f32 } else { 0.0 };
         state.hover_t = animate_towards(state.hover_t, hover_target, dt, Motion::SNAPPY);
 
-        // Scale-pop: decays back to 0 (rest) after being kicked to 1 on click.
-        // Using a very fast half-life (INSTANT) so it snaps back quickly — the
-        // overshoot below is what creates the "pop" feel.
         state.pop_t = animate_towards(state.pop_t, 0.0, dt, Motion::SNAPPY);
 
         let anim_t = state.anim_progress;
         let hover_t = state.hover_t;
         let pop_t = state.pop_t;
 
-        // Scale the box: +8% at peak pop, then settle back to 1.0
-        // The scale is applied by inflating the draw rect from its center.
         let scale = 1.0 + pop_t * 0.08;
         let inflated_w = size[0] * scale;
         let inflated_h = size[1] * scale;
@@ -272,7 +255,6 @@ impl Measurable for Checkbox {
         ];
         let draw_size = [inflated_w, inflated_h];
 
-        // Fill: idle → hover → checked, all cross-faded
         let fill = if let (Fill::Solid(idle_col), Fill::Solid(hov_col), Fill::Solid(chk_col)) =
             (&style.fill, &style.hover_fill, &style.checked_fill)
         {
@@ -284,7 +266,6 @@ impl Measurable for Checkbox {
             style.fill
         };
 
-        // Border tightens toward active as it fills
         let border_color = if anim_t > 0.01 {
             style.border_color.lerp(theme.active, anim_t * 0.5)
         } else if hover_t > 0.01 {
@@ -293,7 +274,6 @@ impl Measurable for Checkbox {
             style.border_color
         };
 
-        // Subtle focus glow ring when checked (half-intensity, very soft)
         if anim_t > 0.05 {
             let glow_r = draw_size[0].max(draw_size[1]) / 2.0 + 4.0 * anim_t;
             let glow_pos = [

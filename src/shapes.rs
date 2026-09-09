@@ -1,8 +1,6 @@
 use crate::color::Color;
 use wgpu::{BufferAddress, VertexBufferLayout, VertexStepMode, vertex_attr_array};
 
-/// One corner of the unit quad every rectangle is stamped from. Never
-/// changes — instancing reuses this same six-vertex geometry for every shape.
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct QuadVertex {
@@ -60,8 +58,6 @@ impl RectInstance {
     pub const LAYOUT: VertexBufferLayout<'static> = VertexBufferLayout {
         array_stride: size_of::<Self>() as BufferAddress,
         step_mode: VertexStepMode::Instance,
-        // Locations 1..4 — continuing on from QuadVertex's location 0, since
-        // both buffers feed the same vertex shader at once.
         attributes: &vertex_attr_array![
             1 => Float32x2,
             2 => Float32x2,

@@ -2,7 +2,7 @@ use crate::Color;
 
 #[derive(Debug, Clone, Copy)]
 pub struct GradientStop {
-    pub position: f32, // 0.0 - 1.0
+    pub position: f32,
     pub color: Color,
 }
 
@@ -11,7 +11,7 @@ pub enum GradientKind {
     Linear { angle: f32 },
     Radial { center: [f32; 2], radius: f32 },
     Conic { center: [f32; 2] },
-    Mesh { corners: [Color; 4] }, //top-right, top-left, bottom-left, bottom-right
+    Mesh { corners: [Color; 4] },
 }
 
 #[derive(Debug, Clone, Copy)]

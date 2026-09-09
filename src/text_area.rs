@@ -314,9 +314,6 @@ impl Measurable for TextArea {
         let track_rect_position = [track_x, position[1]];
         let track_rect_size = [config.thickness + config.padding, size[1]];
         let track_hovered = contains(track_rect_position, track_rect_size, 0.0, mouse_pos);
-        // Keep resetting the "last activity" clock while the pointer is on
-        // the track, so the linger countdown only starts once it actually
-        // leaves — not from whatever scroll/drag last happened.
         if track_hovered {
             extra.scroll.mark_activity();
         }

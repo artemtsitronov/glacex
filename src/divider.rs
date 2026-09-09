@@ -105,11 +105,6 @@ impl Measurable for Divider {
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
-        // Purely decorative dividers (the common case: no explicit `.id(..)`)
-        // have no stable per-instance identity, so registering them would
-        // collide with every other un-identified divider in the same frame.
-        // Only expose one to accessibility tools once the caller opts in by
-        // giving it an id (e.g. an actual resizable pane splitter).
         if self.id.is_some() {
             ui.register_accessible(
                 self,

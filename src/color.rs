@@ -1,12 +1,3 @@
-//! A single, GPU-friendly color type used everywhere in this crate — widget
-//! styling, the theme palette, gradients, and the raw vertex data the GPU
-//! consumes all share this one representation instead of scattering
-//! ad-hoc `[f32; 4]` arrays around.
-//!
-//! `Color` is `#[repr(C)]` and implements `bytemuck::Pod`/`Zeroable`, so it
-//! can be embedded directly in GPU-bound structs (see [`crate::shapes::RectInstance`])
-//! with the exact same memory layout as a `[f32; 4]`.
-
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Color {
@@ -72,8 +63,6 @@ impl Color {
         a: 0.0,
     };
 
-    // --- constructors ---
-
     pub fn rgb(r: u8, g: u8, b: u8) -> Color {
         Color {
             r: r as f32 / 255.0,
@@ -121,15 +110,12 @@ impl Color {
         }
     }
 
-    /// Parses a `"#rrggbb"` or `"rrggbb"` string. Invalid input falls back
-    /// to opaque black rather than panicking.
     pub fn hex_str(s: &str) -> Color {
         let s = s.strip_prefix('#').unwrap_or(s);
         let value = u32::from_str_radix(s, 16).unwrap_or(0);
         Color::hex(value)
     }
 
-    /// `0xRRGGBB`, opaque.
     pub fn hex(hex: u32) -> Color {
         let r = ((hex >> 16) & 0xFF) as u8;
         let g = ((hex >> 8) & 0xFF) as u8;
@@ -137,7 +123,6 @@ impl Color {
         Color::rgb(r, g, b)
     }
 
-    /// `0xRRGGBBAA`.
     pub fn hex_alpha(hex: u32) -> Color {
         let r = ((hex >> 24) & 0xFF) as u8;
         let g = ((hex >> 16) & 0xFF) as u8;
@@ -146,17 +131,10 @@ impl Color {
         Color::rgba(r, g, b, a)
     }
 
-    // --- builders ---
-
-    /// Returns this color with a different alpha, leaving r/g/b untouched.
-    /// Handy for reusing a base color at different opacities, e.g.
-    /// `Color::WHITE.with_alpha(0.3)`.
     pub fn with_alpha(self, a: f32) -> Color {
         Color { a, ..self }
     }
 
-    /// Linearly interpolates between `self` (t=0) and `other` (t=1),
-    /// component-wise including alpha. `t` is not clamped.
     pub fn lerp(self, other: Color, t: f32) -> Color {
         Color {
             r: self.r + (other.r - self.r) * t,
@@ -166,9 +144,6 @@ impl Color {
         }
     }
 
-    // --- conversions ---
-
-    /// 0-255 bytes, alpha included (also scaled to 0-255).
     pub fn to_rgba_bytes(&self) -> [u8; 4] {
         [
             (self.r.clamp(0.0, 1.0) * 255.0).round() as u8,
@@ -178,7 +153,6 @@ impl Color {
         ]
     }
 
-    /// 0-255 bytes, no alpha.
     pub fn to_rgb_bytes(&self) -> [u8; 3] {
         let [r, g, b, _] = self.to_rgba_bytes();
         [r, g, b]
@@ -192,7 +166,6 @@ impl Color {
         [self.r, self.g, self.b, self.a]
     }
 
-    // --- helpers ---
     pub fn darken(&self, amount: f32) -> Color {
         Color {
             r: (self.r * (1.0 - amount)).max(0.0),
@@ -213,8 +186,6 @@ impl Color {
 }
 
 impl Default for Color {
-    /// Fully transparent black — the same as [`Color::TRANSPARENT`], and
-    /// the same value `bytemuck::Zeroable::zeroed()` produces.
     fn default() -> Self {
         Color::TRANSPARENT
     }

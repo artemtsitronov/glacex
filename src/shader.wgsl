@@ -48,21 +48,11 @@ struct VertexOutput {
     @location(12) rotation: f32,
 }
 
-// Must be >= AA_PADDING below, or the fade band extends past the padded
-// geometry and gets clipped again — same failure mode padding exists to fix.
 const AA_FADE_WIDTH: f32 = 1.5;
 
-// Expands rasterized quad geometry beyond the shape's true bounds so every
-// point on the boundary — including cardinal tangent points on a circle —
-// has real pixels beyond dist=0 for the AA fade to blend into.
 const AA_PADDING: f32 = 4.0;
 
 fn sd_rounded_box(p: vec2<f32>, half_size: vec2<f32>, radius: f32) -> f32 {
-    // Clamp to the box's own half-size so an intentionally huge radius (a
-    // "fully round / pill" sentinel like Theme::RADIUS_FULL) degrades into
-    // a stadium shape instead of blowing up the distance field — uncapped,
-    // `q` runs strongly positive even at the box's center, so the whole
-    // shape renders fully transparent.
     let r = min(radius, min(half_size.x, half_size.y));
     let q = abs(p) - half_size + vec2<f32>(r);
     return min(max(q.x, q.y), 0.0) + length(max(q, vec2<f32>(0.0))) - r;
@@ -90,8 +80,6 @@ let padding = max(AA_PADDING, max(instance.blur_radius * 2.0, max(instance.borde
     out.clip_position = vec4<f32>(ndc_x, ndc_y, 0.0, 1.0);
 
     out.color = instance.color;
-    // local_pos/half_size reference the TRUE, unpadded size — the shape's
-    // visible boundary doesn't move, only the raster margin around it grows.
     out.local_pos = padded_local - instance.size * 0.5;
     out.half_size = instance.size * 0.5;
     out.corner_radius = instance.corner_radius;
@@ -117,15 +105,15 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     }
 
     var t: f32 = 0.0;
-    if in.fill_kind == 1.0 { // linear
+    if in.fill_kind == 1.0 {
         let angle_rad = radians(in.gradient_angle);
         let direction = vec2<f32>(cos(angle_rad), sin(angle_rad));
         let projected = dot(in.local_pos, direction);
         t = (projected + in.half_size.x) / (in.half_size.x * 2.0);
-    } else if in.fill_kind == 2.0 { // radial
+    } else if in.fill_kind == 2.0 {
         let dist = length(in.local_pos - in.gradient_center);
-        t = dist / in.gradient_angle; // gradient_angle holds radius here
-    } else if in.fill_kind == 3.0 { // conic
+        t = dist / in.gradient_angle;
+    } else if in.fill_kind == 3.0 {
         let angle = atan2(in.local_pos.y - in.gradient_center.y, in.local_pos.x - in.gradient_center.x);
         t = (angle + 3.14159265) / (2.0 * 3.14159265);
     }
