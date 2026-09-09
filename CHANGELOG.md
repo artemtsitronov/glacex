@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.2.0]
+
+### Added
+- `Separator`, `Skeleton`, `Spinner`, `Kbd`, `Avatar`, and `Alert` display primitives.
+- `Empty`, `Toggle`, `Tabs`, and `Accordion` with persistent immediate-mode state.
+- Overlay `Dialog` and timed `Toast` primitives using the existing overlay renderer and input blocking.
+- `Typography`, `AspectRatio`, `Field`, and `ButtonGroup` foundations for form, layout, and navigation components.
+- `Ui::time()` for lightweight ambient motion.
+
+### Changed
+- Version bumped to `0.2.0`.
+- New primitives inherit the active semantic theme tokens and restrained Geist/zinc defaults.
+
 ## [0.1.6]
 
 ### Added

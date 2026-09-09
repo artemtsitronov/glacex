@@ -19,7 +19,7 @@ Built by **Artem Tsitronov** and **Soumalya Das**.
 
 </div>
 
-> **Status**: early and actively changing. Expect breaking API changes between 0.x releases.
+> **Status**: 0.2.0, early and actively changing. Expect breaking API changes before 1.0.
 
 ## Table of Contents
 

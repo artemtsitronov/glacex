@@ -1,5 +1,23 @@
 # Glacex Widget Reference
 
+Glacex 0.2.0 also includes lightweight display and interaction primitives for common product UI:
+`Separator`, `Skeleton`, `Spinner`, `Kbd`, `Avatar`, `Alert`, `Empty`, `Toggle`, `Tabs`, and `Accordion`. They implement
+`Widget` + `Measurable`, accept builder-style configuration, and compose with the
+existing `row!`, `column!`, and `Card` layout APIs.
+
+```rust
+let mut status = Alert::new("Build completed").variant(AlertVariant::Success);
+let mut shortcut = Kbd::new("⌘ K");
+let mut loading = Skeleton::new([180.0, 16.0]);
+let mut tabs = Tabs::new("settings-tabs", ["General", "Members", "Billing"]);
+let mut details = Accordion::new("details", "Deployment details", "Built from main in 42 seconds.");
+let mut dialog = Dialog::new("confirm", "Publish release?", "This will make the current build available to your team.");
+let mut toast = Toast::new("saved", "Changes saved");
+let mut heading = Typography::new("Project settings").variant(TypographyVariant::Heading);
+let mut field = Field::new("Repository name").description("Use a short, recognizable name.");
+let mut group = ButtonGroup::new("view", ["List", "Board", "Timeline"]);
+```
+
 API reference for all widgets provided by `glacex`.
 
 Most widgets take a stable string id as their first constructor argument. That id is what

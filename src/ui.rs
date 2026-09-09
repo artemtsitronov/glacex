@@ -333,6 +333,10 @@ impl Ui {
         self.dt
     }
 
+    pub fn time(&self) -> f32 {
+        self.start_time.elapsed().as_secs_f32()
+    }
+
     pub fn begin_frame(&mut self) {
         let now = Instant::now();
         let frame_elapsed = now.duration_since(self.last_frame_time).as_secs_f32();
