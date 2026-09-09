@@ -98,7 +98,7 @@ or in `Cargo.toml`:
 
 ```toml
 [dependencies]
-glacex = "0.1.6"
+glacex = "0.1.7"
 ```
 
 ### From GitHub (main branch)
