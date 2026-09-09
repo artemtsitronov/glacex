@@ -47,11 +47,6 @@ pub trait AnyWidget {
     fn measure(&mut self, ui: &mut Ui) -> [f32; 2];
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui);
     fn ui(&mut self, ui: &mut Ui);
-    /// Always None: `Any`/downcasting only exists for 'static types, and
-    /// the only `AnyWidget` impl we have is for `&mut T` (borrowed, not
-    /// necessarily 'static). `get_mut` is effectively unused with the
-    /// current borrowed-widget pattern — reach widgets via their named
-    /// fields directly instead.
     fn as_any_mut(&mut self) -> Option<&mut dyn Any>;
 }
 

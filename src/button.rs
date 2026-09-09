@@ -8,8 +8,6 @@ use crate::theme::Theme;
 use crate::ui::Ui;
 use crate::widget::{Accessible, Measurable, StatefulWidget, Widget, hash_id};
 use accesskit::{NodeId, Role};
-use std::default::Default;
-
 use winit::window::CursorIcon;
 
 pub type ButtonResponse = Interaction;

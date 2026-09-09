@@ -656,6 +656,62 @@ impl Ui {
         );
     }
 
+    /// Draws a rect on the overlay pass (renders on top of all normal-pass content).
+    /// Use this for dropdowns, popovers, and other floating surfaces.
+    #[allow(clippy::too_many_arguments)]
+    pub fn draw_overlay_rect(
+        &mut self,
+        position: [f32; 2],
+        size: [f32; 2],
+        fill: Fill,
+        corner_radius: f32,
+        border_width: f32,
+        border_color: Color,
+        blur_radius: f32,
+        sharp: bool,
+        clip: [f32; 4],
+        rotation: f32,
+    ) {
+        self.painter.draw_overlay_rect(
+            position,
+            size,
+            fill,
+            corner_radius,
+            border_width,
+            border_color,
+            blur_radius,
+            if sharp { 1.0 } else { 0.0 },
+            clip,
+            rotation,
+        );
+    }
+
+    /// Draws text on the overlay pass (renders on top of all normal-pass content).
+    /// Use this for dropdown text, popover labels, etc.
+    #[allow(clippy::too_many_arguments)]
+    pub fn draw_overlay_text_styled(
+        &mut self,
+        text: &str,
+        position: [f32; 2],
+        bounds: [f32; 4],
+        color: Color,
+        font_size: f32,
+        line_height: f32,
+        weight: crate::painter::FontWeight,
+        is_mono: bool,
+    ) {
+        self.painter.draw_overlay_text_styled(
+            text,
+            position,
+            bounds,
+            color,
+            font_size,
+            line_height,
+            weight,
+            is_mono,
+        );
+    }
+
     pub fn add<W: Widget>(&mut self, widget: &mut W) -> W::Output {
         widget.ui(self)
     }

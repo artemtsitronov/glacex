@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.1.6]
+
+### Added
+- `SelectBox` / Combobox widget (`src/select_box.rs`). Spring-animated dropdown (stiffness 380, damping 30) that slides open/closed with an ease-out-cubic curve on the clip rect. Features: trigger button with animated hover/focus states and a chevron icon that rotates 180° on open; keyboard navigation (↑/↓ arrow keys, Enter to select, Escape to close); optional type-to-filter search bar (`.searchable()`); scroll inside long option lists via mouse wheel or auto-scroll to keep the keyboard selection visible; outside-click-to-close; full theme integration via `SelectBoxStyle::from_theme()`; accessibility role `ComboBox`.
+- `SelectBoxStyle` with full customization of trigger, dropdown card, item rows, and search bar.
+- `SelectOption` — lightweight `{ value: String, label: String }` item type.
+- `SelectBoxState` — persistent widget state tracking `selected: Option<String>`, open/close spring, per-item hover animations, keyboard index, and search text.
+- `Ui::draw_overlay_rect` and `Ui::draw_overlay_text_styled` — public wrappers around the existing painter overlay pass so widgets like `SelectBox` can draw their own floating surfaces without a tooltip.
+
 ## [0.1.5]
 
 ### Added

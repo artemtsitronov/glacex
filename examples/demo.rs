@@ -14,7 +14,7 @@ impl DemoApp {
 
 #[derive(Default)]
 struct TripleToggleOrder {
-    order: Vec<&'static str>, // ids in the order they were turned on, oldest first
+    order: Vec<&'static str>,
 }
 
 impl Widget for DemoApp {
@@ -103,6 +103,17 @@ impl Widget for DemoApp {
         let progress = ui.widget_state::<SliderState>("slider");
         let mut progress_bar = ProgressBar::new(progress.value);
 
+        // SelectBox widget
+        let theme_options: Vec<SelectOption> = themes
+            .iter()
+            .enumerate()
+            .map(|(i, t)| SelectOption::new(i.to_string(), t.name))
+            .collect();
+        let mut theme_select = SelectBox::new("theme_select", theme_options)
+            .placeholder("Select theme...")
+            .width(200.0)
+            .show_clear(true);
+
         {
             row![
                 &mut ScrollView::new(
@@ -186,6 +197,7 @@ impl Widget for DemoApp {
                                         ]
                                         .align(Alignment::Center)
                                         .spacing(100.0),
+                                        &mut theme_select,
                                         &mut TextInput::new("text_input")
                                             .placeholder("Here goes text."),
                                         &mut TextArea::new("text_area"),
@@ -239,6 +251,19 @@ impl Widget for DemoApp {
 
         if theme_btn.clicked() {
             self.current_theme_idx = (self.current_theme_idx + 1) % themes.len();
+        }
+
+        // SelectBox theme picker
+        if let Some(idx_str) = ui
+            .widget_state::<SelectBoxState>("theme_select")
+            .selected
+            .clone()
+        {
+            if let Ok(idx) = idx_str.parse::<usize>() {
+                if idx < themes.len() {
+                    self.current_theme_idx = idx;
+                }
+            }
         }
     }
 }

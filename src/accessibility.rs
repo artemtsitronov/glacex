@@ -43,10 +43,7 @@ pub struct AccessibilityActionHandler;
 
 impl ActionHandler for AccessibilityActionHandler {
     fn do_action(&mut self, request: ActionRequest) {
-        // A screen reader is asking the app to do something.
-        // Wiring this to actually trigger the right
-        // widget's click is app-specific — left as a log for now.
-        println!("accessibility action requested: {request:?}");
+        log::warn!("accessibility action requested: {request:?}");
     }
 }
 

@@ -1,4 +1,3 @@
-// scrolling.rs
 use std::time::Instant;
 
 #[derive(Debug, Clone, Copy)]

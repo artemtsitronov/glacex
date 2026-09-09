@@ -52,7 +52,7 @@ impl Fill {
             Fill::Gradient(gradient) => {
                 let mut g = gradient.clone();
                 for stop in &mut g.stops {
-                    stop.color = stop.color.darken(amount);
+                    stop.color = stop.color.lighten(amount);
                 }
                 Fill::Gradient(g)
             }

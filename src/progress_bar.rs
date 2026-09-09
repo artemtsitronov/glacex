@@ -198,6 +198,28 @@ impl Measurable for ProgressBar {
                 false,
                 0.0,
             );
+
+            // Leading-edge glow: a soft bright cap at the right end of the fill.
+            // Width is 2× the bar height, opacity scales with progress so it
+            // fades in gracefully from zero.
+            let glow_w = (size[1] * 2.5).min(filled_width);
+            let glow_x = position[0] + filled_width - glow_w;
+            let glow_color = if let Fill::Solid(c) = &style.progress_fill {
+                c.with_alpha(0.55 * current_progress)
+            } else {
+                Color::WHITE.with_alpha(0.30 * current_progress)
+            };
+            ui.draw_rect(
+                [glow_x, position[1]],
+                [glow_w, size[1]],
+                Fill::Solid(glow_color),
+                style.corner_radius,
+                0.0,
+                Color::TRANSPARENT,
+                glow_w * 0.6, // blur spreads outward
+                false,
+                0.0,
+            );
         }
     }
 }

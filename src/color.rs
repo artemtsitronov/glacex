@@ -192,7 +192,7 @@ impl Color {
         [self.r, self.g, self.b, self.a]
     }
 
-    // --helpers//
+    // --- helpers ---
     pub fn darken(&self, amount: f32) -> Color {
         Color {
             r: (self.r * (1.0 - amount)).max(0.0),

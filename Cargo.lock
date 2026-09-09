@@ -1166,7 +1166,7 @@ dependencies = [
 
 [[package]]
 name = "glacex"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "accesskit",
  "accesskit_winit",
@@ -1174,6 +1174,7 @@ dependencies = [
  "bytemuck",
  "env_logger",
  "glyphon",
+ "log",
  "pollster",
  "taffy",
  "wgpu",

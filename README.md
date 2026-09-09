@@ -72,7 +72,7 @@ There's no retained widget tree and no markup — you describe the UI in plain R
 - `Color` is `#[repr(C)]` + `Pod`/`Zeroable`, so it maps straight onto GPU vertex buffers. Hex, RGB, HSV, alpha blending, `lerp`, lighten/darken.
 - Cursor changes (pointer, text, resize, default) driven by hover state.
 - A floating tooltip layer that clamps to the viewport.
-- Widgets: `Button`, `Checkbox`, `RadioButton`, `Switch`, `Slider`, `ProgressBar`, `TextInput`, `TextArea`, `ScrollView`, `Card`, `Container`, `Badge`, `Divider`, `Label`.
+- Widgets: `Button`, `Checkbox`, `RadioButton`, `Switch`, `Slider`, `ProgressBar`, `TextInput`, `TextArea`, `ScrollView`, `Card`, `Container`, `Badge`, `Divider`, `Label`, `SelectBox`.
 - `row![]` / `column![]` macros backed by `taffy`, with alignment and spacing.
 - Interaction: hover/press/click, secondary/middle mouse buttons, Tab/Shift+Tab focus order, double/triple-click word/line selection, clipboard via `arboard`, blinking cursor.
 - Widget state persists across frames keyed by a stable string id (`Ui::widget_state`, `take_widget_state`, `put_widget_state`) even though the widget itself is rebuilt every frame.
@@ -98,7 +98,7 @@ or in `Cargo.toml`:
 
 ```toml
 [dependencies]
-glacex = "0.1.4"
+glacex = "0.1.6"
 ```
 
 ### From GitHub (main branch)
@@ -290,6 +290,43 @@ let text = ui.widget_state::<TextEditState>("username").text().to_string();
 let mut notes = TextArea::new("notes").size([300.0, 120.0]);
 ```
 
+#### SelectBox
+```rust
+use glacex::{SelectBox, SelectOption};
+
+let options = vec![
+    SelectOption::new("light", "Light"),
+    SelectOption::new("dark", "Dark"),
+    SelectOption::new("mocha", "Catppuccin Mocha"),
+    SelectOption::new("tokyo", "Tokyo Night"),
+];
+
+let mut sel = SelectBox::new("theme_picker", options)
+    .placeholder("Choose a theme…")
+    .width(220.0)
+    .show_clear(true)
+    .tooltip("Switch the active colour theme");
+
+sel.arrange_at([40.0, 40.0], ui);
+
+let selected = ui
+    .widget_state::<SelectBoxState>("theme_picker")
+    .selected
+    .clone();
+```
+
+Enable live filtering with `.searchable()`:
+
+```rust
+let mut sel = SelectBox::new("country", countries)
+    .placeholder("Select a country…")
+    .width(260.0)
+    .searchable()
+    .show_clear(true);
+```
+
+The dropdown opens with a spring animation, closes on Escape or outside-click, supports `↑`/`↓` keyboard navigation and `Enter` to confirm. Use `.show_clear(true)` to add an X button that clears the selection.
+
 ### Containers
 
 #### Card
@@ -346,6 +383,7 @@ let save_btn = Button::new("save_btn", "Save").style(ButtonStyle {
 | `TextAreaStyle` | `TextArea` | `fill`, `border_color`, `focus_border_color`, `thumb_fill`, `thumb_dragging_fill` |
 | `ScrollViewStyle` | `ScrollView` | `thumb_fill`, `thumb_dragging_fill`, `thumb_corner_radius` |
 | `CardStyle` | `Card` | `fill`, `border_width`, `border_color`, `corner_radius`, `padding`, `shadow` |
+| `SelectBoxStyle` | `SelectBox` | `fill`, `hover_fill`, `focus_fill`, `border_color`, `focus_border_color`, `corner_radius`, `height`, `dropdown_fill`, `dropdown_shadow`, `item_height`, `item_hover_fill`, `item_active_fill`, `searchable` |
 
 ### ShadowStyle
 
@@ -515,6 +553,7 @@ glacex/
 │   ├── text_area.rs      # Multi-line text editor
 │   ├── scroll_view.rs    # ScrollView container
 │   ├── card.rs           # Card container
+│   ├── select_box.rs     # SelectBox / Combobox widget
 │   ├── theme.rs          # Theme palettes and design tokens
 │   ├── painter.rs        # wgpu + glyphon rendering backend
 │   └── shader.wgsl       # Instanced SDF quad shader

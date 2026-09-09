@@ -3,6 +3,80 @@ use crate::ui::Ui;
 use crate::widget::{AnyWidget, Measurable, Widget};
 use taffy::prelude::*;
 
+#[allow(clippy::too_many_arguments)]
+fn arrange_children(
+    children: &mut [Box<dyn AnyWidget + '_>],
+    cached_sizes: &[[f32; 2]],
+    position: [f32; 2],
+    size: [f32; 2],
+    padding: [f32; 2],
+    spacing: f32,
+    align: Alignment,
+    direction: FlexDirection,
+    ui: &mut Ui,
+) {
+    let inner_position = [position[0] + padding[0], position[1] + padding[1]];
+    let inner_size = [
+        (size[0] - padding[0] * 2.0).max(0.0),
+        (size[1] - padding[1] * 2.0).max(0.0),
+    ];
+
+    let mut tree: TaffyTree<()> = TaffyTree::new();
+
+    let child_node_ids: Vec<NodeId> = cached_sizes
+        .iter()
+        .map(|s| {
+            tree.new_leaf(Style {
+                size: Size {
+                    width: length(s[0]),
+                    height: length(s[1]),
+                },
+                ..Default::default()
+            })
+            .unwrap()
+        })
+        .collect();
+
+    let gap = match direction {
+        FlexDirection::Column => Size {
+            width: length(0.0),
+            height: length(spacing),
+        },
+        _ => Size {
+            width: length(spacing),
+            height: length(0.0),
+        },
+    };
+
+    let container = tree
+        .new_with_children(
+            Style {
+                size: Size {
+                    width: length(inner_size[0]),
+                    height: length(inner_size[1]),
+                },
+                flex_direction: direction,
+                align_items: Some(to_taffy_align(align)),
+                gap,
+                ..Default::default()
+            },
+            &child_node_ids,
+        )
+        .unwrap();
+
+    tree.compute_layout(container, Size::MAX_CONTENT).unwrap();
+
+    for (child, node_id) in children.iter_mut().zip(child_node_ids.iter()) {
+        let layout = tree.layout(*node_id).unwrap();
+        let child_position = [
+            inner_position[0] + layout.location.x,
+            inner_position[1] + layout.location.y,
+        ];
+        let child_size = [layout.size.width, layout.size.height];
+        child.arrange(child_position, child_size, ui);
+    }
+}
+
 #[macro_export]
 macro_rules! column {
     ($($widget:expr),* $(,)?) => {
@@ -89,10 +163,7 @@ impl<'a> Column<'a> {
             .downcast_mut::<T>()
     }
 
-    /// Measure then arrange in one call, at the given origin. The only
-    /// entry point that should ever be called from outside — measure()
-    /// and arrange() individually assume they're called in that order,
-    /// within the same frame, which this guarantees.
+    /// Measure then arrange in one call, at the given origin.
     pub fn arrange_at(&mut self, position: [f32; 2], ui: &mut Ui) {
         let size = Measurable::measure(self, ui);
         Measurable::arrange(self, position, size, ui);
@@ -129,66 +200,17 @@ impl<'a> Measurable for Column<'a> {
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
-        // `size` is whatever measure() returned this frame (an explicit
-        // `.width()`/`.height()` override, or the hugged content size) —
-        // inset by padding, it becomes the taffy root's own size, so
-        // `.align()` has a real cross-axis box to align children within
-        // once the column is bigger than its content. No child.measure()
-        // calls happen here at all; layout uses the sizes measure()
-        // already cached this frame.
-        let inner_position = [position[0] + self.padding[0], position[1] + self.padding[1]];
-        let inner_size = [
-            (size[0] - self.padding[0] * 2.0).max(0.0),
-            (size[1] - self.padding[1] * 2.0).max(0.0),
-        ];
-
-        let mut tree: TaffyTree<()> = TaffyTree::new();
-
-        let child_node_ids: Vec<NodeId> = self
-            .cached_child_sizes
-            .iter()
-            .map(|size| {
-                tree.new_leaf(Style {
-                    size: Size {
-                        width: length(size[0]),
-                        height: length(size[1]),
-                    },
-                    ..Default::default()
-                })
-                .unwrap()
-            })
-            .collect();
-
-        let column_node = tree
-            .new_with_children(
-                Style {
-                    size: Size {
-                        width: length(inner_size[0]),
-                        height: length(inner_size[1]),
-                    },
-                    flex_direction: FlexDirection::Column,
-                    align_items: Some(to_taffy_align(self.align)),
-                    gap: Size {
-                        width: length(0.0),
-                        height: length(self.spacing),
-                    },
-                    ..Default::default()
-                },
-                &child_node_ids,
-            )
-            .unwrap();
-
-        tree.compute_layout(column_node, Size::MAX_CONTENT).unwrap();
-
-        for (child, node_id) in self.children.iter_mut().zip(child_node_ids.iter()) {
-            let layout = tree.layout(*node_id).unwrap();
-            let child_position = [
-                inner_position[0] + layout.location.x,
-                inner_position[1] + layout.location.y,
-            ];
-            let child_size = [layout.size.width, layout.size.height];
-            child.arrange(child_position, child_size, ui);
-        }
+        arrange_children(
+            &mut self.children,
+            &self.cached_child_sizes,
+            position,
+            size,
+            self.padding,
+            self.spacing,
+            self.align,
+            FlexDirection::Column,
+            ui,
+        );
     }
 }
 
@@ -295,61 +317,16 @@ impl<'a> Measurable for Row<'a> {
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
-        // See Column::arrange — same reasoning: `size` is this frame's
-        // measure() result (override or hugged content), inset by padding
-        // to give the taffy root a real box for `.align()` to work within.
-        let inner_position = [position[0] + self.padding[0], position[1] + self.padding[1]];
-        let inner_size = [
-            (size[0] - self.padding[0] * 2.0).max(0.0),
-            (size[1] - self.padding[1] * 2.0).max(0.0),
-        ];
-
-        let mut tree: TaffyTree<()> = TaffyTree::new();
-
-        let child_node_ids: Vec<NodeId> = self
-            .cached_child_sizes
-            .iter()
-            .map(|size| {
-                tree.new_leaf(Style {
-                    size: Size {
-                        width: length(size[0]),
-                        height: length(size[1]),
-                    },
-                    ..Default::default()
-                })
-                .unwrap()
-            })
-            .collect();
-
-        let row_node = tree
-            .new_with_children(
-                Style {
-                    size: Size {
-                        width: length(inner_size[0]),
-                        height: length(inner_size[1]),
-                    },
-                    flex_direction: FlexDirection::Row,
-                    align_items: Some(to_taffy_align(self.align)),
-                    gap: Size {
-                        width: length(self.spacing),
-                        height: length(0.0),
-                    },
-                    ..Default::default()
-                },
-                &child_node_ids,
-            )
-            .unwrap();
-
-        tree.compute_layout(row_node, Size::MAX_CONTENT).unwrap();
-
-        for (child, node_id) in self.children.iter_mut().zip(child_node_ids.iter()) {
-            let layout = tree.layout(*node_id).unwrap();
-            let child_position = [
-                inner_position[0] + layout.location.x,
-                inner_position[1] + layout.location.y,
-            ];
-            let child_size = [layout.size.width, layout.size.height];
-            child.arrange(child_position, child_size, ui);
-        }
+        arrange_children(
+            &mut self.children,
+            &self.cached_child_sizes,
+            position,
+            size,
+            self.padding,
+            self.spacing,
+            self.align,
+            FlexDirection::Row,
+            ui,
+        );
     }
 }
