@@ -316,7 +316,10 @@ impl<'a> Measurable for ScrollView<'a> {
         ];
         ui.push_clip(clip_rect);
 
-        let child_position = [position[0] - state.x.offset, position[1] - state.y.offset];
+        let child_position = [
+            position[0] + ((size[0] - content_size[0]).max(0.0) * 0.5) - state.x.offset,
+            position[1] + ((size[1] - content_size[1]).max(0.0) * 0.5) - state.y.offset,
+        ];
         self.child.arrange(child_position, content_size, ui);
 
         ui.pop_clip();

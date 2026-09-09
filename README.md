@@ -72,13 +72,21 @@ There's no retained widget tree and no markup — you describe the UI in plain R
 - `Color` is `#[repr(C)]` + `Pod`/`Zeroable`, so it maps straight onto GPU vertex buffers. Hex, RGB, HSV, alpha blending, `lerp`, lighten/darken.
 - Cursor changes (pointer, text, resize, default) driven by hover state.
 - A floating tooltip layer that clamps to the viewport.
-- Widgets: `Button`, `Checkbox`, `RadioButton`, `Switch`, `Slider`, `ProgressBar`, `TextInput`, `TextArea`, `ScrollView`, `Card`, `Container`, `Badge`, `Divider`, `Label`, `SelectBox`.
-- `row![]` / `column![]` macros backed by `taffy`, with alignment and spacing.
+- Widgets: a composable 0.2 surface spanning controls, inputs, overlays, navigation, data display, feedback, layout, and typography. See the complete [widget reference](docs/widgets.md).
+- 0.2 component galleries: `components`, `foundations`, `data`, and `overlays`.
+- `row![]` / `column![]` macros backed by `taffy`, with alignment, spacing, natural measurement, and centered direct use by default.
 - Interaction: hover/press/click, secondary/middle mouse buttons, Tab/Shift+Tab focus order, double/triple-click word/line selection, clipboard via `arboard`, blinking cursor.
 - Widget state persists across frames keyed by a stable string id (`Ui::widget_state`, `take_widget_state`, `put_widget_state`) even though the widget itself is rebuilt every frame.
 - Animation via exponential decay (`animate_towards`) plus a small set of easing curves and spring presets, unified under named half-life constants (`Motion::INSTANT`/`SNAPPY`/`FLUID`/`GENTLE`) so transitions feel consistent across widgets.
 - Draggable auto-hiding scrollbars shared by `ScrollView` and `TextArea`.
 - Optional accessibility tree (AT-SPI on Linux via `accesskit`) — see [Accessibility](#accessibility).
+- Premium defaults: bundled Geist fonts, semantic light/dark tokens, restrained radii, luminance-aware active foregrounds, reliable sRGB rendering, and short motion transitions.
+- Bundled `GeistMono Nerd Font Mono` weights for monospace text, keyboard labels, and private-use-area icon glyphs.
+- Full Nerd Fonts glyph-name catalog is bundled and exposed through `NerdIcon::named(...)`, `NerdIcon::all()`, and `Ui::draw_nerd_icon(...)`.
+
+The grouped galleries keep the showcase practical: `foundations` covers controls and
+form primitives, `data` covers charts and application data surfaces, and `overlays`
+covers command, menu, dialog, sheet, popover, and tooltip entry points.
 
 ## Requirements
 
@@ -98,7 +106,7 @@ or in `Cargo.toml`:
 
 ```toml
 [dependencies]
-glacex = "0.1.6"
+glacex = "0.2.0"
 ```
 
 ### From GitHub (main branch)
@@ -348,7 +356,7 @@ ScrollView::new("log_view", &mut child_column)
 
 ### Displays
 
-- `Label::new(id, text)` — text, with `.secondary()`, `.muted()`, `.accent()`, size presets (`.caption()`, `.heading()`, `.metric()`, ...), and `.mono()`.
+- `Label::new(id, text)` — text, with `.secondary()`, `.muted()`, `.accent()`, size presets (`.caption()`, `.heading()`, `.metric()`, ...), and `.mono()` using the bundled Nerd Font family.
 - `Badge::new(text)` — status pill, `.secondary()` / `.outline()` / `.success()` / `.warning()` / `.error()`.
 - `ProgressBar::new(ratio)` — completion bar; give it a stable `.id(...)` if you want the fill to animate instead of snapping.
 
@@ -526,6 +534,24 @@ cargo run --example example1
 
 # Style playground
 cargo run --example example2
+
+# 0.2 component showcase
+cargo run --example components
+
+# Theme and contrast showcase
+cargo run --example themes
+
+# Focused dark-mode contrast regression showcase
+cargo run --example contrast
+
+# Core controls and form foundations
+cargo run --example foundations
+
+# Tables, charts, pagination, and calendar surfaces
+cargo run --example data
+
+# Command, menu, dialog, sheet, and popover entry points
+cargo run --example overlays
 ```
 
 ## Project Layout

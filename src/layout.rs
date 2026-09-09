@@ -3,6 +3,14 @@ use crate::ui::Ui;
 use crate::widget::{AnyWidget, Measurable, Widget};
 use taffy::prelude::*;
 
+fn centered_position(size: [f32; 2], ui: &Ui) -> [f32; 2] {
+    let window = ui.window_size();
+    [
+        ((window[0] - size[0]) * 0.5).max(0.0),
+        ((window[1] - size[1]) * 0.5).max(0.0),
+    ]
+}
+
 #[allow(clippy::too_many_arguments)]
 fn arrange_children(
     children: &mut [Box<dyn AnyWidget + '_>],
@@ -163,7 +171,8 @@ impl<'a> Widget for Column<'a> {
     type Output = ();
 
     fn ui(&mut self, ui: &mut Ui) {
-        self.arrange_at([0.0, 0.0], ui);
+        let size = self.measure(ui);
+        self.arrange(centered_position(size, ui), size, ui);
     }
 }
 
@@ -275,7 +284,8 @@ impl<'a> Widget for Row<'a> {
     type Output = ();
 
     fn ui(&mut self, ui: &mut Ui) {
-        self.arrange_at([0.0, 0.0], ui);
+        let size = self.measure(ui);
+        self.arrange(centered_position(size, ui), size, ui);
     }
 }
 

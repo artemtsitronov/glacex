@@ -28,7 +28,18 @@ let mut root = column![
 root.arrange_at([20.0, 20.0], ui);
 ```
 
-## 2. Layout Modifiers
+## 2. Default sizing and centering
+
+Rows and columns naturally hug their measured content. When a `Row`, `Column`, or
+`Container` is used directly as a widget with `.ui(ui)`, it measures itself and
+centers itself in the window. This makes small standalone compositions usable
+without manual coordinates.
+
+Use `arrange_at([x, y], ui)` when the parent owns positioning, such as a custom
+dashboard, overlay, scroll region, or anchored panel. Explicit arrangement always
+takes precedence over the centered direct-use default.
+
+## 3. Layout Modifiers
 
 ### `.spacing(px: f32)`
 Sets the pixel gap between adjacent children along the primary axis. Default is `8.0`.
@@ -39,9 +50,14 @@ Sets child alignment along the cross-axis:
 - `Alignment::Center`: Center along the cross-axis.
 - `Alignment::End`: Align to bottom (rows) or right (columns).
 
-By default a `row!`/`column!` hugs its content, so there's no extra cross-axis
-space for `.align()` to do anything with — it only becomes visible once the
-container is bigger than its content, e.g. via `.size()` below.
+By default a `row!`/`column!` hugs its content, so there is no extra cross-axis
+space for `.align()` to use until the container receives an explicit larger size.
+The default alignment is `Alignment::Center`.
+
+For application headers, keep branding, window metadata, and primary actions in
+one centered row with a small consistent gap. Use a separate centered row for
+navigation tabs and context actions so the heading bar does not compete with the
+content grid.
 
 ### `.size([w, h]: [f32; 2])` / `.width(px: f32)` / `.height(px: f32)`
 Overrides the row/column's own width and/or height instead of hugging its
@@ -58,7 +74,7 @@ themselves aren't squeezed).
 ### `.arrange_at(pos: [f32; 2], ui: &mut Ui)`
 Measures and positions the layout tree at the given screen coordinates `[x, y]`.
 
-## 3. The `Measurable` Trait
+## 4. The `Measurable` Trait
 
 Widgets placed inside `row![]` or `column![]` implement `Measurable`:
 

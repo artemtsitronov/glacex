@@ -2,9 +2,10 @@ use crate::color::Color;
 use crate::fill::{Fill, Gradient, GradientHandle, GradientKind, GradientStop};
 use crate::shapes::{QUAD_VERTICES, QuadVertex, RectInstance};
 use crate::theme::Theme;
+use glyphon::cosmic_text::UnderlineStyle;
 use glyphon::{
-    Attrs, Cache, Family, FontSystem, Metrics, Resolution, Shaping, SwashCache, TextArea,
-    TextAtlas, TextBounds, TextRenderer, Viewport, Weight,
+    Attrs, Cache, Family, FontSystem, Metrics, Resolution, Shaping, Style as FontStyle, SwashCache,
+    TextArea, TextAtlas, TextBounds, TextRenderer, Viewport, Weight,
 };
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -199,9 +200,13 @@ impl Painter {
             .unwrap();
 
         let size = window.inner_size();
-        let surface_config = surface
+        let mut surface_config = surface
             .get_default_config(&adapter, size.width, size.height)
             .unwrap();
+        // Theme colors are authored in display-space sRGB values. Rendering
+        // them into an sRGB target would apply the transfer curve twice and
+        // make dark surfaces appear washed out.
+        surface_config.format = surface_config.format.remove_srgb_suffix();
         surface.configure(&device, &surface_config);
 
         let window_size_buffer = device.create_buffer_init(&BufferInitDescriptor {
@@ -343,6 +348,18 @@ impl Painter {
         font_system
             .db_mut()
             .load_font_data(include_bytes!("../assets/fonts/GeistMono-Regular.ttf").to_vec());
+        font_system
+            .db_mut()
+            .load_font_data(include_bytes!("../assets/fonts/GeistMonoNerd-Regular.otf").to_vec());
+        font_system
+            .db_mut()
+            .load_font_data(include_bytes!("../assets/fonts/GeistMonoNerd-Medium.otf").to_vec());
+        font_system
+            .db_mut()
+            .load_font_data(include_bytes!("../assets/fonts/GeistMonoNerd-SemiBold.otf").to_vec());
+        font_system
+            .db_mut()
+            .load_font_data(include_bytes!("../assets/fonts/GeistMonoNerd-Bold.otf").to_vec());
         let swash_cache = SwashCache::new();
         let cache = Cache::new(&device);
         let viewport = Viewport::new(&device, &cache);
@@ -409,6 +426,38 @@ pub enum FontWeight {
     Bold,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct TextStyle {
+    pub weight: FontWeight,
+    pub mono: bool,
+    pub italic: bool,
+    pub underline: bool,
+    pub strikethrough: bool,
+}
+
+impl TextStyle {
+    pub fn mono(mut self, enabled: bool) -> Self {
+        self.mono = enabled;
+        self
+    }
+    pub fn italic(mut self) -> Self {
+        self.italic = true;
+        self
+    }
+    pub fn underline(mut self) -> Self {
+        self.underline = true;
+        self
+    }
+    pub fn strikethrough(mut self) -> Self {
+        self.strikethrough = true;
+        self
+    }
+    pub fn weight(mut self, weight: FontWeight) -> Self {
+        self.weight = weight;
+        self
+    }
+}
+
 impl FontWeight {
     pub fn to_glyphon(self) -> Weight {
         match self {
@@ -450,7 +499,7 @@ impl Painter {
         let mut buffer = glyphon::Buffer::new(&mut self.font_system, metrics);
         buffer.set_size(Some(10000.0), Some(10000.0));
         let family = if is_mono {
-            Family::Name("Geist Mono")
+            Family::Name("GeistMono Nerd Font Mono")
         } else {
             Family::Name("Geist")
         };
@@ -560,18 +609,55 @@ impl Painter {
         weight: FontWeight,
         is_mono: bool,
     ) {
+        self.draw_text_with_style(
+            text,
+            position,
+            bounds,
+            color,
+            font_size,
+            line_height,
+            TextStyle {
+                weight,
+                mono: is_mono,
+                ..Default::default()
+            },
+        );
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn draw_text_with_style(
+        &mut self,
+        text: &str,
+        position: [f32; 2],
+        bounds: [f32; 4],
+        color: Color,
+        font_size: f32,
+        line_height: f32,
+        style: TextStyle,
+    ) {
         let metrics = Metrics {
             font_size,
             line_height,
         };
         let mut buffer = glyphon::Buffer::new(&mut self.font_system, metrics);
         buffer.set_size(Some(10000.0), Some(10000.0));
-        let family = if is_mono {
-            Family::Name("Geist Mono")
+        let family = if style.mono {
+            Family::Name("GeistMono Nerd Font Mono")
         } else {
             Family::Name("Geist")
         };
-        let attrs = Attrs::new().family(family).weight(weight.to_glyphon());
+        let mut attrs = Attrs::new()
+            .family(family)
+            .weight(style.weight.to_glyphon());
+        if style.italic {
+            attrs = attrs.style(FontStyle::Italic);
+        }
+        if style.underline {
+            attrs = attrs.underline(UnderlineStyle::Single);
+        }
+        if style.strikethrough {
+            attrs = attrs.strikethrough();
+        }
         buffer.set_text(text, &attrs, Shaping::Basic, None);
         buffer.shape_until_scroll(&mut self.font_system, false);
 
@@ -649,7 +735,7 @@ impl Painter {
         let mut buffer = glyphon::Buffer::new(&mut self.font_system, metrics);
         buffer.set_size(Some(10000.0), Some(10000.0));
         let family = if is_mono {
-            Family::Name("Geist Mono")
+            Family::Name("GeistMono Nerd Font Mono")
         } else {
             Family::Name("Geist")
         };

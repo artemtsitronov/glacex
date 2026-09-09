@@ -13,11 +13,41 @@ All notable changes to this project are documented in this file.
 - `Carousel` and compact bar `Chart` primitives for demo and dashboard surfaces.
 - Keyboard-operable `CommandPalette` with query filtering, arrow navigation, Enter selection, and Escape dismissal.
 - `Calendar`, `DatePicker`, `InputOtp`, and `ToggleGroup` stateful controls with click and keyboard input.
+- Shared `Menu` primitive, plus `DropdownMenu` and `ContextMenu` entry points with keyboard navigation and selection.
+- `Sheet`, `Drawer`, and `Sidebar` navigation surfaces with side placement, Escape dismissal, and selected-item state.
+- `Resizable` drag handle, `HoverCard`, `Progress`, and `ScrollArea` public entry points.
+- `Item`, `Bubble`, `Message`, `Menubar`, and `NavigationMenu` content/navigation entry points.
+- `Attachment` and `Marker` content primitives for files, tags, and compact status metadata.
+- Completed the public 0.2 component-name audit: all 64 requested names are now exported, with documented aliases where existing native widgets already provide the behavior.
+- Dark-theme contrast hardening: active-surface foregrounds now derive from luminance, with contrast-ratio regression tests for primary, secondary, and active text.
+- Added `examples/components.rs` as a runnable 0.2 component gallery.
+- Fixed standalone `Tooltip` so it only announces while hovered instead of scheduling a tooltip every frame.
+- Added calendar/date regression tests for leap years, month lengths, and weekday indexing.
+- Accordion disclosure now animates height and content opacity through the shared motion timing helper.
+- README now points to the full 0.2 widget reference and runnable component/theme/contrast showcases.
+- Added `examples/contrast.rs` for visual dark-mode contrast checks alongside the full `components` gallery.
+- Added grouped runnable galleries: `foundations`, `data`, and `overlays`, covering the 0.2 component families without one oversized demo.
+- Hardened overlays with valid text metrics, flat themed surfaces, explicit close buttons, mouse dismissal, and anchored menu positioning.
+- Added AccessKit nodes and stable labels for accordion, calendar, OTP, menu, and sidebar controls.
+- Replaced the weakest `InputGroup` and `Popover` compatibility aliases with real stateful/rendering components.
+- Replaced the `Questionnaire` compatibility alias with a real multi-step question/answer control with persistent answers and arrow-key navigation.
 - `Ui::time()` for lightweight ambient motion.
 
 ### Changed
 - Version bumped to `0.2.0`.
 - New primitives inherit the active semantic theme tokens and restrained Geist/zinc defaults.
+- Layout containers now measure and center themselves when used directly through `ui()`, while preserving explicit `arrange_at()` positioning for advanced layouts.
+- Demo composition now uses responsive widths, centered sub-layouts, and tighter panel sizing instead of fixed oversized dashboard columns.
+- Corrected sRGB surface configuration so display-space theme colors render at their authored values instead of washing dark surfaces out.
+- Switch thumbs and radio selection dots now use theme-aware active foreground colors for reliable dark-theme visibility.
+- Added all-preset contrast regression coverage for primary text, secondary text, and active controls.
+- Demo now opens with the light theme, presents light presets before dark presets, and uses a centered branded header bar.
+- Added bundled `GeistMono Nerd Font Mono` weights for monospace labels and Nerd Font icon glyphs.
+- Tab surfaces now have a visible border and stronger inactive labels; the demo uses theme-native primary and outline buttons instead of a fixed gradient.
+- Consolidated active, danger, checkbox, switch, slider, radio, badge, and bubble foreground selection through contrast-aware theme tokens.
+- Marker defaults now resolve its accent from the active theme instead of capturing the light-theme constant.
+- Added the public `NerdIcon` helper with common navigation/action glyphs and `TextStyle` support for mono Nerd Font text, italic, underline, and strikethrough rendering.
+- Added the complete generated Nerd Fonts glyph catalog, `NerdIcon::named`, `NerdIcon::all`, and `Ui::draw_nerd_icon` for theme-colored icon rendering.
 
 ## [0.1.6]
 

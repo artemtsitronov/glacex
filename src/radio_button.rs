@@ -218,14 +218,18 @@ impl Measurable for RadioButton {
 
         if dot_t > 0.01 {
             let max_inset = 5.0;
-            let inset = max_inset + (1.0 - dot_t) * max_inset;
-            let dot_size = (size[0] - inset * 2.0).max(0.0);
-            let dot_pos = [position[0] + inset, position[1] + inset];
-            let dot_radius = dot_size / 2.0;
-            let dot_color = Color::WHITE.with_alpha(dot_t);
+            let dot_size = (size[0].min(size[1]) - max_inset * 2.0).max(0.0);
+            let scale = dot_t;
+            let animated_size = dot_size * scale;
+            let dot_pos = [
+                position[0] + (size[0] - animated_size) / 2.0,
+                position[1] + (size[1] - animated_size) / 2.0,
+            ];
+            let dot_radius = animated_size / 2.0;
+            let dot_color = theme.on_active().with_alpha(dot_t);
             ui.draw_rect(
                 dot_pos,
-                [dot_size, dot_size],
+                [animated_size, animated_size],
                 Fill::Solid(dot_color),
                 dot_radius,
                 0.0,

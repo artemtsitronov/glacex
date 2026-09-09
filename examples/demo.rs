@@ -7,7 +7,7 @@ struct DemoApp {
 impl DemoApp {
     fn new() -> Self {
         DemoApp {
-            current_theme_idx: 1,
+            current_theme_idx: 0,
         }
     }
 }
@@ -23,7 +23,6 @@ impl Widget for DemoApp {
     fn ui(&mut self, ui: &mut Ui) {
         let themes = Theme::all();
 
-        // Check if theme was selected via SelectBox
         if let Some(idx_str) = ui
             .widget_state::<SelectBoxState>("theme_select")
             .selected
@@ -40,7 +39,12 @@ impl Widget for DemoApp {
         ui.set_theme(current_theme);
 
         let window_size = ui.window_size();
+        let content_width = (window_size[0] - 48.0).clamp(720.0, 1040.0);
+        let card_gap = 24.0;
+        let control_width = ((content_width - card_gap) * 0.52).round();
+        let showcase_width = content_width - card_gap - control_width;
 
+        let mut brand_label = Label::new("brand_label", "Glacex").heading();
         let mut window_size_label = Label::new(
             "window_size_label",
             format!("Window size: {:.2} x {:.2}", window_size[0], window_size[1]),
@@ -50,6 +54,14 @@ impl Widget for DemoApp {
             format!("Current theme: {}", current_theme.name),
         );
         let mut theme_btn = Button::new("theme_btn", "Change Theme");
+        let mut demo_tabs = Tabs::new("demo_tabs", ["Overview", "Activity", "Settings"])
+            .width(content_width - 92.0);
+        let chart_width = (content_width * 0.34).round();
+        let mut demo_alert = Alert::new("All systems operational")
+            .variant(AlertVariant::Success)
+            .width(content_width - chart_width - 12.0);
+        let mut demo_chart = Chart::new([18.0, 28.0, 22.0, 38.0, 32.0]).size([chart_width, 112.0]);
+        let mut demo_shortcut = Kbd::new(format!("{}  Ctrl K", NerdIcon::Search.mono()));
 
         let mut good_switch = Switch::new("good_switch");
         let mut fast_switch = Switch::new("fast_switch");
@@ -134,11 +146,24 @@ impl Widget for DemoApp {
                     "scroll_wrapper",
                     &mut glacex::column![
                         &mut row![
+                            &mut brand_label,
                             &mut window_size_label,
                             &mut Divider::vertical(24.0).thickness(2.0),
                             &mut theme_label,
                             &mut theme_btn
-                        ],
+                        ]
+                        .spacing(14.0)
+                        .align(Alignment::Center),
+                        &mut glacex::column![
+                            &mut row![&mut demo_tabs, &mut demo_shortcut]
+                                .spacing(12.0)
+                                .align(Alignment::Center),
+                            &mut row![&mut demo_alert, &mut demo_chart]
+                                .spacing(16.0)
+                                .align(Alignment::Center),
+                        ]
+                        .spacing(16.0)
+                        .align(Alignment::Center),
                         &mut row![
                             &mut Card::new(
                                 &mut ScrollView::new(
@@ -151,25 +176,8 @@ impl Widget for DemoApp {
                                             &mut Badge::new("Dangerous stuff").error(),
                                         ],
                                         &mut row![
-                                            &mut Button::new("btn_a", "Button"),
-                                            &mut Button::new("btn_b", "Fashion button").style(
-                                                ButtonStyle {
-                                                    fill: Fill::Gradient(Gradient {
-                                                        stops: vec![
-                                                            GradientStop {
-                                                                position: 0.0,
-                                                                color: Color::rgb(230, 230, 230)
-                                                            },
-                                                            GradientStop {
-                                                                position: 1.0,
-                                                                color: Color::rgb(120, 200, 180)
-                                                            }
-                                                        ],
-                                                        kind: GradientKind::Linear { angle: 45.0 },
-                                                    }),
-                                                    ..Default::default()
-                                                }
-                                            ),
+                                            &mut Button::new("btn_a", "Button").primary(),
+                                            &mut Button::new("btn_b", "Secondary").outline(),
                                             &mut Button::new("btn_c", "Fat button")
                                                 .size([100.0, 50.0])
                                                 .tooltip(
@@ -192,7 +200,7 @@ impl Widget for DemoApp {
                                                     &mut Checkbox::new("checkbox_3"),
                                                 ]
                                             ]
-                                            .align(Alignment::End),
+                                            .align(Alignment::Center),
                                             &mut glacex::column![
                                                 &mut row![
                                                     &mut good_switch,
@@ -207,7 +215,7 @@ impl Widget for DemoApp {
                                                     &mut Label::new("_8", "Cheap"),
                                                 ]
                                             ]
-                                            .align(Alignment::Start)
+                                            .align(Alignment::Center)
                                         ]
                                         .align(Alignment::Center)
                                         .spacing(100.0),
@@ -218,9 +226,9 @@ impl Widget for DemoApp {
                                     ]
                                     .spacing(20.0)
                                 )
-                                .padding([16.0; 2])
+                                .padding([20.0; 2])
                             )
-                            .size([370.0, 420.0]),
+                            .size([control_width, 432.0]),
                             &mut Card::new(
                                 &mut glacex::column![
                                     &mut row![&mut radio_button_group, &mut joke_label,]
@@ -232,29 +240,34 @@ impl Widget for DemoApp {
                                         &mut Label::new("_35", "Captionist").caption(),
                                     ]
                                     .spacing(12.0)
-                                    .align(Alignment::Start),
+                                    .align(Alignment::Center),
                                     &mut slider,
                                     &mut progress_bar,
                                 ]
                                 .spacing(24.0)
                                 .align(Alignment::Center)
                             )
-                            .height(420.0)
+                            .size([showcase_width, 432.0])
                         ]
-                        .spacing(20.0),
+                        .width(content_width)
+                        .spacing(card_gap)
+                        .align(Alignment::Center),
                         &mut glacex::column![
                             &mut Label::new(
                                 "_36",
-                                "And here ladies and gentleman, I'm afraid our demo ended."
+                                "A focused tour of Glacex's native UI primitives."
                             )
                             .size_preset(18.0),
-                            &mut Label::new("_37", "Be free to check out Glacex's github. <3")
-                                .size_preset(14.0),
+                            &mut Label::new(
+                                "_37",
+                                "Composable, keyboard-friendly, and GPU accelerated."
+                            )
+                            .size_preset(14.0),
                         ],
                     ]
-                    .padding([60.0; 2])
-                    .width(window_size[0])
-                    .spacing(36.0)
+                    .padding([28.0; 2])
+                    .width(content_width)
+                    .spacing(32.0)
                     .align(Alignment::Center)
                 )
                 .size([window_size[0], window_size[1]])

@@ -12,8 +12,8 @@ use crate::text_input::TextInputStyle;
 /// Comprehensive design token palette and theme engine for Glacex.
 ///
 /// Defaults to a pristine, luxurious White / Light theme inspired by
-/// Apple and shadcn/ui. Also includes built-in classic Unixporn community
-/// palettes: Dark, Catppuccin (Mocha & Latte), Tokyo Night, Gruvbox (Dark & Light),
+/// Apple and shadcn/ui. Also includes built-in classic color palletes:
+/// Dark, Catppuccin (Mocha & Latte), Tokyo Night, Gruvbox (Dark & Light),
 /// Nord, and Rosé Pine.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Theme {
@@ -93,6 +93,48 @@ impl Default for Theme {
 }
 
 impl Theme {
+    pub fn on_color(&self, background: Color) -> Color {
+        if Self::contrast_ratio(Color::WHITE, background)
+            >= Self::contrast_ratio(Color::BLACK, background)
+        {
+            Color::WHITE
+        } else {
+            Color::BLACK
+        }
+    }
+
+    pub fn on_active(&self) -> Color {
+        self.on_color(self.active)
+    }
+
+    pub fn control_thumb(&self) -> Color {
+        let light = Color::WHITE;
+        let dark = self.surface;
+        if Self::contrast_ratio(light, self.active) >= Self::contrast_ratio(dark, self.active) {
+            light
+        } else {
+            dark
+        }
+    }
+
+    pub fn contrast_ratio(a: Color, b: Color) -> f32 {
+        fn channel(value: f32) -> f32 {
+            if value <= 0.03928 {
+                value / 12.92
+            } else {
+                ((value + 0.055) / 1.055).powf(2.4)
+            }
+        }
+        let luminance = |color: Color| {
+            0.2126 * channel(color.r) + 0.7152 * channel(color.g) + 0.0722 * channel(color.b)
+        };
+        let (light, dark) = {
+            let a = luminance(a);
+            let b = luminance(b);
+            if a > b { (a, b) } else { (b, a) }
+        };
+        (light + 0.05) / (dark + 0.05)
+    }
     // =========================================================================
     // Built-in Theme Presets
     // =========================================================================
@@ -243,47 +285,47 @@ impl Theme {
         name: "shadcn-dark",
         is_dark: true,
         bg_canvas: Color {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
+            r: 9.0 / 255.0,
+            g: 9.0 / 255.0,
+            b: 11.0 / 255.0,
             a: 1.0,
-        }, // #000000 (Pure Black)
+        }, // #09090b (Zinc 950)
         surface: Color {
-            r: 17.0 / 255.0,
-            g: 17.0 / 255.0,
-            b: 22.0 / 255.0,
+            r: 24.0 / 255.0,
+            g: 24.0 / 255.0,
+            b: 27.0 / 255.0,
             a: 1.0,
-        }, // #111116 (Zinc 950 brightened — visible against black canvas)
+        }, // #18181b (Zinc 900)
         surface_subtle: Color {
-            r: 27.0 / 255.0,
-            g: 27.0 / 255.0,
-            b: 32.0 / 255.0,
+            r: 39.0 / 255.0,
+            g: 39.0 / 255.0,
+            b: 42.0 / 255.0,
             a: 1.0,
-        }, // #1b1b20 (Zinc 900)
+        }, // #27272a (Zinc 800)
         surface_elevated: Color {
-            r: 36.0 / 255.0,
-            g: 36.0 / 255.0,
-            b: 41.0 / 255.0,
+            r: 63.0 / 255.0,
+            g: 63.0 / 255.0,
+            b: 70.0 / 255.0,
             a: 1.0,
-        }, // #242429 (Zinc 850)
+        }, // #3f3f46 (Zinc 700)
         idle: Color {
-            r: 27.0 / 255.0,
-            g: 27.0 / 255.0,
-            b: 32.0 / 255.0,
+            r: 39.0 / 255.0,
+            g: 39.0 / 255.0,
+            b: 42.0 / 255.0,
             a: 1.0,
         },
         hovered: Color {
-            r: 44.0 / 255.0,
-            g: 44.0 / 255.0,
-            b: 50.0 / 255.0,
+            r: 63.0 / 255.0,
+            g: 63.0 / 255.0,
+            b: 70.0 / 255.0,
             a: 1.0,
-        }, // #2c2c32
+        }, // #3f3f46
         pressed: Color {
-            r: 55.0 / 255.0,
-            g: 55.0 / 255.0,
-            b: 61.0 / 255.0,
+            r: 82.0 / 255.0,
+            g: 82.0 / 255.0,
+            b: 91.0 / 255.0,
             a: 1.0,
-        }, // #37373d
+        }, // #52525b
         active: Color {
             r: 250.0 / 255.0,
             g: 250.0 / 255.0,
@@ -1386,12 +1428,12 @@ impl Theme {
     pub fn all() -> &'static [Theme] {
         &[
             Self::LIGHT,
+            Self::CATPPUCCIN_LATTE,
+            Self::GRUVBOX_LIGHT,
             Self::DARK,
             Self::CATPPUCCIN_MOCHA,
-            Self::CATPPUCCIN_LATTE,
             Self::TOKYO_NIGHT,
             Self::GRUVBOX_DARK,
-            Self::GRUVBOX_LIGHT,
             Self::NORD,
             Self::ROSE_PINE,
         ]
@@ -1560,13 +1602,9 @@ impl Theme {
             fill: Fill::Solid(self.active),
             hover_fill: Fill::Solid(self.active_hover),
             pressed_fill: Fill::Solid(self.active.darken(0.12)),
-            text_color: if self.is_dark && self.active.r > 0.7 && self.active.g > 0.7 {
-                Color::BLACK
-            } else {
-                Color::WHITE
-            },
+            text_color: self.on_active(),
             border_width: 1.0,
-            border_color: Color::WHITE.with_alpha(0.15),
+            border_color: self.on_active().with_alpha(0.18),
             corner_radius: 6.0,
             padding: [14.0, 8.0],
             shadow: Some(ShadowStyle {
@@ -1616,7 +1654,7 @@ impl Theme {
             fill: Fill::Solid(self.error),
             hover_fill: Fill::Solid(self.error.lighten(0.08)),
             pressed_fill: Fill::Solid(self.error.darken(0.12)),
-            text_color: Color::WHITE,
+            text_color: self.on_color(self.error),
             border_width: 1.0,
             border_color: self.error.darken(0.15),
             corner_radius: 6.0,
@@ -1676,11 +1714,7 @@ impl Theme {
             }),
             hover_fill: Fill::Solid(self.surface_subtle),
             checked_fill: Fill::Solid(self.active),
-            check_color: if self.is_dark && self.active.r > 0.8 && self.active.g > 0.8 {
-                Color::BLACK
-            } else {
-                Color::WHITE
-            },
+            check_color: self.on_active(),
             border_width: 1.0,
             border_color: self.border_strong,
             corner_radius: 4.0,
@@ -1694,7 +1728,7 @@ impl Theme {
         SwitchStyle {
             track_off_fill: Fill::Solid(self.hovered),
             track_on_fill: Fill::Solid(self.active),
-            thumb_fill: Fill::Solid(Color::WHITE),
+            thumb_fill: Fill::Solid(self.control_thumb()),
             border_width: 1.0,
             border_color: self.border,
             corner_radius: 11.0,
@@ -1750,6 +1784,45 @@ impl Theme {
             thumb_dragging_fill: Fill::Solid(self.text_muted.with_alpha(0.65)),
             shadow: Some(self.shadow_sm()[0]),
             sharp: false,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Theme;
+
+    #[test]
+    fn dark_active_foreground_is_readable() {
+        let foreground = Theme::DARK.on_active();
+        assert!(Theme::contrast_ratio(foreground, Theme::DARK.active) >= 4.5);
+        assert!(Theme::contrast_ratio(Theme::DARK.text_primary, Theme::DARK.bg_canvas) >= 4.5);
+        assert!(Theme::contrast_ratio(Theme::DARK.text_secondary, Theme::DARK.surface) >= 4.5);
+    }
+
+    #[test]
+    fn every_preset_keeps_primary_text_readable() {
+        for theme in Theme::all() {
+            assert!(
+                Theme::contrast_ratio(theme.text_primary, theme.surface) >= 4.5,
+                "{} primary text is too low contrast",
+                theme.name
+            );
+            assert!(
+                Theme::contrast_ratio(theme.text_secondary, theme.surface) >= 4.5,
+                "{} secondary text is too low contrast",
+                theme.name
+            );
+            assert!(
+                Theme::contrast_ratio(theme.on_active(), theme.active) >= 4.5,
+                "{} active text is too low contrast",
+                theme.name
+            );
+            assert!(
+                Theme::contrast_ratio(theme.on_color(theme.error), theme.error) >= 4.5,
+                "{} danger text is too low contrast",
+                theme.name
+            );
         }
     }
 }

@@ -144,11 +144,7 @@ impl Badge {
         match self.variant {
             BadgeVariant::Default => BadgeStyle {
                 fill: Fill::Solid(theme.active),
-                text_color: if theme.is_dark {
-                    Color::BLACK
-                } else {
-                    Color::WHITE
-                },
+                text_color: theme.on_active(),
                 border_width: 1.0,
                 border_color: Color::TRANSPARENT,
                 corner_radius: Theme::RADIUS_FULL,

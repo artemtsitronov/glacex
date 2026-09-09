@@ -528,8 +528,14 @@ impl Measurable for SelectBox {
             size,
             trigger_fill,
             style.corner_radius,
-            0.0,
-            Color::TRANSPARENT,
+            style.border_width,
+            if state.focus_t > 0.01 {
+                style.focus_border_color
+            } else if trigger_hovered {
+                style.hover_border_color
+            } else {
+                style.border_color
+            },
             0.0,
             false,
             0.0,
@@ -695,13 +701,21 @@ impl Measurable for SelectBox {
                 );
             }
 
+            let popup_fill = match style.dropdown_fill.clone() {
+                Fill::Solid(color) => Fill::Solid(color.with_alpha(color.a * open_ease)),
+                fill => fill,
+            };
+            let popup_border = style
+                .dropdown_border_color
+                .with_alpha(style.dropdown_border_color.a * open_ease);
+
             ui.draw_overlay_rect(
                 dropdown_pos,
                 dropdown_size,
-                style.dropdown_fill.clone(),
+                popup_fill,
                 style.dropdown_corner_radius,
-                0.0,
-                Color::TRANSPARENT,
+                style.dropdown_border_width,
+                popup_border,
                 0.0,
                 false,
                 dropdown_clip,
@@ -717,7 +731,11 @@ impl Measurable for SelectBox {
                 ui.draw_overlay_rect(
                     search_pos,
                     search_size,
-                    Fill::Solid(style.search_fill),
+                    Fill::Solid(
+                        style
+                            .search_fill
+                            .with_alpha(style.search_fill.a * open_ease),
+                    ),
                     Theme::RADIUS_MD,
                     0.0,
                     Color::TRANSPARENT,

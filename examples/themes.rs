@@ -32,19 +32,19 @@ impl Widget for ThemesApp {
         let mut title = Label::new("title", "Glacex Design Tokens & Themes Showcase");
         let mut subtitle = Label::new(
             "subtitle",
-            "Toggle between 9 meticulously calibrated Unixporn & Apple-grade color palettes.",
+            "Toggle between 9 meticulously calibrated professional color palettes.",
         )
         .muted();
 
-        let mut btn_0 = Button::new("_a", "shadcn Light").outline();
-        let mut btn_1 = Button::new("_b", "shadcn Dark").outline();
-        let mut btn_2 = Button::new("_c", "Catppuccin Mocha").outline();
-        let mut btn_3 = Button::new("_d", "Catppuccin Latte").outline();
-        let mut btn_4 = Button::new("_e", "Tokyo Night").outline();
-        let mut btn_5 = Button::new("_f", "Gruvbox Dark").outline();
-        let mut btn_6 = Button::new("_g", "Gruvbox Light").outline();
-        let mut btn_7 = Button::new("_h", "Nord").outline();
-        let mut btn_8 = Button::new("_i", "Rosé Pine").outline();
+        let mut btn_0 = theme_button("_a", "shadcn Light", self.selected_theme == 0);
+        let mut btn_1 = theme_button("_b", "Catppuccin Latte", self.selected_theme == 1);
+        let mut btn_2 = theme_button("_c", "Gruvbox Light", self.selected_theme == 2);
+        let mut btn_3 = theme_button("_d", "shadcn Dark", self.selected_theme == 3);
+        let mut btn_4 = theme_button("_e", "Catppuccin Mocha", self.selected_theme == 4);
+        let mut btn_5 = theme_button("_f", "Tokyo Night", self.selected_theme == 5);
+        let mut btn_6 = theme_button("_g", "Gruvbox Dark", self.selected_theme == 6);
+        let mut btn_7 = theme_button("_h", "Nord", self.selected_theme == 7);
+        let mut btn_8 = theme_button("_i", "Rosé Pine", self.selected_theme == 8);
 
         let mut active_badge =
             Badge::new(format!("Active Theme: {}", current.name)).variant(BadgeVariant::Success);
@@ -215,6 +215,15 @@ impl Widget for ThemesApp {
         if btn_8.clicked() {
             self.selected_theme = 8;
         }
+    }
+}
+
+fn theme_button(id: &str, label: &str, selected: bool) -> Button {
+    let button = Button::new(id, label);
+    if selected {
+        button.primary()
+    } else {
+        button.outline()
     }
 }
 

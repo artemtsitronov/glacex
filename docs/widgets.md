@@ -28,9 +28,100 @@ let mut commands = CommandPalette::new("command-menu", [
 let mut calendar = Calendar::new("release-date", CalendarDate { year: 2026, month: 9, day: 9 });
 let mut otp = InputOtp::new("verification-code", 6);
 let mut toggles = ToggleGroup::new("view-mode", ["List", "Board", "Timeline"]);
+let mut menu = DropdownMenu::new("actions", "Actions", [
+    MenuItem::new("rename", "Rename"),
+    MenuItem::new("archive", "Archive"),
+]);
+let mut sheet = Sheet::new("details", "Deployment details", "Logs and metadata").side(SheetSide::Right);
+let mut sidebar = Sidebar::new("app-nav", ["Overview", "Projects", "Settings"]);
+let mut split = Resizable::new("main-split", 720.0).limits(0.25, 0.75);
+let mut details = HoverCard::new("Build #1042", "Completed successfully 2 minutes ago.");
+let mut row = Item::new("Production deploy").description("2 minutes ago · main");
+let mut bubble = Bubble::new("Build completed").outgoing(true);
+let mut file = Attachment::new("release-notes.md").meta("14 KB · Markdown");
+let mut marker = Marker::new("Beta");
+let mut grouped_input = InputGroup::new("repository", "Search repositories…")
+    .prefix("⌕")
+    .suffix("⌘ K");
+let mut popover = Popover::new("release-info", "Release notes", "Everything is ready to publish.");
+let mut questionnaire = Questionnaire::new("onboarding", [
+    Question::new("How do you ship?", ["Preview", "Production"]),
+    Question::new("What matters most?", ["Speed", "Control"]),
+]);
 ```
 
 API reference for all widgets provided by `glacex`.
+
+The 0.2 component surface includes all 64 requested public names. A handful of
+names are deliberate compatibility aliases over the mature native implementation:
+`DataTable`/`Table`, `Collapsible`/`Accordion`, `Input`/`TextInput`,
+`InputOTP`/`InputOtp`, `Select`/`SelectBox`, and `ScrollArea`/`ScrollView`.
+This keeps state, keyboard behavior, and accessibility consistent instead of
+shipping duplicate controls with subtly different semantics.
+
+Interactive disclosure, skeleton, spinner, progress, selection, and overlay
+components use frame time and the shared motion helpers. Motion is deliberately
+short and low-amplitude; the library avoids decorative animation that competes
+with content.
+
+Components resolve their visual styles from the active `Theme` on every frame.
+Dark presets use semantic surface and foreground tokens, and active controls
+choose a contrasting foreground automatically. Switch thumbs, radio dots, and
+checkbox marks remain legible when the active surface is light or dark.
+Danger actions, sliders, badges, bubbles, and markers use the same contrast-aware
+foreground rules instead of fixed black or white text.
+
+When a layout container is used directly, it measures its natural content and
+centers itself in the window. Use explicit `arrange_at` coordinates when building
+anchored or custom layouts.
+
+`Theme::all()` returns the built-in presets in presentation order: light presets
+first, followed by dark presets. The main demo follows this order and starts with
+the light theme for a neutral first-run preview.
+
+## Runnable galleries
+
+The repository includes small, focused examples so component families can be
+reviewed without navigating one oversized screen:
+
+```bash
+cargo run --example foundations  # controls, forms, feedback, typography
+cargo run --example data         # tabs, charts, tables, pagination, calendar
+cargo run --example overlays     # command, menu, dialog, sheet, popover, tooltip
+```
+
+`components` remains the compact mixed gallery, while `demo` is the composed
+dashboard example.
+
+## Text and Nerd Font icons
+
+`NerdIcon` provides stable common Nerd Font glyphs without requiring callers to
+paste private-use-area code points:
+
+```rust
+let search = NerdIcon::Search.mono();
+ui.draw_text_with_style(
+    search,
+    [16.0, 16.0],
+    [16.0, 16.0, 40.0, 40.0],
+    ui.theme().text_primary,
+    16.0,
+    20.0,
+    TextStyle::default().mono(true),
+);
+```
+
+The complete upstream catalog is available through `NerdIcon::named("name")`
+and `NerdIcon::all()`. Names and codepoints are generated from the bundled
+Nerd Fonts `glyphnames.json` catalog, so the full icon set is available without
+adding a dependency or manually copying glyph characters. Icons are ordinary
+colored text: use `Ui::draw_nerd_icon` or `draw_text_with_style` with any theme
+color, opacity, and size.
+
+`TextStyle` supports Geist or Nerd Mono selection, regular/medium/semibold/bold
+weights, italic, underline, and strikethrough. The bundled Nerd Mono family is
+used by `.mono()` and by `Kbd`, so keyboard labels and icon glyphs share the same
+font metrics.
 
 Most widgets take a stable string id as their first constructor argument. That id is what
 `Ui::widget_state` uses to find the right persistent state across frames, and it's also what
@@ -152,7 +243,9 @@ Separator line.
 ## 3. Displays
 
 ### Label
-Text, using the bundled Geist / Geist Mono fonts.
+Text uses the bundled Geist family. `.mono()` uses the bundled
+`GeistMono Nerd Font Mono` family, including the regular, medium, semibold, and
+bold weights with Nerd Font icon glyph coverage.
 - **Constructor**: `Label::new("label_id", "Text")` or `Label::new("label_id", format!("Count: {n}"))`
 - **Color variants**: `.secondary()`, `.muted()`, `.accent()`, `.success()`, `.warning()`, `.error()`, `.color(Color)`
 - **Size presets**: `.caption()` (12px), `.subheading()` (16px), `.heading()` (18px), `.title()` (22px), `.metric()` (28px, bold)

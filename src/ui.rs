@@ -656,6 +656,49 @@ impl Ui {
     }
 
     #[allow(clippy::too_many_arguments)]
+    pub fn draw_text_with_style(
+        &mut self,
+        text: &str,
+        position: [f32; 2],
+        bounds: [f32; 4],
+        color: Color,
+        font_size: f32,
+        line_height: f32,
+        style: crate::painter::TextStyle,
+    ) {
+        let clipped = intersect_rects(bounds, self.current_clip());
+        self.painter.draw_text_with_style(
+            text,
+            position,
+            clipped,
+            color,
+            font_size,
+            line_height,
+            style,
+        );
+    }
+
+    pub fn draw_nerd_icon(
+        &mut self,
+        icon: crate::icons::NerdGlyph,
+        position: [f32; 2],
+        bounds: [f32; 4],
+        color: Color,
+        size: f32,
+    ) {
+        let text = icon.character.to_string();
+        self.draw_text_with_style(
+            &text,
+            position,
+            bounds,
+            color,
+            size,
+            size,
+            crate::painter::TextStyle::default().mono(true),
+        );
+    }
+
+    #[allow(clippy::too_many_arguments)]
     pub fn draw_overlay_rect(
         &mut self,
         position: [f32; 2],

@@ -14,6 +14,8 @@ categories = ["gui", "graphics", "rendering"]
 include = [
     "src/**/*",
     "assets/fonts/*.ttf",
+    "assets/fonts/*.otf",
+    "assets/fonts/nerd-fonts-glyphnames.json",
     "Cargo.toml",
     "README.md",
     "LICENSE",
