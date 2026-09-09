@@ -3,7 +3,7 @@ use crate::color::Color;
 use crate::fill::Fill;
 use crate::theme::Theme;
 use crate::ui::Ui;
-use crate::widget::{Accessible, Measurable, StatefulWidget, Widget, hash_id};
+use crate::widget::{Accessible, IntoId, Measurable, StatefulWidget, Widget, hash_id};
 use accesskit::{NodeId, Role};
 
 #[derive(Default)]
@@ -66,8 +66,8 @@ impl ProgressBar {
         }
     }
 
-    pub fn id(mut self, id: impl Into<String>) -> Self {
-        self.id = Some(id.into());
+    pub fn id(mut self, id: impl IntoId) -> Self {
+        self.id = id.into_id();
         self
     }
 

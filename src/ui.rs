@@ -32,7 +32,7 @@ fn inflate_rect(rect: [f32; 4], amount: f32) -> [f32; 4] {
 }
 
 pub struct Ui {
-    window: Arc<Window>, // If you read this, you're gay
+    window: Arc<Window>,
     painter: Painter,
     persistent_state: HashMap<String, Box<dyn Any>>,
     mouse_position: [f32; 2],

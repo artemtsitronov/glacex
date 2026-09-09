@@ -125,6 +125,15 @@ impl Checkbox {
     pub fn hovered(&self) -> bool {
         self.interaction.hovered
     }
+
+    pub fn is_checked(&self, ui: &mut Ui) -> bool {
+        self.state(ui).checked
+    }
+    pub fn check(&mut self, ui: &mut Ui, value: bool) {
+        let mut state = self.take_state(ui);
+        state.checked = value;
+        self.put_state(ui, state);
+    }
 }
 
 impl Widget for Checkbox {

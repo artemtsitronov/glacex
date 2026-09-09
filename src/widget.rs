@@ -20,6 +20,40 @@ pub fn hash_id(s: &str) -> u64 {
     hasher.finish()
 }
 
+/// Accepted by every widget's `.id(..)` builder method, so callers can pass
+/// a plain `&str`/`String` (the common case), an already-`Option`al id, or
+/// `None` to explicitly clear one — without forcing everyone through
+/// `Some("...".to_string())`. `Into<Option<String>>` can't cover `&str`
+/// directly (no `From<&str> for Option<String>` in std, and orphan rules
+/// block adding one), hence this local trait.
+pub trait IntoId {
+    fn into_id(self) -> Option<String>;
+}
+
+impl IntoId for Option<String> {
+    fn into_id(self) -> Option<String> {
+        self
+    }
+}
+
+impl IntoId for String {
+    fn into_id(self) -> Option<String> {
+        Some(self)
+    }
+}
+
+impl IntoId for &str {
+    fn into_id(self) -> Option<String> {
+        Some(self.to_string())
+    }
+}
+
+impl IntoId for Option<&str> {
+    fn into_id(self) -> Option<String> {
+        self.map(|s| s.to_string())
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct FocusId(u64);
 
@@ -80,5 +114,11 @@ pub trait StatefulWidget {
     }
     fn state<'a>(&self, ui: &'a mut Ui) -> &'a mut Self::State {
         ui.widget_state_or(self.state_id(), self.initial_state())
+    }
+    fn take_state(&self, ui: &mut Ui) -> Self::State {
+        ui.take_widget_state_or(self.state_id(), self.initial_state())
+    }
+    fn put_state(&self, ui: &mut Ui, state: Self::State) {
+        ui.put_widget_state(self.state_id(), state)
     }
 }

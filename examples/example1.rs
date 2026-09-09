@@ -1,6 +1,6 @@
 use glacex::{
     Alignment, App, Badge, BadgeVariant, Button, ButtonStyle, Card, CardStyle, Color, Divider,
-    Fill, Label, ShadowStyle, TextEditState, TextInput, Theme, Ui, Widget, column, row,
+    Fill, Label, ShadowStyle, TextInput, Theme, Ui, Widget, column, row,
 };
 
 struct ColorDemo {
@@ -21,12 +21,10 @@ impl Widget for ColorDemo {
     fn ui(&mut self, ui: &mut Ui) {
         ui.set_bgcolor(Theme::BG_CANVAS);
 
-        let input_state = ui.widget_state::<TextEditState>("color_hex_input");
-        if input_state.text().is_empty() {
-            input_state.set_text(&self.default_hex);
-        }
-        let hex_text = input_state.text().to_string();
-        let parsed_color = Color::hex_str(&hex_text);
+        let mut hex_input = TextInput::new("color_hex_input")
+            .width(320.0)
+            .default_text(&self.default_hex);
+        let parsed_color = Color::hex_str(&hex_input.text(ui));
 
         let mut badge = Badge::new("COLOR").variant(BadgeVariant::Success);
         let mut title = Label::new("title", "Dynamic Color Preview");
@@ -37,7 +35,6 @@ impl Widget for ColorDemo {
         let mut divider = Divider::horizontal(360.0);
 
         let mut input_label = Label::new("input_label", "Hex Code (#RRGGBB)");
-        let mut hex_input = TextInput::new("color_hex_input").width(320.0);
 
         let mut preview_label = Label::new("preview_label", "Styled Preview");
         let mut preview_btn = Button::new("_a", "Sample Button").style(ButtonStyle {

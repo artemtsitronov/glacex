@@ -1,5 +1,5 @@
 use crate::ui::Ui;
-use crate::widget::{Accessible, AnyWidget, Measurable, Widget, hash_id};
+use crate::widget::{Accessible, AnyWidget, IntoId, Measurable, Widget, hash_id};
 use accesskit::{NodeId, Role};
 
 pub struct Container<'a> {
@@ -24,8 +24,8 @@ impl<'a> Container<'a> {
         }
     }
 
-    pub fn id(mut self, id: impl Into<String>) -> Self {
-        self.id = Some(id.into());
+    pub fn id(mut self, id: impl IntoId) -> Self {
+        self.id = id.into_id();
         self
     }
 

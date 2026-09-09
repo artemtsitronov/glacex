@@ -108,6 +108,15 @@ impl Switch {
     pub fn hovered(&self) -> bool {
         self.interaction.hovered
     }
+
+    pub fn enabled(&self, ui: &mut Ui) -> bool {
+        self.state(ui).enabled
+    }
+    pub fn set_enabled(&mut self, ui: &mut Ui, enabled: bool) {
+        let mut state = self.take_state(ui);
+        state.enabled = enabled;
+        self.put_state(ui, state);
+    }
 }
 
 impl Widget for Switch {

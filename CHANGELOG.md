@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.1.7]
+
+### Changed
+- `Theme`'s built-in palettes (`src/theme.rs`) now build every color with `Color::rgb()`/`Color::rgba()` instead of hand-rolled `Color { r: N / 255.0, ... }` struct literals.
+- `Badge`, `Card`, `Divider`, `Container`, and `ProgressBar`'s `.id(..)` builder now takes `impl IntoId` instead of `impl Into<String>`, so it accepts `&str`/`String` as before, plus `Some(..)`/`None` directly (e.g. to explicitly clear an id). New `IntoId` trait in `src/widget.rs`.
+
 ## [0.1.6]
 
 ### Added
@@ -10,6 +16,14 @@ All notable changes to this project are documented in this file.
 - `SelectOption` — lightweight `{ value: String, label: String }` item type.
 - `SelectBoxState` — persistent widget state tracking `selected: Option<String>`, open/close spring, per-item hover animations, keyboard index, and search text.
 - `Ui::draw_overlay_rect` and `Ui::draw_overlay_text_styled` — public wrappers around the existing painter overlay pass so widgets like `SelectBox` can draw their own floating surfaces without a tooltip.
+- `StatefulWidget::take_state` / `put_state`, alongside the existing `.state()` — same `state_id()`/`initial_state()`-backed lookup, for call sites that need to own the state struct (e.g. to mutate it while also touching other widgets) instead of holding a `&mut` borrow through `Ui`.
+- Small typed state accessors, one pair per widget, built on top of those three so most call sites never need to name the state struct or its id twice: `Checkbox::is_checked`/`check`, `Switch::enabled`/`set_enabled`, `Slider::value`/`set_value`, `ScrollView::offset`/`set_offset`, `SelectBox::selected`/`set_selected`, `TextInput`/`TextArea::text`/`set_text`.
+
+### Changed
+- All four examples (`demo.rs`, `example1.rs`, `example2.rs`, `themes.rs`) now read/write widget state through the new accessors above instead of raw `ui.widget_state::<T>(id)`/`take_widget_state`/`put_widget_state` calls — see `docs/widgets.md`'s new "State access" section for the full picture.
+
+### Fixed
+- `README.md`'s `SelectBox` example called a `.show_clear(true)` builder method that doesn't exist on `SelectBox` — removed.
 
 ## [0.1.5]
 

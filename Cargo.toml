@@ -1,9 +1,9 @@
 [package]
 name = "glacex"
-version = "0.1.6"
+version = "0.1.7"
 edition = "2024"
 rust-version = "1.85"
-description = "GPU-accelerated, immediate-mode GPU UI library built from scratch in Rust — Geist typography, SDF rendering, shadcn-grade design system"
+description = "GPU-accelerated, immediate-mode GPU UI library built from scratch in Rust"
 license = "MIT"
 repository = "https://github.com/artemtsitronov/glacex"
 keywords = ["gui", "wgpu", "ui", "immediate-mode", "graphics"]

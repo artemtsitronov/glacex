@@ -2,7 +2,7 @@ use crate::Color;
 
 #[derive(Debug, Clone, Copy)]
 pub struct GradientStop {
-    pub position: f32, // 0.0 - 1.0
+    pub position: f32,
     pub color: Color,
 }
 

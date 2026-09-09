@@ -59,7 +59,7 @@ Built by **Artem Tsitronov** and **Soumalya Das**.
 
 - **`winit`** owns the window and the cross-platform event loop.
 - **`wgpu`** renders every shape as an instanced signed-distance-field (SDF) quad on the GPU.
-- **`glyphon`** (+ `swash`) shapes and rasterizes text into glyph atlases with per-widget clipping.
+- **`glyphon`** shapes and rasterizes text into glyph atlases with per-widget clipping.
 - **`taffy`** does the flexbox math for `row!`/`column!` layouts.
 
 There's no retained widget tree and no markup — you describe the UI in plain Rust every frame, and glacex measures, lays out, hit-tests, animates, and renders it.
@@ -75,7 +75,7 @@ There's no retained widget tree and no markup — you describe the UI in plain R
 - Widgets: `Button`, `Checkbox`, `RadioButton`, `Switch`, `Slider`, `ProgressBar`, `TextInput`, `TextArea`, `ScrollView`, `Card`, `Container`, `Badge`, `Divider`, `Label`, `SelectBox`.
 - `row![]` / `column![]` macros backed by `taffy`, with alignment and spacing.
 - Interaction: hover/press/click, secondary/middle mouse buttons, Tab/Shift+Tab focus order, double/triple-click word/line selection, clipboard via `arboard`, blinking cursor.
-- Widget state persists across frames keyed by a stable string id (`Ui::widget_state`, `take_widget_state`, `put_widget_state`) even though the widget itself is rebuilt every frame.
+- Widget state persists across frames keyed by a stable string id, even though the widget itself is rebuilt every frame. Every stateful widget exposes this via `.state(ui)`/`.take_state(ui)`/`.put_state(ui, state)` (from the `StatefulWidget` trait), plus small typed accessors for the common case (`checkbox.is_checked(ui)`, `slider.value(ui)`, etc.) — see [Widgets](#widgets). `Ui::widget_state`/`take_widget_state`/`put_widget_state` are the lower-level primitives underneath, for state that isn't tied to a single widget's id.
 - Animation via exponential decay (`animate_towards`) plus a small set of easing curves and spring presets, unified under named half-life constants (`Motion::INSTANT`/`SNAPPY`/`FLUID`/`GENTLE`) so transitions feel consistent across widgets.
 - Draggable auto-hiding scrollbars shared by `ScrollView` and `TextArea`.
 - Optional accessibility tree (AT-SPI on Linux via `accesskit`) — see [Accessibility](#accessibility).
@@ -202,7 +202,7 @@ pub trait Measurable: Widget {
 - Input: `mouse_position()`, `mouse_pressed()`, `mouse_right_pressed()`, `click_count()`, `key_pressed()`, `ctrl_held()`, `shift_held()`.
 - Cursor: `set_cursor_icon(CursorIcon)`.
 - Tooltips: `show_tooltip(text)`, `show_tooltip_at(text, pos)`.
-- State: `widget_state::<T>(id)`, `take_widget_state::<T>(id)`, `put_widget_state(id, state)`.
+- State: `widget_state::<T>(id)`, `take_widget_state::<T>(id)`, `put_widget_state(id, state)` — the primitives behind every widget's `.state(ui)`/`.take_state(ui)`/`.put_state(ui, state)`.
 - Focus: `request_focus(id)`, `is_focused(id)`, `advance_focus(backward)`.
 - Clipping: `push_clip(rect)`, `pop_clip()`, `push_input_block(rect)`.
 - Drawing: `draw_rect(...)`, `draw_text(...)`, `measure_text(...)`, `line_height()`.
@@ -254,7 +254,7 @@ Variants: `.primary()`, `.outline()`, `.ghost()`, `.danger()`.
 #### Checkbox
 ```rust
 let mut check = Checkbox::new("enable_feature").default_checked(true);
-let is_checked = ui.widget_state::<CheckboxState>("enable_feature").checked;
+let is_checked = check.is_checked(ui);
 ```
 
 #### RadioButton
@@ -270,19 +270,19 @@ let selected = ui.selected_option("theme_group").unwrap_or("dark");
 #### Switch
 ```rust
 let mut sw = Switch::new("network_stream").default_enabled(true);
-let enabled = ui.widget_state::<SwitchState>("network_stream").enabled;
+let enabled = sw.enabled(ui);
 ```
 
 #### Slider
 ```rust
 let mut slider = Slider::new("volume", 0.0, 100.0).width(240.0).default_value(50.0);
-let val = ui.widget_state::<SliderState>("volume").value;
+let val = slider.value(ui);
 ```
 
 #### TextInput
 ```rust
 let mut input = TextInput::new("username").width(260.0).placeholder("Enter a username");
-let text = ui.widget_state::<TextEditState>("username").text().to_string();
+let text = input.text(ui);
 ```
 
 #### TextArea
@@ -304,15 +304,11 @@ let options = vec![
 let mut sel = SelectBox::new("theme_picker", options)
     .placeholder("Choose a theme…")
     .width(220.0)
-    .show_clear(true)
     .tooltip("Switch the active colour theme");
 
 sel.arrange_at([40.0, 40.0], ui);
 
-let selected = ui
-    .widget_state::<SelectBoxState>("theme_picker")
-    .selected
-    .clone();
+let selected = sel.selected(ui);
 ```
 
 Enable live filtering with `.searchable()`:
@@ -321,11 +317,10 @@ Enable live filtering with `.searchable()`:
 let mut sel = SelectBox::new("country", countries)
     .placeholder("Select a country…")
     .width(260.0)
-    .searchable()
-    .show_clear(true);
+    .searchable();
 ```
 
-The dropdown opens with a spring animation, closes on Escape or outside-click, supports `↑`/`↓` keyboard navigation and `Enter` to confirm. Use `.show_clear(true)` to add an X button that clears the selection.
+The dropdown opens with a spring animation, closes on Escape or outside-click, supports `↑`/`↓` keyboard navigation and `Enter` to confirm.
 
 ### Containers
 

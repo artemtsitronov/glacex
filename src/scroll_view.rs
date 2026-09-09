@@ -97,6 +97,17 @@ impl<'a> ScrollView<'a> {
         let size = self.measure(ui);
         Measurable::arrange(self, position, size, ui);
     }
+
+    pub fn offset(&self, ui: &mut Ui) -> [f32; 2] {
+        let state = self.state(ui);
+        [state.x.offset, state.y.offset]
+    }
+    pub fn set_offset(&mut self, ui: &mut Ui, offset: [f32; 2]) {
+        let mut state = self.take_state(ui);
+        state.x.offset = offset[0];
+        state.y.offset = offset[1];
+        self.put_state(ui, state);
+    }
 }
 
 impl<'a> Widget for ScrollView<'a> {

@@ -2,7 +2,7 @@ use crate::color::Color;
 use crate::fill::Fill;
 use crate::theme::Theme;
 use crate::ui::Ui;
-use crate::widget::{Accessible, Measurable, Widget, hash_id};
+use crate::widget::{Accessible, IntoId, Measurable, Widget, hash_id};
 use accesskit::{NodeId, Role};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -46,8 +46,8 @@ impl Divider {
         }
     }
 
-    pub fn id(mut self, id: impl Into<String>) -> Self {
-        self.id = Some(id.into());
+    pub fn id(mut self, id: impl IntoId) -> Self {
+        self.id = id.into_id();
         self
     }
 

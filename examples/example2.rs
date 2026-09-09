@@ -1,7 +1,7 @@
 use glacex::{
     Alignment, App, Badge, BadgeVariant, Button, ButtonStyle, Card, CardStyle, Checkbox,
     CheckboxStyle, Color, Divider, Fill, Label, ScrollView, ScrollViewStyle, ShadowStyle, TextArea,
-    TextAreaStyle, TextEditState, TextInput, TextInputStyle, Theme, Ui, Widget, column, row,
+    TextAreaStyle, TextInput, TextInputStyle, Theme, Ui, Widget, column, row,
 };
 use std::collections::HashMap;
 
@@ -217,10 +217,8 @@ impl Widget for AppState {
     fn ui(&mut self, ui: &mut Ui) {
         ui.set_bgcolor(Theme::BG_CANVAS);
 
-        let command = ui
-            .widget_state::<TextEditState>("command_input")
-            .text()
-            .to_string();
+        let mut command_input = TextInput::new("command_input").width(580.0);
+        let command = command_input.text(ui);
         let parsed = parse_command(&command);
 
         let title = match &parsed {
@@ -259,7 +257,6 @@ impl Widget for AppState {
         let mut divider_mid = Divider::horizontal(620.0);
 
         let mut command_caption = Label::new("command_caption", "Command Input");
-        let mut command_input = TextInput::new("command_input").width(580.0);
 
         let mut preview_caption = Label::new("preview_caption", "Live Render Preview");
 

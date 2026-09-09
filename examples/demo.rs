@@ -1,4 +1,5 @@
 use glacex::*;
+use wgpu::SurfaceStatus::Good;
 
 struct DemoApp {
     current_theme_idx: usize,
@@ -41,15 +42,12 @@ impl Widget for DemoApp {
         let mut fast_switch = Switch::new("fast_switch");
         let mut cheap_switch = Switch::new("cheap_switch");
 
-        let mut good_state = ui.take_widget_state::<SwitchState>("good_switch");
-        let mut fast_state = ui.take_widget_state::<SwitchState>("fast_switch");
-        let mut cheap_state = ui.take_widget_state::<SwitchState>("cheap_switch");
         let mut order_state = ui.take_widget_state::<TripleToggleOrder>("triple_toggle_order");
 
         let states = [
-            ("good_switch", &mut good_state.enabled),
-            ("fast_switch", &mut fast_state.enabled),
-            ("cheap_switch", &mut cheap_state.enabled),
+            ("good_switch", &mut good_switch.enabled(ui)),
+            ("fast_switch", &mut fast_switch.enabled(ui)),
+            ("cheap_switch", &mut cheap_switch.enabled(ui)),
         ];
 
         for (id, enabled) in states {
@@ -64,16 +62,13 @@ impl Widget for DemoApp {
         while order_state.order.len() > 2 {
             let evicted = order_state.order.remove(0);
             match evicted {
-                "good_switch" => good_state.enabled = false,
-                "fast_switch" => fast_state.enabled = false,
-                "cheap_switch" => cheap_state.enabled = false,
+                "good_switch" => good_switch.set_enabled(ui, false),
+                "fast_switch" => fast_switch.set_enabled(ui, false),
+                "cheap_switch" => cheap_switch.set_enabled(ui, false),
                 _ => {}
             }
         }
 
-        ui.put_widget_state("good_switch", good_state);
-        ui.put_widget_state("fast_switch", fast_state);
-        ui.put_widget_state("cheap_switch", cheap_state);
         ui.put_widget_state("triple_toggle_order", order_state);
 
         let mut radio_yes_option = RadioButton::new("radio_group", "radio_button_yes");
@@ -93,15 +88,13 @@ impl Widget for DemoApp {
                 match ui.selected_option("radio_group") {
                     Some("radio_button_yes") => "Yes",
                     Some("radio_button_no") => "No",
-                    None => "...",
-                    Some(&_) => "...",
+                    _ => "...",
                 }
             )
         });
 
         let mut slider = Slider::new("slider", 0.0, 1.0);
-        let progress = ui.widget_state::<SliderState>("slider");
-        let mut progress_bar = ProgressBar::new(progress.value).id("slider_progress_bar");
+        let mut progress_bar = ProgressBar::new(slider.value(ui)).id("slider_progress_bar");
 
         let theme_options: Vec<SelectOption> = themes
             .iter()
@@ -251,11 +244,7 @@ impl Widget for DemoApp {
             self.current_theme_idx = (self.current_theme_idx + 1) % themes.len();
         }
 
-        if let Some(idx_str) = ui
-            .widget_state::<SelectBoxState>("theme_select")
-            .selected
-            .clone()
-        {
+        if let Some(idx_str) = theme_select.selected(ui) {
             if let Ok(idx) = idx_str.parse::<usize>() {
                 if idx < themes.len() {
                     self.current_theme_idx = idx;

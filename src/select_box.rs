@@ -266,6 +266,15 @@ impl SelectBox {
         let size = self.measure(ui);
         self.arrange(position, size, ui);
     }
+
+    pub fn selected(&self, ui: &mut Ui) -> Option<String> {
+        self.state(ui).selected.clone()
+    }
+    pub fn set_selected(&mut self, ui: &mut Ui, selected: Option<String>) {
+        let mut state = self.take_state(ui);
+        state.selected = selected;
+        self.put_state(ui, state);
+    }
 }
 
 impl Widget for SelectBox {

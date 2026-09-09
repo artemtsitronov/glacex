@@ -140,6 +140,15 @@ impl TextArea {
         }
         style
     }
+
+    pub fn text(&self, ui: &mut Ui) -> String {
+        self.state(ui).text().to_string()
+    }
+    pub fn set_text(&mut self, ui: &mut Ui, text: String) {
+        let mut state = self.take_state(ui);
+        state.set_text(text);
+        self.put_state(ui, state);
+    }
 }
 
 impl Widget for TextArea {

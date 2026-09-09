@@ -3,7 +3,7 @@ use crate::fill::Fill;
 use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::theme::Theme;
 use crate::ui::Ui;
-use crate::widget::{Accessible, AnyWidget, Measurable, Widget, hash_id};
+use crate::widget::{Accessible, AnyWidget, IntoId, Measurable, Widget, hash_id};
 use accesskit::{NodeId, Role};
 
 #[derive(Debug, Clone)]
@@ -92,8 +92,8 @@ impl<'a> Card<'a> {
         }
     }
 
-    pub fn id(mut self, id: impl Into<String>) -> Self {
-        self.id = Some(id.into());
+    pub fn id(mut self, id: impl IntoId) -> Self {
+        self.id = id.into_id();
         self
     }
 

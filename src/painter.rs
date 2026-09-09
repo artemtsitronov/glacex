@@ -695,7 +695,6 @@ impl Painter {
             });
         }
 
-        // Upload instances: base rects followed by overlay rects
         let mut instances: Vec<RectInstance> = self.pending_rects.iter().map(|(_, r)| *r).collect();
         instances.extend(self.pending_overlay_rects.iter().map(|(_, r)| *r));
         self.queue.write_buffer(
@@ -933,7 +932,3 @@ impl Painter {
         );
     }
 }
-
-// That's it folks!
-// Remember, if it works - it works.
-// So don't you dare touch this code :)

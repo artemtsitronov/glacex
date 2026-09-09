@@ -90,8 +90,7 @@ impl Widget for ThemesApp {
         let mut slider = Slider::new("showcase_slider", 0.0, 100.0)
             .width(280.0)
             .default_value(self.slider_val);
-        let slider_resp = slider.state(ui);
-        self.slider_val = slider_resp.value;
+        self.slider_val = slider.value(ui);
 
         let mut progress = ProgressBar::new(self.slider_val / 100.0)
             .width(280.0)

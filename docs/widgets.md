@@ -3,11 +3,42 @@
 API reference for all widgets provided by `glacex`.
 
 Most widgets take a stable string id as their first constructor argument. That id is what
-`Ui::widget_state` uses to find the right persistent state across frames, and it's also what
-shows up in the accessibility tree (see [Accessibility](../README.md#accessibility)) when
-one is enabled. `Card`, `Container`, `Divider`, and `ProgressBar` don't require an id up
-front — call `.id("...")` on them if you need stable state or want that instance to be
-addressable by assistive tech; otherwise they're fine left anonymous.
+persistent state is keyed on across frames, and it's also what shows up in the accessibility
+tree (see [Accessibility](../README.md#accessibility)) when one is enabled. `Card`,
+`Container`, `Divider`, and `ProgressBar` don't require an id up front — call `.id("...")` on
+them if you need stable state or want that instance to be addressable by assistive tech;
+otherwise they're fine left anonymous. That `.id(..)` builder accepts anything implementing
+`IntoId` — `&str`, `String`, `Some("...")`, or `None` to explicitly clear it.
+
+## State access
+
+Every stateful widget implements `StatefulWidget`, which gives it three methods for free,
+keyed by its own id:
+
+```rust
+widget.state(ui)             // &mut State — get-or-init in place
+widget.take_state(ui)        // State — get-or-init, owned (removed from Ui until put back)
+widget.put_state(ui, state)  // hand a State back
+```
+
+Reach for these when you need the whole state struct at once — e.g. mutating several fields
+together, like the three-way mutual-exclusion logic in `examples/demo.rs`. For the common
+case of reading or writing a single value, most widgets also expose small typed convenience
+methods built on top of these three:
+
+| Widget | Read | Write |
+|---|---|---|
+| `Checkbox` | `.is_checked(ui) -> bool` | `.check(ui, bool)` |
+| `Switch` | `.enabled(ui) -> bool` | `.set_enabled(ui, bool)` |
+| `Slider` | `.value(ui) -> f32` | `.set_value(ui, f32)` |
+| `ScrollView` | `.offset(ui) -> [f32; 2]` | `.set_offset(ui, [f32; 2])` |
+| `SelectBox` | `.selected(ui) -> Option<String>` | `.set_selected(ui, Option<String>)` |
+| `TextInput` / `TextArea` | `.text(ui) -> String` | `.set_text(ui, String)` |
+
+`Ui::widget_state` / `take_widget_state` / `put_widget_state` are still there underneath, and
+are what the widget methods above call into. Reach for them directly for state that isn't
+tied to a single widget's id — `examples/demo.rs` uses a plain `TripleToggleOrder` struct
+this way, to remember which of three switches was flipped on most recently.
 
 ## 1. Controls
 
@@ -27,10 +58,7 @@ Push button with hover/press animation.
 Boolean toggle with an animated tick.
 - **Constructor**: `Checkbox::new("checkbox_id")`
 - **Builder methods**: `.style(CheckboxStyle)`, `.default_checked(bool)`, `.size([w, h])`
-- **Reading state**:
-  ```rust
-  let is_checked = ui.widget_state::<CheckboxState>("checkbox_id").checked;
-  ```
+- **Reading/writing state**: `checkbox.is_checked(ui) -> bool`, `checkbox.check(ui, bool)`
 - **Animation**: `CheckboxState` tracks `anim_progress` and `hover_t` via `Motion::SNAPPY`. The tick draws in two overlapping strokes (left leg 0–35%, right leg 30–100%). Border moves toward `Theme::ACTIVE` when checked.
 
 ### RadioButton
@@ -46,20 +74,14 @@ Mutually exclusive selection within a named group.
 Compact toggle with a sliding knob.
 - **Constructor**: `Switch::new("switch_id")`
 - **Builder methods**: `.style(SwitchStyle)`, `.default_enabled(bool)`, `.size([w, h])`
-- **Reading state**:
-  ```rust
-  let enabled = ui.widget_state::<SwitchState>("switch_id").enabled;
-  ```
+- **Reading/writing state**: `switch.enabled(ui) -> bool`, `switch.set_enabled(ui, bool)`
 - **Animation**: `SwitchState` tracks `anim_progress` (`Motion::FLUID`) and `hover_t` (`Motion::SNAPPY`).
 
 ### Slider
 Continuous numeric range control.
 - **Constructor**: `Slider::new("slider_id", min, max)`
 - **Builder methods**: `.width(px)` / `.height(px)` / `.size([w, h])`, `.style(SliderStyle)`, `.default_value(f32)`
-- **Reading state**:
-  ```rust
-  let val = ui.widget_state::<SliderState>("slider_id").value;
-  ```
+- **Reading/writing state**: `slider.value(ui) -> f32`, `slider.set_value(ui, f32)`
 - **Animation**: `SliderState` tracks `hover_t` (`Motion::SNAPPY`) and `drag_t` (`Motion::INSTANT`). Thumb grows 2px while dragging.
 
 ### TextInput
@@ -73,12 +95,7 @@ Single-line text field.
   - `.placeholder("...")` — shown in `Theme::TEXT_MUTED` when empty
   - `.default_text("...")` — initial value
   - `.style(TextInputStyle)`
-- **State access**:
-  ```rust
-  let state = ui.widget_state::<TextEditState>("input_id");
-  let text = state.text();
-  state.set_text("New value");
-  ```
+- **Reading/writing state**: `input.text(ui) -> String`, `input.set_text(ui, String)`
 - **Animation**: focus ring via `Motion::GENTLE` — border grows 0.5px, glow shadow expands 6px. Hover border via `Motion::SNAPPY`.
 
 ### TextArea
@@ -87,7 +104,17 @@ Multi-line editor with scrolling.
 - Arrow-key navigation with column memory, `Enter` for newlines
 - **Constructor**: `TextArea::new("area_id")`
 - **Builder methods**: `.width(px)` / `.height(px)` / `.size([w, h])`, `.default_text("...")`, `.style(TextAreaStyle)`
+- **Reading/writing state**: `area.text(ui) -> String`, `area.set_text(ui, String)`
 - **Animation**: same focus ring as `TextInput`.
+
+### SelectBox
+Combobox: a trigger button that opens a spring-animated floating dropdown.
+- Keyboard navigation (↑/↓, `Enter` to select, `Escape` to close), click-outside-to-close
+- Optional type-to-filter search bar, mouse-wheel scroll through long option lists
+- **Constructor**: `SelectBox::new("select_id", vec![SelectOption::new("value", "Label"), ...])`
+- **Builder methods**: `.placeholder("...")`, `.width(px)`, `.searchable()`, `.style(SelectBoxStyle)`, `.tooltip("...")`
+- **Reading/writing state**: `select.selected(ui) -> Option<String>`, `select.set_selected(ui, Option<String>)`
+- **Animation**: open/close spring (stiffness 380, damping 30) drives the dropdown's slide and the chevron's 180° rotation; per-item hover fades via `Motion::SNAPPY`.
 
 ---
 
@@ -103,6 +130,7 @@ Surface with rounded corners, padding, border, and an optional drop shadow.
 Scrolling container with a draggable scrollbar.
 - **Constructor**: `ScrollView::new("scroll_id", &mut child)`
 - **Builder methods**: `.size([w, h])`, `.padding([x, y])`, `.default_offset([x, y])`, `.style(ScrollViewStyle)`
+- **Reading/writing state**: `scroll.offset(ui) -> [f32; 2]`, `scroll.set_offset(ui, [f32; 2])`
 
 ### Container
 Fixed-size wrapper around a child widget.

@@ -109,15 +109,13 @@ impl Slider {
         self
     }
 
-    pub fn state(&self, ui: &mut Ui) -> SliderState {
-        ui.widget_state_or::<SliderState>(
-            &self.id,
-            SliderState {
-                value: self.default_value,
-                ..Default::default()
-            },
-        )
-        .clone()
+    pub fn value(&self, ui: &mut Ui) -> f32 {
+        self.state(ui).value
+    }
+    pub fn set_value(&mut self, ui: &mut Ui, value: f32) {
+        let mut state = self.take_state(ui);
+        state.value = value;
+        self.put_state(ui, state);
     }
 }
 

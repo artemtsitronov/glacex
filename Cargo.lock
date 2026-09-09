@@ -1166,7 +1166,7 @@ dependencies = [
 
 [[package]]
 name = "glacex"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "accesskit",
  "accesskit_winit",
