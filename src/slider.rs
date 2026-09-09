@@ -206,7 +206,6 @@ impl Measurable for Slider {
 
         let value = state.value;
         let dragging = state.dragging;
-        let hover_t = state.hover_t;
         let drag_t = state.drag_t;
         let velocity_x = state.velocity_x;
         ui.put_widget_state(&self.id, state);
@@ -267,24 +266,6 @@ impl Measurable for Slider {
                 0.0,
                 Color::TRANSPARENT,
                 4.0,
-                false,
-                0.0,
-            );
-        }
-
-        let active_halo_t = hover_t.max(drag_t);
-        if active_halo_t > 0.01 {
-            let glow_size = thumb_current_size + 12.0 * active_halo_t;
-            let glow_offset = (glow_size - thumb_current_size) / 2.0;
-            let glow_pos = [thumb_x - glow_offset, thumb_y - glow_offset];
-            ui.draw_rect(
-                glow_pos,
-                [glow_size, glow_size],
-                Fill::Solid(theme.active.with_alpha(0.24 * active_halo_t)),
-                glow_size / 2.0,
-                0.0,
-                Color::TRANSPARENT,
-                0.0,
                 false,
                 0.0,
             );

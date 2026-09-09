@@ -16,8 +16,6 @@ pub struct SwitchState {
     pub hover_t: f32,
     pub initialized: bool,
     pub prev_progress: f32,
-    /// Glow halo intensity (0 = none, 1 = full). Pulses in when enabled.
-    pub glow_t: f32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -153,7 +151,6 @@ impl Measurable for Switch {
             state.anim_progress = if state.enabled { 1.0 } else { 0.0 };
             state.initialized = true;
             state.prev_progress = state.anim_progress;
-            state.glow_t = state.anim_progress;
         }
 
         if interaction.clicked {
@@ -170,26 +167,12 @@ impl Measurable for Switch {
         let hover_target = if interaction.hovered { 1.0f32 } else { 0.0 };
         state.hover_t = animate_towards(state.hover_t, hover_target, dt, Motion::SNAPPY);
 
-        // Glow fades in when enabled (FLUID = 60ms, intentionally slower than
-        // the knob so the glow "blooms" behind the movement).
-        let glow_target = if enabled { 1.0f32 } else { 0.0 };
-        state.glow_t = animate_towards(state.glow_t, glow_target, dt, Motion::FLUID);
-
         let progress = state.anim_progress;
         let velocity = (progress - state.prev_progress) / dt.max(0.001);
         state.prev_progress = progress;
 
         let hover_t = state.hover_t;
-        let glow_t = state.glow_t;
 
-        // Extract the "on" color for the glow halo before track_fill consumes it
-        let on_color = if let Fill::Solid(c) = &style.track_on_fill {
-            *c
-        } else {
-            theme.active
-        };
-
-        // Track color cross-fade
         let track_fill = if let (Fill::Solid(off_col), Fill::Solid(on_col)) =
             (&style.track_off_fill, &style.track_on_fill)
         {
@@ -256,24 +239,6 @@ impl Measurable for Switch {
             );
         }
 
-        // Active glow halo behind the knob (only visible when enabled)
-        if glow_t > 0.01 {
-            let halo_size = knob_size + 10.0 * glow_t;
-            let halo_offset = (halo_size - knob_size) / 2.0;
-            ui.draw_rect(
-                [knob_x - halo_offset, position[1] + padding - halo_offset],
-                [halo_size, halo_size],
-                Fill::Solid(on_color.with_alpha(0.30 * glow_t)),
-                halo_size / 2.0,
-                0.0,
-                Color::TRANSPARENT,
-                4.0,
-                false,
-                0.0,
-            );
-        }
-
-        // Thumb drop-shadow
         let thumb_shadow = ShadowStyle {
             color: Color::rgba(0, 0, 0, 0.28),
             blur_radius: 3.0,
@@ -321,7 +286,6 @@ impl StatefulWidget for Switch {
             hover_t: 0.0,
             initialized: true,
             prev_progress: if self.default_enabled { 1.0 } else { 0.0 },
-            glow_t: if self.default_enabled { 1.0 } else { 0.0 },
         }
     }
 }

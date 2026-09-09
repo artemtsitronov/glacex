@@ -14,7 +14,6 @@ pub struct CheckboxState {
     pub checked: bool,
     /// 0 = unchecked, 1 = fully checked (drives checkmark draw and box fill).
     pub anim_progress: f32,
-    /// 0 = resting, 1 = hovering.
     pub hover_t: f32,
     /// 0 = baseline, 1 = fully popped (used for scale-pop spring on check).
     pub pop_t: f32,
@@ -244,17 +243,12 @@ impl Measurable for Checkbox {
 
         let checked = state.checked;
 
-        // Check-draw animation: FLUID half-life feels like ink flowing onto paper
         let target_anim = if checked { 1.0 } else { 0.0 };
         state.anim_progress = animate_towards(state.anim_progress, target_anim, dt, Motion::FLUID);
 
-        // Hover
         let hover_target = if interaction.hovered { 1.0f32 } else { 0.0 };
         state.hover_t = animate_towards(state.hover_t, hover_target, dt, Motion::SNAPPY);
 
-        // Scale-pop: decays back to 0 (rest) after being kicked to 1 on click.
-        // Using a very fast half-life (INSTANT) so it snaps back quickly — the
-        // overshoot below is what creates the "pop" feel.
         state.pop_t = animate_towards(state.pop_t, 0.0, dt, Motion::SNAPPY);
 
         let anim_t = state.anim_progress;
@@ -272,7 +266,6 @@ impl Measurable for Checkbox {
         ];
         let draw_size = [inflated_w, inflated_h];
 
-        // Fill: idle → hover → checked, all cross-faded
         let fill = if let (Fill::Solid(idle_col), Fill::Solid(hov_col), Fill::Solid(chk_col)) =
             (&style.fill, &style.hover_fill, &style.checked_fill)
         {
@@ -284,7 +277,6 @@ impl Measurable for Checkbox {
             style.fill
         };
 
-        // Border tightens toward active as it fills
         let border_color = if anim_t > 0.01 {
             style.border_color.lerp(theme.active, anim_t * 0.5)
         } else if hover_t > 0.01 {
@@ -292,26 +284,6 @@ impl Measurable for Checkbox {
         } else {
             style.border_color
         };
-
-        // Subtle focus glow ring when checked (half-intensity, very soft)
-        if anim_t > 0.05 {
-            let glow_r = draw_size[0].max(draw_size[1]) / 2.0 + 4.0 * anim_t;
-            let glow_pos = [
-                draw_pos[0] + draw_size[0] / 2.0 - glow_r,
-                draw_pos[1] + draw_size[1] / 2.0 - glow_r,
-            ];
-            ui.draw_rect(
-                glow_pos,
-                [glow_r * 2.0, glow_r * 2.0],
-                Fill::Solid(theme.active.with_alpha(0.12 * anim_t)),
-                glow_r,
-                0.0,
-                Color::TRANSPARENT,
-                0.0,
-                false,
-                0.0,
-            );
-        }
 
         if let Some(shadow) = &style.shadow {
             draw_shadow(shadow, draw_pos, draw_size, style.corner_radius * scale, ui);

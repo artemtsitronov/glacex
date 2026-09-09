@@ -394,9 +394,10 @@ impl Measurable for TextArea {
             }
         }
 
-        if hovered && ui.scroll_delta_y() != 0.0 {
+        if !ui.scroll_consumed() && hovered && ui.scroll_delta_y() != 0.0 {
             extra.scroll.offset -= ui.scroll_delta_y();
             extra.scroll.mark_activity();
+            ui.consume_scroll();
         }
 
         let geometry = compute_geometry(

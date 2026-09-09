@@ -101,9 +101,8 @@ impl Widget for DemoApp {
 
         let mut slider = Slider::new("slider", 0.0, 1.0);
         let progress = ui.widget_state::<SliderState>("slider");
-        let mut progress_bar = ProgressBar::new(progress.value);
+        let mut progress_bar = ProgressBar::new(progress.value).id("slider_progress_bar");
 
-        // SelectBox widget
         let theme_options: Vec<SelectOption> = themes
             .iter()
             .enumerate()
@@ -111,8 +110,7 @@ impl Widget for DemoApp {
             .collect();
         let mut theme_select = SelectBox::new("theme_select", theme_options)
             .placeholder("Select theme...")
-            .width(200.0)
-            .show_clear(true);
+            .width(200.0);
 
         {
             row![
@@ -253,7 +251,6 @@ impl Widget for DemoApp {
             self.current_theme_idx = (self.current_theme_idx + 1) % themes.len();
         }
 
-        // SelectBox theme picker
         if let Some(idx_str) = ui
             .widget_state::<SelectBoxState>("theme_select")
             .selected

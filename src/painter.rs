@@ -103,7 +103,7 @@ impl GradientAtlas {
     fn bake_ramp(&mut self, queue: &wgpu::Queue, stops: &[GradientStop]) -> GradientHandle {
         const ATLAS_ROWS: u32 = 64;
         let row = self.rows_used % ATLAS_ROWS;
-        let mut pixels = [0u8; 256 * 4]; // one row, RGBA bytes
+        let mut pixels = [0u8; 256 * 4];
 
         for x in 0..256 {
             let t = x as f32 / 255.0;
@@ -864,7 +864,6 @@ impl Painter {
             // scissor the last base-rect group happened to leave behind.
             render_pass.set_scissor_rect(0, 0, surface_w, surface_h);
 
-            // Render base text
             self.text_renderer
                 .render(&self.text_atlas, &self.viewport, &mut render_pass)
                 .expect("failed to render text");
@@ -875,11 +874,10 @@ impl Painter {
             render_pass.set_bind_group(0, &self.bind_group, &[]);
             render_pass.set_bind_group(1, &self.gradient_bind_group, &[]);
 
-            // --- OVERLAY PASS (Tooltips, Popovers, Modals) ---
-            // Rendered strictly on top of all base geometry and base text.
-            // Overlay rects (card + shadow) draw first, then overlay text on
-            // top of them — the other way around and the rect fill paints
-            // straight over the text.
+            // Overlay pass (tooltips, popovers, modals): rendered strictly on
+            // top of all base geometry and base text. Overlay rects (card +
+            // shadow) draw first, then overlay text on top of them — the
+            // other way around and the rect fill paints over the text.
             if !self.pending_overlay_rects.is_empty() {
                 let overlay_offset = self.pending_rects.len();
                 let mut range_start = 0usize;
@@ -935,3 +933,7 @@ impl Painter {
         );
     }
 }
+
+// That's it folks!
+// Remember, if it works - it works.
+// So don't you dare touch this code :)

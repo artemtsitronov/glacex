@@ -32,7 +32,7 @@ fn inflate_rect(rect: [f32; 4], amount: f32) -> [f32; 4] {
 }
 
 pub struct Ui {
-    window: Arc<Window>,
+    window: Arc<Window>, // If you read this, you're gay
     painter: Painter,
     persistent_state: HashMap<String, Box<dyn Any>>,
     mouse_position: [f32; 2],
@@ -57,6 +57,7 @@ pub struct Ui {
     clip_stack: Vec<[f32; 4]>,
     scroll_delta_x: f32,
     scroll_delta_y: f32,
+    scroll_consumed: bool,
     input_block_stack: Vec<[f32; 4]>,
     selected: HashMap<String, String>,
     click_count: u32,
@@ -110,6 +111,7 @@ impl Ui {
             clip_stack: Vec::new(),
             scroll_delta_x: 0.0,
             scroll_delta_y: 0.0,
+            scroll_consumed: false,
             input_block_stack: Vec::new(),
             selected: HashMap::new(),
             click_count: 0,
@@ -236,6 +238,20 @@ impl Ui {
     }
     pub fn set_scroll_delta_y(&mut self, delta: f32) {
         self.scroll_delta_y = delta;
+    }
+
+    /// Whether some scrollable widget has already claimed this frame's wheel
+    /// event. Widgets should skip reacting to `scroll_delta_x`/`_y` once
+    /// this is `true`, so a wheel tick only ever moves the one scrollable
+    /// area actually under the cursor instead of every hovered ancestor.
+    pub fn scroll_consumed(&self) -> bool {
+        self.scroll_consumed
+    }
+
+    /// Claims this frame's wheel event so no other (e.g. ancestor) scrollable
+    /// widget also reacts to it. Call after actually applying the delta.
+    pub fn consume_scroll(&mut self) {
+        self.scroll_consumed = true;
     }
 
     pub fn push_clip(&mut self, rect: [f32; 4]) {
@@ -534,6 +550,7 @@ impl Ui {
         self.focus_requested_this_frame = false;
         self.scroll_delta_x = 0.0;
         self.scroll_delta_y = 0.0;
+        self.scroll_consumed = false;
 
         if !self.cursor_icon_set_this_frame && self.cursor_icon != CursorIcon::Default {
             self.cursor_icon = CursorIcon::Default;
@@ -555,7 +572,6 @@ impl Ui {
         self.painter.set_bgcolor(color);
     }
 
-    /// Returns the currently active theme.
     pub fn theme(&self) -> &Theme {
         &self.theme
     }
@@ -570,7 +586,6 @@ impl Ui {
         self.painter.window_size()
     }
 
-    /// Sets the native window title.
     pub fn set_title(&self, title: &str) {
         self.window.set_title(title);
     }
@@ -729,12 +744,10 @@ impl Ui {
             let pad_x = 10.0;
             let pad_y = 6.0;
             let width = (text_width + pad_x * 2.0).max(60.0);
-            let height = 18.0 + pad_y * 2.0; // 18px line height + vertical padding
+            let height = 18.0 + pad_y * 2.0;
 
             let window_size = self.painter.window_size();
-            // Offset tooltip 10px to the right and 20px below the cursor
             let mut tooltip_pos = [pos[0] + 10.0, pos[1] + 20.0];
-            // Clamp to viewport with 6px margin
             if tooltip_pos[0] + width > window_size[0] - 6.0 {
                 tooltip_pos[0] = (pos[0] - width - 8.0).max(6.0);
             }
@@ -744,7 +757,6 @@ impl Ui {
 
             let full_clip = [0.0, 0.0, window_size[0], window_size[1]];
 
-            // Ambient shadow behind tooltip card (rendered on overlay pass)
             self.painter.draw_overlay_rect(
                 [tooltip_pos[0] - 4.0, tooltip_pos[1] - 4.0],
                 [width + 8.0, height + 8.0],
@@ -757,13 +769,12 @@ impl Ui {
                 12.0,
                 0.0,
                 Color::TRANSPARENT,
-                14.0, // blur — soft ambient
+                14.0,
                 0.0,
                 full_clip,
                 0.0,
             );
 
-            // Tooltip surface card (rendered on overlay pass)
             self.painter.draw_overlay_rect(
                 tooltip_pos,
                 [width, height],

@@ -148,21 +148,11 @@ impl<'a> Measurable for ScrollView<'a> {
         let hovered = contains(position, size, 0.0, ui.mouse_position());
         let mut state = ui.take_widget_state_or(&self.id, self.initial_state());
 
-        let scrolled_this_frame =
-            hovered && (ui.scroll_delta_x() != 0.0 || ui.scroll_delta_y() != 0.0);
-
-        if hovered {
-            if ui.shift_held() {
-                state.x.offset -= ui.scroll_delta_y();
-            } else {
-                state.x.offset -= ui.scroll_delta_x();
-                state.y.offset -= ui.scroll_delta_y();
-            }
-        }
-        if scrolled_this_frame {
-            state.x.mark_activity();
-            state.y.mark_activity();
-        }
+        // Applying the wheel event is deferred until after `self.child` has
+        // been arranged below — if the child is (or contains) a nested
+        // ScrollView, its own arrange() call claims the event first via
+        // `ui.consume_scroll()`, so a wheel tick over a nested scroll area
+        // only moves that inner view instead of every hovered ancestor too.
 
         let content_size = self.child.measure(ui);
 
@@ -326,6 +316,28 @@ impl<'a> Measurable for ScrollView<'a> {
         self.child.arrange(child_position, content_size, ui);
 
         ui.pop_clip();
+
+        // Claim the wheel event now, after any nested scrollable inside
+        // `self.child` has had first crack at it. `state.offset` changing
+        // here lands visually next frame — an imperceptible one-frame lag
+        // in exchange for a wheel tick only ever moving the topmost/most
+        // specific hovered scroll area.
+        if !ui.scroll_consumed()
+            && hovered
+            && (ui.scroll_delta_x() != 0.0 || ui.scroll_delta_y() != 0.0)
+        {
+            if ui.shift_held() {
+                state.x.offset -= ui.scroll_delta_y();
+            } else {
+                state.x.offset -= ui.scroll_delta_x();
+                state.y.offset -= ui.scroll_delta_y();
+            }
+            state.x.offset = state.x.offset.clamp(0.0, geometry_x.max_scroll);
+            state.y.offset = state.y.offset.clamp(0.0, geometry_y.max_scroll);
+            state.x.mark_activity();
+            state.y.mark_activity();
+            ui.consume_scroll();
+        }
 
         if show_x {
             ui.pop_input_block();
