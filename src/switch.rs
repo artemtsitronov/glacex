@@ -193,6 +193,21 @@ impl Measurable for Switch {
             style.track_off_fill
         };
 
+        // The thumb sits on the track, which itself lerps off -> on color
+        // above. Most themes' on-color is dark/saturated enough for a white
+        // thumb, but shadcn-dark's `active` is near-white, so blend toward
+        // a contrasting color as the track approaches "on" — otherwise the
+        // thumb goes white-on-white right when it matters most.
+        let thumb_fill = if let Fill::Solid(thumb_color) = style.thumb_fill {
+            Fill::Solid(if progress > 0.01 {
+                thumb_color.lerp(theme.on_active(), progress)
+            } else {
+                thumb_color
+            })
+        } else {
+            style.thumb_fill
+        };
+
         let border_color = if progress > 0.01 {
             style.border_color.lerp(theme.active, progress * 0.5)
         } else if hover_t > 0.01 {
@@ -264,7 +279,7 @@ impl Measurable for Switch {
         ui.draw_rect(
             knob_pos,
             [knob_size, knob_size],
-            style.thumb_fill,
+            thumb_fill,
             knob_radius,
             0.0,
             Color::TRANSPARENT,

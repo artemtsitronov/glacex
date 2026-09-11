@@ -53,6 +53,8 @@ Built by **Artem Tsitronov** and **Soumalya Das**.
 - [Contributing](#contributing)
 - [License](#license)
 
+If you'd like an experimental version of glacex, try visiting programmersd21 fork: https://github.com/programmersd21/glacex [DISCLAIMER: Artem Tsitronov is not responsible for programmersd21 fork. That includes drastic changes, redesigns, and AI-generated content]
+
 ## What is glacex?
 
 `glacex` is an immediate-mode UI library for Rust that draws its own pixels instead of wrapping a native toolkit or a browser engine:
@@ -72,7 +74,7 @@ There's no retained widget tree and no markup — you describe the UI in plain R
 - `Color` is `#[repr(C)]` + `Pod`/`Zeroable`, so it maps straight onto GPU vertex buffers. Hex, RGB, HSV, alpha blending, `lerp`, lighten/darken.
 - Cursor changes (pointer, text, resize, default) driven by hover state.
 - A floating tooltip layer that clamps to the viewport.
-- Widgets: `Button`, `Checkbox`, `RadioButton`, `Switch`, `Slider`, `ProgressBar`, `TextInput`, `TextArea`, `ScrollView`, `Card`, `Container`, `Badge`, `Divider`, `Label`, `SelectBox`.
+- Widgets: `Button`, `Checkbox`, `RadioButton`, `Switch`, `Slider`, `ProgressBar`, `TextInput`, `TextArea`, `ScrollView`, `Card`, `Container`, `Badge`, `Divider`, `Label`, `SelectBox`, `Tabs`.
 - `row![]` / `column![]` macros backed by `taffy`, with alignment and spacing.
 - Interaction: hover/press/click, secondary/middle mouse buttons, Tab/Shift+Tab focus order, double/triple-click word/line selection, clipboard via `arboard`, blinking cursor.
 - Widget state persists across frames keyed by a stable string id, even though the widget itself is rebuilt every frame. Every stateful widget exposes this via `.state(ui)`/`.take_state(ui)`/`.put_state(ui, state)` (from the `StatefulWidget` trait), plus small typed accessors for the common case (`checkbox.is_checked(ui)`, `slider.value(ui)`, etc.) — see [Widgets](#widgets). `Ui::widget_state`/`take_widget_state`/`put_widget_state` are the lower-level primitives underneath, for state that isn't tied to a single widget's id.
@@ -98,7 +100,7 @@ or in `Cargo.toml`:
 
 ```toml
 [dependencies]
-glacex = "0.1.7"
+glacex = "0.1.8"
 ```
 
 ### From GitHub (main branch)
@@ -322,6 +324,24 @@ let mut sel = SelectBox::new("country", countries)
 
 The dropdown opens with a spring animation, closes on Escape or outside-click, supports `↑`/`↓` keyboard navigation and `Enter` to confirm.
 
+#### Tabs
+```rust
+use glacex::{Tabs, TabItem};
+
+let mut tabs = Tabs::new(
+    "settings_tabs",
+    vec![
+        TabItem::new("general", "General"),
+        TabItem::new("account", "Account"),
+        TabItem::new("billing", "Billing"),
+    ],
+);
+
+let selected = tabs.selected(ui);
+```
+
+The active pill slides and resizes to the selected tab with a spring animation; clicking a tab updates the selection immediately. Selection is stored the same way as `RadioButton` groups, so `ui.selected_option("settings_tabs")` also works.
+
 ### Containers
 
 #### Card
@@ -379,6 +399,7 @@ let save_btn = Button::new("save_btn", "Save").style(ButtonStyle {
 | `ScrollViewStyle` | `ScrollView` | `thumb_fill`, `thumb_dragging_fill`, `thumb_corner_radius` |
 | `CardStyle` | `Card` | `fill`, `border_width`, `border_color`, `corner_radius`, `padding`, `shadow` |
 | `SelectBoxStyle` | `SelectBox` | `fill`, `hover_fill`, `focus_fill`, `border_color`, `focus_border_color`, `corner_radius`, `height`, `dropdown_fill`, `dropdown_shadow`, `item_height`, `item_hover_fill`, `item_active_fill`, `searchable` |
+| `TabsStyle` | `Tabs` | `height`, `tab_padding_x`, `gap`, `text_color`, `hover_text_color`, `active_fill`, `pill_corner_radius`, `pill_inset_y` |
 
 ### ShadowStyle
 
@@ -549,6 +570,7 @@ glacex/
 │   ├── scroll_view.rs    # ScrollView container
 │   ├── card.rs           # Card container
 │   ├── select_box.rs     # SelectBox / Combobox widget
+│   ├── tabs.rs           # Tabs widget
 │   ├── theme.rs          # Theme palettes and design tokens
 │   ├── painter.rs        # wgpu + glyphon rendering backend
 │   └── shader.wgsl       # Instanced SDF quad shader

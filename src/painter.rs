@@ -8,6 +8,8 @@ use glyphon::{
 };
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::iter;
 use std::sync::Arc;
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
@@ -22,6 +24,30 @@ use wgpu::{
     ShaderStages, StoreOp, Surface, SurfaceConfiguration, TextureViewDescriptor, VertexState,
 };
 use winit::window::Window;
+
+struct CachedText {
+    buffer: glyphon::Buffer,
+    width: f32,
+    last_used_frame: u64,
+}
+
+const TEXT_CACHE_EVICTION_FRAME: u64 = 180;
+
+fn hash_text_key(
+    text: &str,
+    font_size: f32,
+    line_height: f32,
+    weight: FontWeight,
+    is_mono: bool,
+) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    text.hash(&mut hasher);
+    font_size.to_bits().hash(&mut hasher);
+    line_height.to_bits().hash(&mut hasher);
+    weight.hash(&mut hasher);
+    is_mono.hash(&mut hasher);
+    hasher.finish()
+}
 
 /// Walks the stop list, finds the two stops `t` falls between, and mixes
 /// them — the same interpolation the shader does per-fragment, just run
@@ -44,8 +70,7 @@ fn sample_stops(stops: &[GradientStop], t: f32) -> Color {
 }
 
 fn hash_gradient(gradient: &Gradient) -> u64 {
-    use std::hash::{Hash, Hasher};
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    let mut hasher = DefaultHasher::new();
     // Hash each stop's position + color bytes — f32 doesn't implement Hash
     // directly (NaN issues), so hash the bit pattern instead.
     for stop in &gradient.stops {
@@ -154,9 +179,34 @@ struct WindowSize {
     height: f32,
 }
 
-/// Owns every GPU and font-rendering detail. Knows nothing about buttons,
-/// labels, hit-testing, or layout — its entire job is "draw a rectangle" /
-/// "draw some text", queued per frame, uploaded and submitted once.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash)]
+pub enum FontWeight {
+    #[default]
+    Regular,
+    Medium,
+    SemiBold,
+    Bold,
+}
+
+impl FontWeight {
+    pub fn to_glyphon(self) -> Weight {
+        match self {
+            FontWeight::Regular => Weight::NORMAL,
+            FontWeight::Medium => Weight::MEDIUM,
+            FontWeight::SemiBold => Weight::SEMIBOLD,
+            FontWeight::Bold => Weight::BOLD,
+        }
+    }
+}
+
+macro_rules! load_font {
+    ($font_system:expr, $path:literal) => {
+        $font_system
+            .db_mut()
+            .load_font_data(include_bytes!($path).to_vec());
+    };
+}
+
 pub struct Painter {
     surface: Surface<'static>,
     surface_config: SurfaceConfiguration,
@@ -179,14 +229,17 @@ pub struct Painter {
     text_atlas: TextAtlas,
     text_renderer: TextRenderer,
     overlay_text_renderer: TextRenderer,
+    text_shape_cache: HashMap<u64, CachedText>,
     font_metrics: Metrics,
-    pending_labels: Vec<(glyphon::Buffer, [f32; 2], [f32; 4], Color)>,
-    pending_overlay_labels: Vec<(glyphon::Buffer, [f32; 2], [f32; 4], Color)>,
+    pending_labels: Vec<(u64, [f32; 2], [f32; 4], Color)>,
+    pending_overlay_labels: Vec<(u64, [f32; 2], [f32; 4], Color)>,
 
     gradient_atlas: GradientAtlas,
     gradient_bind_group: BindGroup,
 
     bgcolor: WgpuColor,
+
+    frame_count: u64,
 }
 
 impl Painter {
@@ -336,21 +389,11 @@ impl Painter {
         });
 
         let mut font_system = FontSystem::new();
-        font_system
-            .db_mut()
-            .load_font_data(include_bytes!("../assets/fonts/Geist-Regular.ttf").to_vec());
-        font_system
-            .db_mut()
-            .load_font_data(include_bytes!("../assets/fonts/Geist-Medium.ttf").to_vec());
-        font_system
-            .db_mut()
-            .load_font_data(include_bytes!("../assets/fonts/Geist-SemiBold.ttf").to_vec());
-        font_system
-            .db_mut()
-            .load_font_data(include_bytes!("../assets/fonts/Geist-Bold.ttf").to_vec());
-        font_system
-            .db_mut()
-            .load_font_data(include_bytes!("../assets/fonts/GeistMono-Regular.ttf").to_vec());
+        load_font!(font_system, "../assets/fonts/Geist-Regular.ttf");
+        load_font!(font_system, "../assets/fonts/Geist-Medium.ttf");
+        load_font!(font_system, "../assets/fonts/Geist-SemiBold.ttf");
+        load_font!(font_system, "../assets/fonts/Geist-Bold.ttf");
+        load_font!(font_system, "../assets/fonts/GeistMono-Regular.ttf");
         let swash_cache = SwashCache::new();
         let cache = Cache::new(&device);
         let viewport = Viewport::new(&device, &cache);
@@ -384,20 +427,71 @@ impl Painter {
             text_atlas,
             text_renderer,
             overlay_text_renderer,
+            text_shape_cache: HashMap::new(),
             font_metrics,
             pending_labels: vec![],
             pending_overlay_labels: vec![],
             gradient_atlas,
             gradient_bind_group,
             bgcolor: WgpuColor::WHITE,
+            frame_count: 0,
         }
     }
 
+    fn get_or_shape_text(
+        &mut self,
+        text: &str,
+        font_size: f32,
+        line_height: f32,
+        weight: FontWeight,
+        is_mono: bool,
+    ) -> u64 {
+        let key = hash_text_key(text, font_size, line_height, weight, is_mono);
+        if let Some(cached) = self.text_shape_cache.get_mut(&key) {
+            cached.last_used_frame = self.frame_count;
+            return key;
+        }
+
+        let mut buffer =
+            glyphon::Buffer::new(&mut self.font_system, Metrics::new(font_size, line_height));
+        buffer.set_size(Some(1000.0), Some(1000.0));
+
+        let family = if is_mono {
+            Family::Name("Geist Mono")
+        } else {
+            Family::Name("Geist")
+        }; // adjust to your actual font setup
+        let attrs = Attrs::new().weight(weight.to_glyphon()).family(family);
+        buffer.set_text(text, &attrs, Shaping::Basic, None);
+        buffer.shape_until_scroll(&mut self.font_system, false);
+
+        let width = buffer
+            .layout_runs()
+            .map(|run| run.line_w)
+            .fold(0.0, f32::max);
+
+        self.text_shape_cache.insert(
+            key,
+            CachedText {
+                buffer,
+                width,
+                last_used_frame: self.frame_count,
+            },
+        );
+
+        key
+    }
+
     pub fn begin_frame(&mut self) {
+        self.frame_count += 1;
+
         self.pending_rects.clear();
         self.pending_labels.clear();
         self.pending_overlay_rects.clear();
         self.pending_overlay_labels.clear();
+        self.text_shape_cache.retain(|_, cached| {
+            self.frame_count - cached.last_used_frame <= TEXT_CACHE_EVICTION_FRAME
+        });
     }
 
     pub fn window_size(&self) -> [f32; 2] {
@@ -406,29 +500,7 @@ impl Painter {
             self.surface_config.height as f32,
         ]
     }
-}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum FontWeight {
-    #[default]
-    Regular,
-    Medium,
-    SemiBold,
-    Bold,
-}
-
-impl FontWeight {
-    pub fn to_glyphon(self) -> Weight {
-        match self {
-            FontWeight::Regular => Weight::NORMAL,
-            FontWeight::Medium => Weight::MEDIUM,
-            FontWeight::SemiBold => Weight::SEMIBOLD,
-            FontWeight::Bold => Weight::BOLD,
-        }
-    }
-}
-
-impl Painter {
     pub fn line_height(&self) -> f32 {
         self.font_metrics.line_height
     }
@@ -451,25 +523,8 @@ impl Painter {
         weight: FontWeight,
         is_mono: bool,
     ) -> f32 {
-        let metrics = Metrics {
-            font_size,
-            line_height,
-        };
-        let mut buffer = glyphon::Buffer::new(&mut self.font_system, metrics);
-        buffer.set_size(Some(10000.0), Some(10000.0));
-        let family = if is_mono {
-            Family::Name("Geist Mono")
-        } else {
-            Family::Name("Geist")
-        };
-        let attrs = Attrs::new().family(family).weight(weight.to_glyphon());
-        buffer.set_text(text, &attrs, Shaping::Basic, None);
-        buffer.shape_until_scroll(&mut self.font_system, false);
-
-        buffer
-            .layout_runs()
-            .map(|run| run.line_w)
-            .fold(0.0, f32::max)
+        let key = self.get_or_shape_text(text, font_size, line_height, weight, is_mono);
+        self.text_shape_cache[&key].width
     }
 
     pub fn set_bgcolor(&mut self, color: Color) {
@@ -568,22 +623,8 @@ impl Painter {
         weight: FontWeight,
         is_mono: bool,
     ) {
-        let metrics = Metrics {
-            font_size,
-            line_height,
-        };
-        let mut buffer = glyphon::Buffer::new(&mut self.font_system, metrics);
-        buffer.set_size(Some(10000.0), Some(10000.0));
-        let family = if is_mono {
-            Family::Name("Geist Mono")
-        } else {
-            Family::Name("Geist")
-        };
-        let attrs = Attrs::new().family(family).weight(weight.to_glyphon());
-        buffer.set_text(text, &attrs, Shaping::Basic, None);
-        buffer.shape_until_scroll(&mut self.font_system, false);
-
-        self.pending_labels.push((buffer, position, bounds, color));
+        let key = self.get_or_shape_text(text, font_size, line_height, weight, is_mono);
+        self.pending_labels.push((key, position, bounds, color));
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -650,23 +691,9 @@ impl Painter {
         weight: FontWeight,
         is_mono: bool,
     ) {
-        let metrics = Metrics {
-            font_size,
-            line_height,
-        };
-        let mut buffer = glyphon::Buffer::new(&mut self.font_system, metrics);
-        buffer.set_size(Some(10000.0), Some(10000.0));
-        let family = if is_mono {
-            Family::Name("Geist Mono")
-        } else {
-            Family::Name("Geist")
-        };
-        let attrs = Attrs::new().family(family).weight(weight.to_glyphon());
-        buffer.set_text(text, &attrs, Shaping::Basic, None);
-        buffer.shape_until_scroll(&mut self.font_system, false);
-
+        let key = self.get_or_shape_text(text, font_size, line_height, weight, is_mono);
         self.pending_overlay_labels
-            .push((buffer, position, bounds, color));
+            .push((key, position, bounds, color));
     }
 
     pub fn present(&mut self) {
@@ -724,11 +751,13 @@ impl Painter {
             },
         );
 
+        let cache = &self.text_shape_cache;
+
         let text_areas = self
             .pending_labels
             .iter()
-            .map(|(buffer, position, bounds, color)| TextArea {
-                buffer,
+            .map(|(key, position, bounds, color)| TextArea {
+                buffer: &cache[key].buffer,
                 left: position[0],
                 top: position[1],
                 scale: 1.0,
@@ -762,8 +791,8 @@ impl Painter {
         let overlay_text_areas =
             self.pending_overlay_labels
                 .iter()
-                .map(|(buffer, position, bounds, color)| TextArea {
-                    buffer,
+                .map(|(key, position, bounds, color)| TextArea {
+                    buffer: &cache[key].buffer,
                     left: position[0],
                     top: position[1],
                     scale: 1.0,

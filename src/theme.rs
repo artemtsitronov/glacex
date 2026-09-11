@@ -589,6 +589,18 @@ impl Theme {
         }
     }
 
+    /// A color that stays legible drawn on top of `active`. Most themes'
+    /// `active` is dark/saturated enough for white to read fine, but
+    /// shadcn-dark's `active` is near-white — fall back to black there so
+    /// e.g. a switch thumb or a selected radio dot doesn't disappear.
+    pub fn on_active(&self) -> Color {
+        if self.is_dark && self.active.r > 0.8 && self.active.g > 0.8 {
+            Color::BLACK
+        } else {
+            Color::WHITE
+        }
+    }
+
     pub fn checkbox_style(&self) -> CheckboxStyle {
         CheckboxStyle {
             fill: Fill::Solid(if self.is_dark {
@@ -598,11 +610,7 @@ impl Theme {
             }),
             hover_fill: Fill::Solid(self.surface_subtle),
             checked_fill: Fill::Solid(self.active),
-            check_color: if self.is_dark && self.active.r > 0.8 && self.active.g > 0.8 {
-                Color::BLACK
-            } else {
-                Color::WHITE
-            },
+            check_color: self.on_active(),
             border_width: 1.0,
             border_color: self.border_strong,
             corner_radius: 4.0,

@@ -1,5 +1,4 @@
 use glacex::*;
-use wgpu::SurfaceStatus::Good;
 
 struct DemoApp {
     current_theme_idx: usize,
@@ -110,6 +109,14 @@ impl Widget for DemoApp {
                 &mut ScrollView::new(
                     "scroll_wrapper",
                     &mut glacex::column![
+                        &mut Tabs::new(
+                            "tabs",
+                            vec![
+                                TabItem::new("tab1", "Tab 1"),
+                                TabItem::new("tab2", "Tab 2"),
+                                TabItem::new("tab3", "Tab 3"),
+                            ]
+                        ),
                         &mut row![
                             &mut window_size_label,
                             &mut Divider::vertical(24.0).thickness(2.0),

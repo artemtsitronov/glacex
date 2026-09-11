@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.1.8]
+
+### Added
+- `Tabs` widget (`src/tabs.rs`) — a segmented tab list with a pill-shaped selection indicator that spring-animates (`Motion::FLUID`) between tabs on both position and width, plus a per-tab hover fade (`Motion::SNAPPY`). `TabItem::new(id, label)` builds each entry; `TabsStyle`/`TabsStyle::from_theme()` control height, padding, gap, text colors, and the pill's fill/radius/inset. Selection is backed by `Ui::select`/`selected_option` (same mechanism as radio groups), with `Tabs::selected`/`set_selected` accessors and a `TabsResponse { selected, changed, hovered_index }` returned per frame. Accessibility role `TabList`.
+- A text-shape cache in `Painter` (`src/painter.rs`): laid-out `glyphon::Buffer`s are now keyed by a hash of `(text, font_size, line_height, weight, mono)` and reused across calls instead of re-shaping the same string up to 3x a frame (once for measurement, once each for the normal and overlay passes). Entries idle for `TEXT_CACHE_EVICTION_FRAME` (180) frames are evicted.
+
+### Changed
+- `arboard` dependency now enables the `wayland-data-control` feature, so clipboard access works under Wayland compositors without an X11 fallback.
+- `RadioButton`'s selected dot and `Switch`'s thumb now use the new `Theme::on_active()` instead of hard-coded `Color::WHITE`, matching the fix already applied to `Checkbox`'s check mark — themes like shadcn-dark whose `active` color is near-white no longer render an invisible white-on-white dot/thumb.
+- Minor internal cleanup in `src/painter.rs`: font loading de-duplicated into a `load_font!` macro, and `hash_gradient`'s local `Hash`/`Hasher` imports hoisted to the module level (shared with the new text-cache hashing).
+
 ## [0.1.7]
 
 ### Changed

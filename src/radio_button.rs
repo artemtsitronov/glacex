@@ -27,6 +27,9 @@ pub struct RadioButtonStyle {
     pub corner_radius: f32,
     pub shadow: Option<ShadowStyle>,
     pub sharp: bool,
+    /// Color of the inner dot, shown once selected (or animating toward
+    /// it). Only sits on `selected_fill`, so it should contrast with that.
+    pub dot_color: Color,
 }
 
 impl Default for RadioButtonStyle {
@@ -40,6 +43,7 @@ impl Default for RadioButtonStyle {
             corner_radius: 9.0,
             shadow: Some(ShadowStyle::default()),
             sharp: false,
+            dot_color: Color::WHITE,
         }
     }
 }
@@ -137,6 +141,7 @@ impl Measurable for RadioButton {
             corner_radius: 9.0,
             shadow: Some(theme.shadow_sm()[0]),
             sharp: false,
+            dot_color: theme.on_active(),
         });
         let dt = ui.dt();
 
@@ -222,7 +227,7 @@ impl Measurable for RadioButton {
             let dot_size = (size[0] - inset * 2.0).max(0.0);
             let dot_pos = [position[0] + inset, position[1] + inset];
             let dot_radius = dot_size / 2.0;
-            let dot_color = Color::WHITE.with_alpha(dot_t);
+            let dot_color = style.dot_color.with_alpha(dot_t);
             ui.draw_rect(
                 dot_pos,
                 [dot_size, dot_size],
