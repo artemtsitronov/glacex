@@ -116,6 +116,33 @@ Combobox: a trigger button that opens a spring-animated floating dropdown.
 - **Reading/writing state**: `select.selected(ui) -> Option<String>`, `select.set_selected(ui, Option<String>)`
 - **Animation**: open/close spring (stiffness 380, damping 30) drives the dropdown's slide and the chevron's 180° rotation; per-item hover fades via `Motion::SNAPPY`.
 
+### Tabs
+Horizontal tab strip with an animated selection pill.
+- **Constructor**: `Tabs::new("tabs_id", vec![TabItem::new("tab1", "Tab 1"), TabItem::new("tab2", "Tab 2"), ...])`
+- **Builder methods**: `.style(TabsStyle)`
+- **Reading/writing state**: `tabs.selected(ui) -> Option<String>`, `tabs.set_selected(ui, "tab_id")`
+- **Response**: `.ui(ui)` returns `TabsResponse { selected, changed, hovered_index }` — `changed` is `true` on the frame the selection moved, useful for driving a `match` over the selected id without re-reading state separately.
+- **Behavior**: first `TabItem` is auto-selected the first frame if nothing is selected yet.
+- **Animation**: the active-tab pill slides and resizes via `Motion::FLUID` (`indicator_x` / `indicator_w`); per-tab label color fades between `text_color` and `hover_text_color` via `Motion::SNAPPY` on hover. Active label text color is chosen automatically for contrast against `active_fill`.
+
+```rust
+let tabs_response = Tabs::new(
+    "tabs",
+    vec![
+        TabItem::new("tab1", "Tab 1"),
+        TabItem::new("tab2", "Tab 2"),
+        TabItem::new("tab3", "Tab 3"),
+    ],
+)
+.ui(ui);
+
+match tabs_response.selected.as_str() {
+    "tab1" => { /* ... */ }
+    "tab2" => { /* ... */ }
+    _ => { /* ... */ }
+}
+```
+
 ---
 
 ## 2. Containers
