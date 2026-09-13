@@ -56,6 +56,8 @@ Each rectangle submitted to the GPU contains:
 - `blur_radius`: drop shadow soft radius
 - `fill_kind`: `0.0` solid, `1.0` linear, `2.0` radial, `3.0` conic
 - `gradient_angle`, `gradient_row`, `gradient_center`: gradient parameters
+- `rotation`: `f32`
+- `image_handle`: `ImageHandle`
 
 ## 3. Animation System (`src/animation.rs`)
 
@@ -111,11 +113,13 @@ All animated widgets follow this pattern:
 - Rectangles sharing the same clip bounds pack into a single instanced `draw` call.
 - `glyphon` text submissions clip independently, preventing overflow outside `ScrollView` or `Card` boundaries.
 
-## 6. Gradient Atlas System
+## 6. Gradient & Image Atlas System
 
 Gradient fills bake onto a dedicated GPU ramp texture atlas:
 - New gradients are sampled into an atlas row on first use.
 - Gradients cache by content hash. Reusing the same definition across frames costs nothing.
+
+`Fill::Image` works the same way conceptually — `Ui::load_image(path)` decodes a PNG/JPEG/WebP file via the `image` crate and uploads it into a shared atlas texture, returning an `ImageHandle` to use as a `Fill` like a solid color or gradient. There's no packing/eviction yet, so only one image is resident at a time.
 
 ## 7. Frame Lifecycle (`src/lib.rs`)
 
@@ -165,4 +169,3 @@ Accessibility is opt-in (`App::accessibility_enabled(true)`) and layered on top 
 - **`AccessibilityActionHandler`**: receives action requests from the AT client (e.g. "invoke this button"). Currently just logged — wiring it back into widget state is app-specific and left to the caller.
 
 Each widget's `NodeId` is a hash of its own id string (`hash_id`, `src/widget.rs`), so two widgets sharing an id — including two anonymous `Card`/`Container`/`Divider`/`ProgressBar` instances that both fall back to the same default id — collide in the tree. `Card`, `Container`, and `Divider` only call `register_accessible` when the caller has actually set an `.id(...)`, precisely to avoid that.
-

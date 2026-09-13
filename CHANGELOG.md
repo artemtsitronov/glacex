@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.1.9]
+
+### Added
+- `Fill::Image` — widgets can now be filled with a loaded image, the
+  same way they can be filled with a solid color or gradient.
+- `Ui::load_image(path)` — decodes a PNG/JPEG/WebP file via `image` and returns an
+  `ImageHandle` for use with `Fill::Image`.
+- `ImageHandle::width()` / `ImageHandle::height()` — read an image's
+  natural pixel dimensions, e.g. to size a widget to match it.
+
+### Notes
+- Images are currently stored in a single shared atlas texture with no
+  packing/eviction yet — only one image is supported at a time until a
+  real atlas packer is built. This will hopefully be fixed in 0.2.0
+
 ## [0.1.8]
 
 ### Added

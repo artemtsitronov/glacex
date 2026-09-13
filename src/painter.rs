@@ -1,3 +1,4 @@
+use crate::ImageHandle;
 use crate::color::Color;
 use crate::fill::{Fill, Gradient, GradientHandle, GradientKind, GradientStop};
 use crate::shapes::{QUAD_VERTICES, QuadVertex, RectInstance};
@@ -6,6 +7,7 @@ use glyphon::{
     Attrs, Cache, Family, FontSystem, Metrics, Resolution, Shaping, SwashCache, TextArea,
     TextAtlas, TextBounds, TextRenderer, Viewport, Weight,
 };
+use image::{ImageError, ImageReader};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
@@ -21,7 +23,8 @@ use wgpu::{
     MultisampleState, Operations, PipelineCompilationOptions, PipelineLayoutDescriptor,
     PrimitiveState, Queue, RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline,
     RenderPipelineDescriptor, RequestAdapterOptions, ShaderModuleDescriptor, ShaderSource,
-    ShaderStages, StoreOp, Surface, SurfaceConfiguration, TextureViewDescriptor, VertexState,
+    ShaderStages, StoreOp, Surface, SurfaceConfiguration, Texture, TextureDescriptor,
+    TextureViewDescriptor, VertexState,
 };
 use winit::window::Window;
 
@@ -32,6 +35,7 @@ struct CachedText {
 }
 
 const TEXT_CACHE_EVICTION_FRAME: u64 = 180;
+const IMAGE_ATLAS_SIZE: f32 = 2048.0;
 
 fn hash_text_key(
     text: &str,
@@ -207,6 +211,77 @@ macro_rules! load_font {
     };
 }
 
+struct ImageAtlas {
+    texture: wgpu::Texture,
+    texture_view: wgpu::TextureView,
+    sampler: wgpu::Sampler,
+}
+
+impl ImageAtlas {
+    pub fn new(device: &wgpu::Device) -> Self {
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("image atlas"),
+            size: wgpu::Extent3d {
+                width: 2048,
+                height: 2048,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8Unorm,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        });
+
+        let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
+            ..Default::default()
+        });
+
+        ImageAtlas {
+            texture,
+            texture_view,
+            sampler,
+        }
+    }
+
+    pub fn write_region(
+        &self,
+        queue: &wgpu::Queue,
+        x: u32,
+        y: u32,
+        width: u32,
+        height: u32,
+        rgba_bytes: &[u8],
+    ) {
+        queue.write_texture(
+            wgpu::TexelCopyTextureInfo {
+                texture: &self.texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d { x, y, z: 0 },
+                aspect: wgpu::TextureAspect::All,
+            },
+            rgba_bytes,
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(width * 4), // 4 bytes per pixel (RGBA)
+                rows_per_image: Some(height),
+            },
+            wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+        );
+    }
+}
+
 pub struct Painter {
     surface: Surface<'static>,
     surface_config: SurfaceConfiguration,
@@ -236,6 +311,9 @@ pub struct Painter {
 
     gradient_atlas: GradientAtlas,
     gradient_bind_group: BindGroup,
+
+    image_atlas: ImageAtlas,
+    image_bind_group: BindGroup,
 
     bgcolor: WgpuColor,
 
@@ -288,6 +366,17 @@ impl Painter {
             }],
         });
 
+        let bind_group = device.create_bind_group(&BindGroupDescriptor {
+            label: None,
+            layout: &bind_group_layout,
+            entries: &[BindGroupEntry {
+                binding: 0,
+                resource: window_size_buffer.as_entire_binding(),
+            }],
+        });
+
+        let gradient_atlas = GradientAtlas::new(&device);
+
         let gradient_bind_group_layout =
             device.create_bind_group_layout(&BindGroupLayoutDescriptor {
                 label: Some("gradient atlas bind group layout"),
@@ -311,17 +400,6 @@ impl Painter {
                 ],
             });
 
-        let bind_group = device.create_bind_group(&BindGroupDescriptor {
-            label: None,
-            layout: &bind_group_layout,
-            entries: &[BindGroupEntry {
-                binding: 0,
-                resource: window_size_buffer.as_entire_binding(),
-            }],
-        });
-
-        let gradient_atlas = GradientAtlas::new(&device);
-
         let gradient_bind_group = device.create_bind_group(&BindGroupDescriptor {
             label: Some("gradient atlas bind group"),
             layout: &gradient_bind_group_layout,
@@ -337,9 +415,52 @@ impl Painter {
             ],
         });
 
+        let image_atlas = ImageAtlas::new(&device);
+
+        let image_bind_group_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            label: Some("image atlas bind group layout"),
+            entries: &[
+                BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: ShaderStages::FRAGMENT,
+                    count: None,
+                    ty: BindingType::Texture {
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        multisampled: false,
+                    },
+                },
+                BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: ShaderStages::FRAGMENT,
+                    count: None,
+                    ty: BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                },
+            ],
+        });
+
+        let image_bind_group = device.create_bind_group(&BindGroupDescriptor {
+            label: Some("image atlas bind group"),
+            layout: &image_bind_group_layout,
+            entries: &[
+                BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&image_atlas.texture_view),
+                },
+                BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&image_atlas.sampler),
+                },
+            ],
+        });
+
         let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: None,
-            bind_group_layouts: &[Some(&bind_group_layout), Some(&gradient_bind_group_layout)],
+            bind_group_layouts: &[
+                Some(&bind_group_layout),
+                Some(&gradient_bind_group_layout),
+                Some(&image_bind_group_layout),
+            ],
             immediate_size: 0,
         });
 
@@ -433,9 +554,27 @@ impl Painter {
             pending_overlay_labels: vec![],
             gradient_atlas,
             gradient_bind_group,
+            image_atlas,
+            image_bind_group,
             bgcolor: WgpuColor::WHITE,
             frame_count: 0,
         }
+    }
+
+    pub fn test_image_atlas(&mut self) {
+        let img = image::ImageReader::open("assets/test/1.webp")
+            .unwrap()
+            .decode()
+            .unwrap();
+        let rgba = img.to_rgba8();
+        self.image_atlas.write_region(
+            &self.queue,
+            0,
+            0,
+            rgba.width(),
+            rgba.height(),
+            rgba.as_raw(),
+        );
     }
 
     fn get_or_shape_text(
@@ -536,6 +675,28 @@ impl Painter {
         };
     }
 
+    pub fn load_image(&mut self, path: &str) -> Result<ImageHandle, ImageError> {
+        let img = ImageReader::open(path)?.decode()?;
+        let rgba = img.into_rgba8();
+        self.image_atlas.write_region(
+            &self.queue,
+            0,
+            0,
+            rgba.width(),
+            rgba.height(),
+            rgba.as_raw(),
+        );
+
+        let u1 = rgba.width() as f32 / IMAGE_ATLAS_SIZE;
+        let v1 = rgba.height() as f32 / IMAGE_ATLAS_SIZE;
+
+        Ok(ImageHandle {
+            atlas_uv: [0.0, 0.0, u1, v1],
+            width: rgba.width(),
+            height: rgba.height(),
+        })
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn draw_rect(
         &mut self,
@@ -550,8 +711,9 @@ impl Painter {
         clip: [f32; 4],
         rotation: f32,
     ) {
-        let (fill_kind, color, gradient_angle, gradient_center, gradient_row) = match fill {
-            Fill::Solid(color) => (0.0, color, 0.0, [0.0, 0.0], 0.0),
+        let (fill_kind, color, gradient_angle, gradient_center, gradient_row, image_uv) = match fill
+        {
+            Fill::Solid(color) => (0.0, color, 0.0, [0.0, 0.0], 0.0, [0.0; 4]),
             Fill::Gradient(gradient) => {
                 let handle = self.gradient_atlas.bake_cached(&self.queue, &gradient);
                 let row = match handle {
@@ -564,8 +726,9 @@ impl Painter {
                     GradientKind::Conic { center } => (3.0, 0.0, *center),
                     GradientKind::Mesh { .. } => (4.0, 0.0, [0.0, 0.0]),
                 };
-                (kind, Color::TRANSPARENT, param0, center, row)
+                (kind, Color::TRANSPARENT, param0, center, row, [0.0; 4])
             }
+            Fill::Image(handle) => (5.0, Color::TRANSPARENT, 0.0, [0.0; 2], 0.0, handle.atlas_uv),
         };
 
         self.pending_rects.push((
@@ -584,6 +747,7 @@ impl Painter {
                 blur_radius,
                 sharp,
                 rotation,
+                image_uv,
             },
         ));
     }
@@ -641,8 +805,9 @@ impl Painter {
         clip: [f32; 4],
         rotation: f32,
     ) {
-        let (fill_kind, color, gradient_angle, gradient_center, gradient_row) = match fill {
-            Fill::Solid(color) => (0.0, color, 0.0, [0.0, 0.0], 0.0),
+        let (fill_kind, color, gradient_angle, gradient_center, gradient_row, image_uv) = match fill
+        {
+            Fill::Solid(color) => (0.0, color, 0.0, [0.0, 0.0], 0.0, [0.0; 4]),
             Fill::Gradient(gradient) => {
                 let handle = self.gradient_atlas.bake_cached(&self.queue, &gradient);
                 let row = match handle {
@@ -655,8 +820,9 @@ impl Painter {
                     GradientKind::Conic { center } => (3.0, 0.0, *center),
                     GradientKind::Mesh { .. } => (4.0, 0.0, [0.0, 0.0]),
                 };
-                (kind, Color::TRANSPARENT, param0, center, row)
+                (kind, Color::TRANSPARENT, param0, center, row, [0.0; 4])
             }
+            Fill::Image(handle) => (5.0, Color::TRANSPARENT, 0.0, [0.0; 2], 0.0, handle.atlas_uv),
         };
 
         self.pending_overlay_rects.push((
@@ -675,6 +841,7 @@ impl Painter {
                 blur_radius,
                 sharp,
                 rotation,
+                image_uv,
             },
         ));
     }
@@ -714,6 +881,7 @@ impl Painter {
                 gradient_row: 0.0,
                 gradient_center: [0.0; 2],
                 rotation: 0.0,
+                image_uv: [0.0; 4],
             };
             self.rect_instance_buffer = self.device.create_buffer_init(&BufferInitDescriptor {
                 label: None,
@@ -846,6 +1014,7 @@ impl Painter {
             render_pass.set_vertex_buffer(1, self.rect_instance_buffer.slice(..));
             render_pass.set_bind_group(0, &self.bind_group, &[]);
             render_pass.set_bind_group(1, &self.gradient_bind_group, &[]);
+            render_pass.set_bind_group(2, &self.image_bind_group, &[]);
 
             // Group consecutive rects sharing the same clip rect into one
             // draw call each, setting the scissor rect before every group.
@@ -960,4 +1129,15 @@ impl Painter {
             }]),
         );
     }
+}
+
+#[test]
+fn test_image() -> Result<(), image::ImageError> {
+    use image::ImageReader;
+
+    let img = ImageReader::open("assets/test/1.webp")?.decode()?;
+    let rgba = img.to_rgba8();
+    assert_eq!(rgba.width(), img.width());
+    assert_eq!(rgba.height(), img.height());
+    Ok(())
 }

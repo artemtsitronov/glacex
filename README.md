@@ -41,7 +41,7 @@ Built by **Artem Tsitronov** and **Soumalya Das**.
   - [Style Structs](#style-structs)
   - [ShadowStyle](#shadowstyle)
   - [Color Type](#color)
-  - [Fill & Gradients](#fill-and-gradients)
+  - [Fills, Gradients & Images](#fills-gradients--images)
   - [Theme Palette](#theme)
   - [Window Control](#window-title-and-background)
 - [Accessibility](#accessibility)
@@ -63,6 +63,7 @@ If you'd like an experimental version of glacex, try visiting programmersd21 for
 - **`wgpu`** renders every shape as an instanced signed-distance-field (SDF) quad on the GPU.
 - **`glyphon`** shapes and rasterizes text into glyph atlases with per-widget clipping.
 - **`taffy`** does the flexbox math for `row!`/`column!` layouts.
+- **`image`** decodes the images.
 
 There's no retained widget tree and no markup — you describe the UI in plain Rust every frame, and glacex measures, lays out, hit-tests, animates, and renders it.
 
@@ -70,7 +71,7 @@ There's no retained widget tree and no markup — you describe the UI in plain R
 
 - Custom renderer: instanced rounded rects (anti-aliased SDF), borders, and soft drop shadows, batched into one draw call per shared clip rect.
 - Text rendering via `glyphon` with independent clip bounds per widget.
-- Fills: solid colors and gradients (linear, radial, conic), cached into a GPU atlas.
+- Fills: solid colors, gradients (linear, radial, conic), and images, cached into a GPU atlas.
 - `Color` is `#[repr(C)]` + `Pod`/`Zeroable`, so it maps straight onto GPU vertex buffers. Hex, RGB, HSV, alpha blending, `lerp`, lighten/darken.
 - Cursor changes (pointer, text, resize, default) driven by hover state.
 - A floating tooltip layer that clamps to the viewport.
@@ -428,7 +429,7 @@ let dark = Color::RED.darken(0.2);
 let light = Color::RED.lighten(0.2);
 ```
 
-### Fill and Gradients
+### Fills, Gradients & Images
 
 ```rust
 use glacex::{Color, Fill, Gradient, GradientKind, GradientStop};
@@ -443,6 +444,15 @@ let sunset = Fill::Gradient(Gradient {
 ```
 
 Supported kinds: `GradientKind::Linear { angle }`, `Radial { center, radius }`, `Conic { center }`. Gradients are cached in a GPU ramp atlas by content hash, so reusing the same definition across frames is free.
+
+Images work the same way as a solid color or gradient — load once, then use anywhere a `Fill` is expected:
+
+```rust
+let logo = ui.load_image("assets/logo.png"); // PNG/JPEG/WebP via the `image` crate
+let fill = Fill::Image(logo);
+```
+
+`ImageHandle::width()` / `height()` / `size()` return the image's natural pixel dimensions, handy for sizing a widget to match it.
 
 ### Theme
 
@@ -582,6 +592,7 @@ glacex/
 ## Known Limitations
 
 - `GradientKind::Mesh` is reserved but not implemented yet — it currently falls back to transparent. Use Linear, Radial, or Conic.
+- `Fill::Image` shares one atlas slot with no packing/eviction yet, so only one image is supported at a time. A real atlas packer is planned for 0.2.0.
 - Pre-1.0, so the API still moves around between releases.
 
 ## Documentation

@@ -26,10 +26,33 @@ pub struct Gradient {
     pub stops: Vec<GradientStop>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ImageHandle {
+    pub(crate) atlas_uv: [f32; 4],
+    pub(crate) width: u32,
+    pub(crate) height: u32,
+}
+
+impl ImageHandle {
+    pub fn width(&self) -> f32 {
+        self.width as f32
+    }
+    pub fn height(&self) -> f32 {
+        self.height as f32
+    }
+    pub fn size(&self) -> [f32; 2] {
+        [self.width as f32, self.height as f32]
+    }
+    pub fn scale(&self, factor: f32) -> [f32; 2] {
+        [self.width as f32 * factor, self.height as f32 * factor]
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Fill {
     Solid(Color),
     Gradient(Gradient),
+    Image(ImageHandle),
 }
 
 impl Fill {
@@ -43,6 +66,7 @@ impl Fill {
                 }
                 Fill::Gradient(g)
             }
+            Fill::Image(image) => Fill::Image(*image),
         }
     }
 
@@ -56,6 +80,7 @@ impl Fill {
                 }
                 Fill::Gradient(g)
             }
+            Fill::Image(image) => Fill::Image(*image),
         }
     }
 }

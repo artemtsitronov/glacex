@@ -70,6 +70,7 @@ fn contrasting_text_color(bg: &Fill) -> Color {
             .first()
             .map(|stop| stop.color)
             .unwrap_or(Color::WHITE),
+        Fill::Image(_) => todo!(),
     };
     let luma = sample.r * 0.299 + sample.g * 0.587 + sample.b * 0.114;
     if luma > 0.5 {

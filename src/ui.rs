@@ -1,3 +1,4 @@
+use crate::ImageHandle;
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::painter::Painter;
@@ -78,8 +79,11 @@ pub struct Ui {
 
 impl Ui {
     pub async fn new(window: Arc<Window>) -> Ui {
+        let mut painter = Painter::new(window.clone()).await;
+        painter.test_image_atlas();
+
         Ui {
-            painter: Painter::new(window.clone()).await,
+            painter,
             window,
             theme: Theme::LIGHT,
             persistent_state: HashMap::new(),
@@ -128,6 +132,10 @@ impl Ui {
             pending_tooltip: None,
             accessibility_nodes: Vec::new(),
         }
+    }
+
+    pub fn load_image(&mut self, path: &str) -> ImageHandle {
+        self.painter.load_image(path).expect("Failed to load image")
     }
 
     pub fn accessibility_nodes(&self) -> Vec<(NodeId, Node)> {

@@ -2,12 +2,14 @@ use glacex::*;
 
 struct DemoApp {
     current_theme_idx: usize,
+    kitty_image: Option<ImageHandle>,
 }
 
 impl DemoApp {
     fn new() -> Self {
         DemoApp {
             current_theme_idx: 1,
+            kitty_image: None,
         }
     }
 }
@@ -19,6 +21,10 @@ struct TripleToggleOrder {
 
 impl Widget for DemoApp {
     type Output = ();
+
+    fn on_start(&mut self, ui: &mut Ui) {
+        self.kitty_image = Some(ui.load_image("assets/test/1.webp"));
+    }
 
     fn ui(&mut self, ui: &mut Ui) {
         let themes = Theme::all();
@@ -104,6 +110,8 @@ impl Widget for DemoApp {
             .placeholder("Select theme...")
             .width(200.0);
 
+        let kitty_image = self.kitty_image.unwrap();
+
         {
             row![
                 &mut ScrollView::new(
@@ -128,6 +136,12 @@ impl Widget for DemoApp {
                                 &mut ScrollView::new(
                                     "scroll_view",
                                     &mut glacex::column![
+                                        &mut Card::new(&mut Label::new("_", "Kitty!"))
+                                            .style(CardStyle {
+                                                fill: Fill::Image(kitty_image),
+                                                ..CardStyle::subtle()
+                                            })
+                                            .size(kitty_image.scale(0.2)),
                                         &mut row![
                                             &mut Badge::new("Badge").variant(BadgeVariant::Outline),
                                             &mut Badge::new("Success").success(),
@@ -204,7 +218,7 @@ impl Widget for DemoApp {
                                 )
                                 .padding([12.0; 2])
                             )
-                            .size([350.0, 400.0])
+                            .size([400.0, 600.0])
                             .padding([0.0; 2]),
                             &mut Card::new(
                                 &mut glacex::column![
@@ -220,11 +234,17 @@ impl Widget for DemoApp {
                                     .align(Alignment::Start),
                                     &mut slider,
                                     &mut progress_bar,
+                                    &mut Card::new(&mut Label::new("_", "Another kitty!"))
+                                        .style(CardStyle {
+                                            fill: Fill::Image(kitty_image),
+                                            ..CardStyle::subtle()
+                                        })
+                                        .size(kitty_image.scale(0.2)),
                                 ]
                                 .spacing(24.0)
                                 .align(Alignment::Center)
                             )
-                            .height(400.0)
+                            .height(600.0)
                         ],
                         &mut glacex::column![
                             &mut Label::new(

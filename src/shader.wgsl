@@ -10,6 +10,10 @@ var<uniform> window_size: WindowSize;
 var gradient_atlas: texture_2d<f32>;
 @group(1) @binding(1)
 var gradient_sampler: sampler;
+@group(2) @binding(0)
+var image_atlas: texture_2d<f32>;
+@group(2) @binding(1)
+var image_sampler: sampler;
 
 struct QuadVertex {
     @location(0) local_position: vec2<f32>,
@@ -29,6 +33,7 @@ struct RectInstance {
     @location(11) gradient_row: f32,
     @location(12) gradient_center: vec2<f32>,
     @location(13) rotation: f32,
+    @location(14) image_uv: vec4<f32>,
 }
 
 struct VertexOutput {
@@ -46,6 +51,7 @@ struct VertexOutput {
     @location(10) gradient_row: f32,
     @location(11) gradient_center: vec2<f32>,
     @location(12) rotation: f32,
+    @location(14) image_uv: vec4<f32>,
 }
 
 // Must be >= AA_PADDING below, or the fade band extends past the padded
@@ -104,6 +110,7 @@ let padding = max(AA_PADDING, max(instance.blur_radius * 2.0, max(instance.borde
     out.gradient_row = instance.gradient_row;
     out.gradient_center = instance.gradient_center;
     out.rotation = instance.rotation;
+    out.image_uv = instance.image_uv;
 
     return out;
 }
@@ -135,6 +142,12 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         let row_count = 64.0;
         let v = (in.gradient_row + 0.5) / row_count;
         fill_color = textureSample(gradient_atlas, gradient_sampler, vec2<f32>(clamp(t, 0.0, 1.0), v));
+    }
+
+    if in.fill_kind == 5.0 { // image
+        let local_uv = (in.local_pos + in.half_size) / (in.half_size * 2.0);
+        let uv = mix(in.image_uv.xy, in.image_uv.zw, local_uv);
+        fill_color = textureSample(image_atlas, image_sampler, uv);
     }
 
     let rotated_pos = rotate(in.local_pos, -in.rotation);
