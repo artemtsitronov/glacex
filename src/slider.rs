@@ -1,7 +1,7 @@
 use crate::animation::{Motion, animate_towards};
 use crate::color::Color;
 use crate::fill::Fill;
-use crate::geometry::contains;
+use crate::geometry::{MeasurablePath, Path};
 use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::theme::Theme;
 use crate::ui::Ui;
@@ -27,7 +27,7 @@ pub struct SliderResponse {
     pub hovered: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct SliderStyle {
     pub track_fill: Fill,
     pub filled_fill: Fill,
@@ -37,6 +37,11 @@ pub struct SliderStyle {
     pub track_height: f32,
     pub thumb_size: f32,
     pub shadow: Option<ShadowStyle>,
+    pub path: Path,
+}
+
+fn default_track_path() -> Path {
+    Path::from_fn(|position, size| MeasurablePath::rect(position, size, [size[1] * 0.5; 4]))
 }
 
 impl Default for SliderStyle {
@@ -50,6 +55,7 @@ impl Default for SliderStyle {
             track_height: 6.0,
             thumb_size: 16.0,
             shadow: Some(ShadowStyle::default()),
+            path: default_track_path(),
         }
     }
 }
@@ -143,7 +149,7 @@ impl Measurable for Slider {
         let mouse_pressed = ui.mouse_pressed();
         let mouse_pressed_this_frame = ui.mouse_pressed_this_frame();
 
-        let hovered = contains(position, size, 0.0, mouse_pos)
+        let hovered = MeasurablePath::rect(position, size, [0.0; 4]).contains(mouse_pos)
             && !ui.is_input_blocked(mouse_pos)
             && ui.point_in_current_clip(mouse_pos);
 
@@ -209,13 +215,10 @@ impl Measurable for Slider {
         ui.put_widget_state(&self.id, state);
 
         let track_y = position[1] + (size[1] - style.track_height) / 2.0;
-        let track_radius = style.track_height / 2.0;
 
-        ui.draw_rect(
-            [position[0], track_y],
-            [size[0], style.track_height],
+        ui.draw_shape(
+            (style.path)([position[0], track_y], [size[0], style.track_height]),
             style.track_fill,
-            track_radius,
             style.border_width,
             style.border_color,
             0.0,
@@ -226,11 +229,9 @@ impl Measurable for Slider {
         let filled_width = progress * size[0];
 
         if filled_width > 0.0 {
-            ui.draw_rect(
-                [position[0], track_y],
-                [filled_width, style.track_height],
+            ui.draw_shape(
+                (style.path)([position[0], track_y], [filled_width, style.track_height]),
                 style.filled_fill,
-                track_radius,
                 0.0,
                 Color::TRANSPARENT,
                 0.0,
@@ -256,11 +257,13 @@ impl Measurable for Slider {
                 thumb_x
             };
             let trail_w = thumb_current_size + blur_trail_len.abs();
-            ui.draw_rect(
-                [trail_x, thumb_y],
-                [trail_w, thumb_current_size],
+            ui.draw_shape(
+                MeasurablePath::rect(
+                    [trail_x, thumb_y],
+                    [trail_w, thumb_current_size],
+                    [thumb_radius; 4],
+                ),
                 Fill::Solid(theme.active.with_alpha(0.18)),
-                thumb_radius,
                 0.0,
                 Color::TRANSPARENT,
                 4.0,
@@ -273,14 +276,18 @@ impl Measurable for Slider {
             let mut s = *shadow;
             s.blur_radius += drag_t * 4.0;
             s.offset[1] += drag_t * 1.5;
-            draw_shadow(&s, thumb_pos, thumb_size, thumb_radius, ui);
+            draw_shadow(
+                &s,
+                thumb_pos,
+                thumb_size,
+                &Path::rect([thumb_radius; 4]),
+                ui,
+            );
         }
 
-        ui.draw_rect(
-            thumb_pos,
-            thumb_size,
+        ui.draw_shape(
+            MeasurablePath::rect(thumb_pos, thumb_size, [thumb_radius; 4]),
             style.thumb_fill,
-            thumb_radius,
             1.0,
             theme.border,
             0.0,

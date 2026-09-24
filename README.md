@@ -208,7 +208,7 @@ pub trait Measurable: Widget {
 - State: `widget_state::<T>(id)`, `take_widget_state::<T>(id)`, `put_widget_state(id, state)` — the primitives behind every widget's `.state(ui)`/`.take_state(ui)`/`.put_state(ui, state)`.
 - Focus: `request_focus(id)`, `is_focused(id)`, `advance_focus(backward)`.
 - Clipping: `push_clip(rect)`, `pop_clip()`, `push_input_block(rect)`.
-- Drawing: `draw_rect(...)`, `draw_text(...)`, `measure_text(...)`, `line_height()`.
+- Drawing: `draw_shape(...)`, `draw_text(...)`, `measure_text(...)`, `line_height()`.
 - Window: `set_title(&str)`, `set_bgcolor(Color)`.
 
 ### Layout
@@ -535,8 +535,8 @@ busctl --user set-property org.a11y.Bus /org/a11y/bus org.a11y.Status ScreenRead
 
 ## How Rendering Works
 
-1. Widgets call `Ui::draw_rect` / `Ui::draw_text` to queue primitives.
-2. Rects sharing a scissor rect batch into one instanced draw call.
+1. Widgets call `Ui::draw_shape` / `Ui::draw_text` to queue primitives. Every widget draws its own shape (a rect by default) via `ShapeKind`, which callers can swap out.
+2. Shapes sharing a scissor rect batch into one instanced draw call.
 3. `shader.wgsl` evaluates corner rounding, borders, and soft drop shadows per-fragment as an SDF.
 4. Glyphs are cached into a texture atlas by `glyphon` and drawn with per-widget scissor bounds.
 5. Everything submits in a single GPU command buffer per frame.

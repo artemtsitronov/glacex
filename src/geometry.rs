@@ -1,24 +1,86 @@
-pub fn contains(position: [f32; 2], size: [f32; 2], corner_radius: f32, point: [f32; 2]) -> bool {
-    let half_size = [size[0] * 0.5, size[1] * 0.5];
-    let center = [position[0] + half_size[0], position[1] + half_size[1]];
-    let p = [(point[0] - center[0]).abs(), (point[1] - center[1]).abs()];
-    let q = [
-        p[0] - half_size[0] + corner_radius,
-        p[1] - half_size[1] + corner_radius,
-    ];
-    let dist = q[0].max(q[1]).min(0.0) + (q[0].max(0.0).powi(2) + q[1].max(0.0).powi(2)).sqrt()
-        - corner_radius;
-    dist <= 0.0
+use crate::fill::Fill;
+use kurbo::{BezPath, Ellipse, Point, RoundedRect, Shape as KurboShape};
+use std::sync::Arc;
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum MeasurablePath {
+    Rect(RoundedRect),
+    Ellipse(Ellipse),
+    Free(BezPath),
 }
 
-pub fn center_text_in(
-    position: [f32; 2],
-    size: [f32; 2],
-    text_width: f32,
-    line_height: f32,
-) -> [f32; 2] {
-    [
-        position[0] + (size[0] - text_width) / 2.0,
-        position[1] + (size[1] - line_height) / 2.0,
-    ]
+impl MeasurablePath {
+    pub fn rect(pos: [f32; 2], size: [f32; 2], radii: [f32; 4]) -> Self {
+        Self::Rect(RoundedRect::from_origin_size(
+            (pos[0] as f64, pos[1] as f64),
+            (size[0] as f64, size[1] as f64),
+            (
+                radii[0] as f64,
+                radii[1] as f64,
+                radii[2] as f64,
+                radii[3] as f64,
+            ),
+        ))
+    }
+    pub fn ellipse(pos: [f32; 2], radii: [f32; 2], rot: f32) -> Self {
+        Self::Ellipse(Ellipse::new(
+            (pos[0] as f64, pos[1] as f64),
+            (radii[0] as f64, radii[1] as f64),
+            rot as f64,
+        ))
+    }
+    pub fn free(bez_path: BezPath) -> Self {
+        Self::Free(bez_path)
+    }
+
+    pub fn contains(&self, point: [f32; 2]) -> bool {
+        let p = Point::new(point[0] as f64, point[1] as f64);
+        match self {
+            Self::Rect(rect) => rect.contains(p),
+            Self::Ellipse(ellipse) => ellipse.contains(p),
+            Self::Free(bez_path) => bez_path.contains(p),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct Path(Arc<dyn Fn([f32; 2], [f32; 2]) -> MeasurablePath + Send + Sync>);
+
+impl Path {
+    pub fn from_fn(
+        f: impl Fn([f32; 2], [f32; 2]) -> MeasurablePath + Send + Sync + 'static,
+    ) -> Self {
+        Path(Arc::new(f))
+    }
+
+    pub fn rect(radii: [f32; 4]) -> Self {
+        Path(Arc::new(move |position, size| {
+            MeasurablePath::rect(position, size, radii)
+        }))
+    }
+
+    pub fn ellipse(rotation_degrees: f32) -> Self {
+        Path(Arc::new(move |position, size| {
+            let radii = [size[0] * 0.5, size[1] * 0.5];
+            MeasurablePath::ellipse(
+                [position[0] + radii[0], position[1] + radii[1]],
+                radii,
+                rotation_degrees.to_radians(),
+            )
+        }))
+    }
+}
+
+impl std::ops::Deref for Path {
+    type Target = dyn Fn([f32; 2], [f32; 2]) -> MeasurablePath + Send + Sync;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.0
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Shape {
+    pub path: MeasurablePath,
+    pub fill: Fill,
 }

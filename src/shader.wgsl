@@ -19,21 +19,22 @@ struct QuadVertex {
     @location(0) local_position: vec2<f32>,
 }
 
-struct RectInstance {
+struct ShapeInstance {
     @location(1) position: vec2<f32>,
     @location(2) size: vec2<f32>,
     @location(3) color: vec4<f32>,
-    @location(4) corner_radius: f32,
+    @location(4) corner_radius: vec4<f32>,
     @location(5) border_width: f32,
     @location(6) border_color: vec4<f32>,
     @location(7) blur_radius: f32,
     @location(8) sharp: f32,
     @location(9) fill_kind: f32,
-    @location(10) gradient_angle: f32,
-    @location(11) gradient_row: f32,
-    @location(12) gradient_center: vec2<f32>,
-    @location(13) rotation: f32,
-    @location(14) image_uv: vec4<f32>,
+    @location(10) shape_kind: f32,
+    @location(11) gradient_angle: f32,
+    @location(12) gradient_row: f32,
+    @location(13) gradient_center: vec2<f32>,
+    @location(14) rotation: f32,
+    @location(15) image_uv: vec4<f32>,
 }
 
 struct VertexOutput {
@@ -41,37 +42,48 @@ struct VertexOutput {
     @location(0) color: vec4<f32>,
     @location(1) local_pos: vec2<f32>,
     @location(2) half_size: vec2<f32>,
-    @location(3) corner_radius: f32,
+    @location(3) corner_radius: vec4<f32>,
     @location(4) blur_radius: f32,
     @location(5) border_width: f32,
     @location(6) border_color: vec4<f32>,
     @location(7) sharp: f32,
     @location(8) fill_kind: f32,
-    @location(9) gradient_angle: f32,
-    @location(10) gradient_row: f32,
-    @location(11) gradient_center: vec2<f32>,
-    @location(12) rotation: f32,
+    @location(9) shape_kind: f32,
+    @location(10) gradient_angle: f32,
+    @location(11) gradient_row: f32,
+    @location(12) gradient_center: vec2<f32>,
+    @location(13) rotation: f32,
     @location(14) image_uv: vec4<f32>,
 }
 
 // Must be >= AA_PADDING below, or the fade band extends past the padded
-// geometry and gets clipped again — same failure mode padding exists to fix.
+// geometry and gets clipped again
 const AA_FADE_WIDTH: f32 = 1.5;
 
 // Expands rasterized quad geometry beyond the shape's true bounds so every
-// point on the boundary — including cardinal tangent points on a circle —
-// has real pixels beyond dist=0 for the AA fade to blend into.
+// point on the boundary
 const AA_PADDING: f32 = 4.0;
 
-fn sd_rounded_box(p: vec2<f32>, half_size: vec2<f32>, radius: f32) -> f32 {
-    // Clamp to the box's own half-size so an intentionally huge radius (a
-    // "fully round / pill" sentinel like Theme::RADIUS_FULL) degrades into
-    // a stadium shape instead of blowing up the distance field — uncapped,
-    // `q` runs strongly positive even at the box's center, so the whole
-    // shape renders fully transparent.
-    let r = min(radius, min(half_size.x, half_size.y));
+fn sd_rounded_box(p: vec2<f32>, half_size: vec2<f32>, radii: vec4<f32>) -> f32 {
+    let top_radius = select(radii.y, radii.x, p.x < 0.0);
+    let bottom_radius = select(radii.z, radii.w, p.x < 0.0);
+    let corner_radius = select(bottom_radius, top_radius, p.y < 0.0);
+    let r = min(corner_radius, min(half_size.x, half_size.y));
     let q = abs(p) - half_size + vec2<f32>(r);
     return min(max(q.x, q.y), 0.0) + length(max(q, vec2<f32>(0.0))) - r;
+}
+
+fn sd_ellipse(p: vec2<f32>, half_size: vec2<f32>) -> f32 {
+    let k0 = length(p / half_size);
+    let k1 = length(p / (half_size * half_size));
+    return k0 * (k0 - 1.0) / k1;
+}
+
+fn shape_distance(p: vec2<f32>, half_size: vec2<f32>, radii: vec4<f32>, shape_kind: f32) -> f32 {
+    if shape_kind < 0.5 {
+        return sd_rounded_box(p, half_size, radii);
+    }
+    return sd_ellipse(p, half_size);
 }
 
 fn rotate(p: vec2<f32>, angle: f32) -> vec2<f32> {
@@ -81,7 +93,7 @@ fn rotate(p: vec2<f32>, angle: f32) -> vec2<f32> {
 }
 
 @vertex
-fn vs_main(vertex: QuadVertex, instance: RectInstance) -> VertexOutput {
+fn vs_main(vertex: QuadVertex, instance: ShapeInstance) -> VertexOutput {
     var out: VertexOutput;
 
     let diagonal = length(instance.size * 0.5);
@@ -96,8 +108,6 @@ let padding = max(AA_PADDING, max(instance.blur_radius * 2.0, max(instance.borde
     out.clip_position = vec4<f32>(ndc_x, ndc_y, 0.0, 1.0);
 
     out.color = instance.color;
-    // local_pos/half_size reference the TRUE, unpadded size — the shape's
-    // visible boundary doesn't move, only the raster margin around it grows.
     out.local_pos = padded_local - instance.size * 0.5;
     out.half_size = instance.size * 0.5;
     out.corner_radius = instance.corner_radius;
@@ -105,6 +115,7 @@ let padding = max(AA_PADDING, max(instance.blur_radius * 2.0, max(instance.borde
     out.border_width = instance.border_width;
     out.border_color = instance.border_color;
     out.sharp = instance.sharp;
+    out.shape_kind = instance.shape_kind;
     out.fill_kind = instance.fill_kind;
     out.gradient_angle = instance.gradient_angle;
     out.gradient_row = instance.gradient_row;
@@ -118,7 +129,7 @@ let padding = max(AA_PADDING, max(instance.blur_radius * 2.0, max(instance.borde
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     if in.blur_radius > 0.0 {
-        let dist = sd_rounded_box(in.local_pos, in.half_size, in.corner_radius);
+        let dist = shape_distance(in.local_pos, in.half_size, in.corner_radius, in.shape_kind);
         let alpha = 1.0 - smoothstep(-in.blur_radius, in.blur_radius, dist);
         return vec4<f32>(in.color.rgb, in.color.a * alpha);
     }
@@ -152,11 +163,12 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
     let rotated_pos = rotate(in.local_pos, -in.rotation);
 
-    let inner_dist = sd_rounded_box(rotated_pos, in.half_size, in.corner_radius);
-    let outer_dist = sd_rounded_box(
+    let inner_dist = shape_distance(rotated_pos, in.half_size, in.corner_radius, in.shape_kind);
+    let outer_dist = shape_distance(
         rotated_pos,
         in.half_size + vec2<f32>(in.border_width),
-        in.corner_radius + in.border_width,
+        in.corner_radius + vec4<f32>(in.border_width),
+        in.shape_kind,
     );
 
     let fill_alpha = 1.0 - smoothstep(0.0, AA_FADE_WIDTH, inner_dist);

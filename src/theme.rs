@@ -3,6 +3,7 @@ use crate::card::CardStyle;
 use crate::checkbox::CheckboxStyle;
 use crate::color::Color;
 use crate::fill::Fill;
+use crate::geometry::{MeasurablePath, Path};
 use crate::shadow::ShadowStyle;
 use crate::slider::SliderStyle;
 use crate::switch::SwitchStyle;
@@ -477,10 +478,10 @@ impl Theme {
             text_color: self.text_primary,
             border_width: 1.0,
             border_color: self.border,
-            corner_radius: 6.0,
             padding: [14.0, 8.0],
             shadow: Some(self.shadow_sm()[0]),
             sharp: false,
+            path: Path::rect([6.0; 4]),
         }
     }
 
@@ -496,7 +497,6 @@ impl Theme {
             },
             border_width: 1.0,
             border_color: Color::WHITE.with_alpha(0.15),
-            corner_radius: 6.0,
             padding: [14.0, 8.0],
             shadow: Some(ShadowStyle {
                 color: self.active.with_alpha(0.20),
@@ -504,6 +504,7 @@ impl Theme {
                 offset: [0.0, 1.5],
             }),
             sharp: false,
+            path: Path::rect([6.0; 4]),
         }
     }
 
@@ -515,10 +516,10 @@ impl Theme {
             text_color: self.text_primary,
             border_width: 1.0,
             border_color: self.border_strong,
-            corner_radius: 6.0,
             padding: [14.0, 8.0],
             shadow: Some(self.shadow_sm()[0]),
             sharp: false,
+            path: Path::rect([6.0; 4]),
         }
     }
 
@@ -530,10 +531,10 @@ impl Theme {
             text_color: self.text_secondary,
             border_width: 0.0,
             border_color: Color::TRANSPARENT,
-            corner_radius: 6.0,
             padding: [14.0, 8.0],
             shadow: None,
             sharp: false,
+            path: Path::rect([6.0; 4]),
         }
     }
 
@@ -545,7 +546,6 @@ impl Theme {
             text_color: Color::WHITE,
             border_width: 1.0,
             border_color: self.error.darken(0.15),
-            corner_radius: 6.0,
             padding: [14.0, 8.0],
             shadow: Some(ShadowStyle {
                 color: self.error.with_alpha(0.25),
@@ -553,6 +553,7 @@ impl Theme {
                 offset: [0.0, 1.5],
             }),
             sharp: false,
+            path: Path::rect([6.0; 4]),
         }
     }
 
@@ -561,9 +562,9 @@ impl Theme {
             fill: Fill::Solid(self.surface),
             border_width: 1.0,
             border_color: self.border,
-            corner_radius: 10.0,
             padding: [20.0, 20.0],
             shadow: Some(self.shadow_sm()[0]),
+            path: Path::rect([10.0; 4]),
         }
     }
 
@@ -572,9 +573,9 @@ impl Theme {
             fill: Fill::Solid(self.surface_subtle),
             border_width: 1.0,
             border_color: self.border_faint,
-            corner_radius: 8.0,
             padding: [16.0, 16.0],
             shadow: None,
+            path: Path::rect([8.0; 4]),
         }
     }
 
@@ -583,9 +584,9 @@ impl Theme {
             fill: Fill::Solid(self.surface_elevated),
             border_width: 1.0,
             border_color: self.border_strong,
-            corner_radius: 12.0,
             padding: [20.0, 20.0],
             shadow: Some(self.shadow_md()[0]),
+            path: Path::rect([12.0; 4]),
         }
     }
 
@@ -613,9 +614,9 @@ impl Theme {
             check_color: self.on_active(),
             border_width: 1.0,
             border_color: self.border_strong,
-            corner_radius: 4.0,
             shadow: Some(self.shadow_sm()[0]),
             sharp: false,
+            path: Path::rect([4.0; 4]),
         }
     }
 
@@ -626,8 +627,8 @@ impl Theme {
             thumb_fill: Fill::Solid(Color::WHITE),
             border_width: 1.0,
             border_color: self.border,
-            corner_radius: 11.0,
             shadow: Some(self.shadow_sm()[0]),
+            path: Path::rect([11.0; 4]),
         }
     }
 
@@ -641,6 +642,9 @@ impl Theme {
             track_height: 4.0,
             thumb_size: 16.0,
             shadow: Some(self.shadow_sm()[0]),
+            path: Path::from_fn(|position, size| {
+                MeasurablePath::rect(position, size, [size[1] * 0.5; 4])
+            }),
         }
     }
 
@@ -652,12 +656,12 @@ impl Theme {
             border_width: 1.0,
             border_color: self.border_strong,
             focus_border_color: self.focus_border,
-            corner_radius: 6.0,
             padding: [10.0, 10.0],
             selection_color: self.selection,
             cursor_color: self.active,
             shadow: Some(self.shadow_sm()[0]),
             sharp: false,
+            path: Path::rect([6.0; 4]),
         }
     }
 
@@ -668,7 +672,6 @@ impl Theme {
             border_width: 1.0,
             border_color: self.border_strong,
             focus_border_color: self.focus_border,
-            corner_radius: 6.0,
             padding: [10.0, 10.0],
             selection_color: self.selection,
             cursor_color: self.active,
@@ -676,6 +679,7 @@ impl Theme {
             thumb_dragging_fill: Fill::Solid(self.text_muted.with_alpha(0.65)),
             shadow: Some(self.shadow_sm()[0]),
             sharp: false,
+            path: Path::rect([6.0; 4]),
         }
     }
 }

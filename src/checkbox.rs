@@ -1,6 +1,7 @@
 use crate::animation::{Motion, animate_towards};
 use crate::color::Color;
 use crate::fill::Fill;
+use crate::geometry::{MeasurablePath, Path};
 use crate::interaction::Interaction;
 use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::theme::Theme;
@@ -39,7 +40,7 @@ pub struct CheckboxResponse {
     pub hovered: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct CheckboxStyle {
     pub fill: Fill,
     pub hover_fill: Fill,
@@ -47,9 +48,9 @@ pub struct CheckboxStyle {
     pub check_color: Color,
     pub border_width: f32,
     pub border_color: Color,
-    pub corner_radius: f32,
     pub shadow: Option<ShadowStyle>,
     pub sharp: bool,
+    pub path: Path,
 }
 
 impl Default for CheckboxStyle {
@@ -61,9 +62,9 @@ impl Default for CheckboxStyle {
             check_color: Color::WHITE,
             border_width: 1.0,
             border_color: Theme::BORDER,
-            corner_radius: 5.0,
             shadow: Some(ShadowStyle::default()),
             sharp: false,
+            path: Path::rect([5.0; 4]),
         }
     }
 }
@@ -197,11 +198,9 @@ fn draw_stroke(a: [f32; 2], b: [f32; 2], width: f32, color: Color, ui: &mut Ui) 
     let center = [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0];
     let position = [center[0] - length / 2.0, center[1] - width / 2.0];
 
-    ui.draw_rect(
-        position,
-        [length, width],
+    ui.draw_shape(
+        MeasurablePath::rect(position, [length, width], [width / 2.0; 4]),
         Fill::Solid(color),
-        width / 2.0,
         0.0,
         Color::TRANSPARENT,
         0.0,
@@ -220,7 +219,8 @@ impl Measurable for Checkbox {
         let style = self.style.clone().unwrap_or_else(|| theme.checkbox_style());
         let dt = ui.dt();
 
-        let interaction = Interaction::update(position, size, style.corner_radius, ui);
+        let shape = (style.path)(position, size);
+        let interaction = Interaction::update(&shape, ui);
         self.interaction = interaction;
 
         ui.register_accessible(
@@ -295,13 +295,11 @@ impl Measurable for Checkbox {
         };
 
         if let Some(shadow) = &style.shadow {
-            draw_shadow(shadow, draw_pos, draw_size, style.corner_radius * scale, ui);
+            draw_shadow(shadow, draw_pos, draw_size, &style.path, ui);
         }
-        ui.draw_rect(
-            draw_pos,
-            draw_size,
+        ui.draw_shape(
+            (style.path)(draw_pos, draw_size),
             fill,
-            style.corner_radius * scale,
             style.border_width,
             border_color,
             0.0,

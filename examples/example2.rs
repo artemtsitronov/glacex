@@ -1,7 +1,7 @@
 use glacex::{
     Alignment, App, Badge, BadgeVariant, Button, ButtonStyle, Card, CardStyle, Checkbox,
-    CheckboxStyle, Color, Divider, Fill, Label, ScrollView, ScrollViewStyle, ShadowStyle, TextArea,
-    TextAreaStyle, TextInput, TextInputStyle, Theme, Ui, Widget, column, row,
+    CheckboxStyle, Color, Divider, Fill, Label, Path, ScrollView, ScrollViewStyle, ShadowStyle,
+    TextArea, TextAreaStyle, TextInput, TextInputStyle, Theme, Ui, Widget, column, row,
 };
 use std::collections::HashMap;
 
@@ -83,7 +83,7 @@ fn button_style(attrs: &HashMap<String, String>) -> ButtonStyle {
         style.border_width = w;
     }
     if let Some(r) = attr_f32(attrs, "corner_radius") {
-        style.corner_radius = r;
+        style.path = Path::rect([r; 4]);
     }
     if let Some(v) = attr_bool(attrs, "sharp") {
         style.sharp = v;
@@ -110,7 +110,7 @@ fn checkbox_style(attrs: &HashMap<String, String>) -> CheckboxStyle {
         style.border_width = w;
     }
     if let Some(r) = attr_f32(attrs, "corner_radius") {
-        style.corner_radius = r;
+        style.path = Path::rect([r; 4]);
     }
     if let Some(v) = attr_bool(attrs, "sharp") {
         style.sharp = v;
@@ -131,7 +131,7 @@ fn text_input_style(attrs: &HashMap<String, String>) -> TextInputStyle {
         style.border_width = w;
     }
     if let Some(r) = attr_f32(attrs, "corner_radius") {
-        style.corner_radius = r;
+        style.path = Path::rect([r; 4]);
     }
     if let Some(c) = attr_color(attrs, "focus_border_color") {
         style.focus_border_color = c;
@@ -161,7 +161,7 @@ fn text_area_style(attrs: &HashMap<String, String>) -> TextAreaStyle {
         style.border_width = w;
     }
     if let Some(r) = attr_f32(attrs, "corner_radius") {
-        style.corner_radius = r;
+        style.path = Path::rect([r; 4]);
     }
     if let Some(c) = attr_color(attrs, "focus_border_color") {
         style.focus_border_color = c;
@@ -194,7 +194,7 @@ fn scroll_view_style(attrs: &HashMap<String, String>) -> ScrollViewStyle {
         style.thumb_dragging_fill = Fill::Solid(c);
     }
     if let Some(v) = attr_f32(attrs, "thumb_corner_radius") {
-        style.thumb_corner_radius = v;
+        style.path = Path::rect([v; 4]);
     }
     style
 }

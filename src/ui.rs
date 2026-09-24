@@ -1,6 +1,7 @@
 use crate::ImageHandle;
 use crate::color::Color;
 use crate::fill::Fill;
+use crate::geometry::{MeasurablePath, Shape};
 use crate::painter::Painter;
 use crate::theme::Theme;
 use crate::widget::{Accessible, FocusId, Widget};
@@ -599,12 +600,10 @@ impl Ui {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn draw_rect(
+    pub fn draw_shape(
         &mut self,
-        position: [f32; 2],
-        size: [f32; 2],
+        path: MeasurablePath,
         fill: Fill,
-        corner_radius: f32,
         border_width: f32,
         border_color: Color,
         blur_radius: f32,
@@ -612,11 +611,9 @@ impl Ui {
         rotation: f32,
     ) {
         let clip = self.current_clip();
-        self.painter.draw_rect(
-            position,
-            size,
-            fill,
-            corner_radius,
+        let shape = Shape { path, fill };
+        self.painter.draw_shape(
+            shape,
             border_width,
             border_color,
             blur_radius,
@@ -679,15 +676,13 @@ impl Ui {
         );
     }
 
-    /// Draws a rect on the overlay pass (renders on top of all normal-pass content).
+    /// Draws a shape on the overlay pass (renders on top of all normal-pass content).
     /// Use this for dropdowns, popovers, and other floating surfaces.
     #[allow(clippy::too_many_arguments)]
-    pub fn draw_overlay_rect(
+    pub fn draw_overlay_shape(
         &mut self,
-        position: [f32; 2],
-        size: [f32; 2],
+        path: MeasurablePath,
         fill: Fill,
-        corner_radius: f32,
         border_width: f32,
         border_color: Color,
         blur_radius: f32,
@@ -695,11 +690,9 @@ impl Ui {
         clip: [f32; 4],
         rotation: f32,
     ) {
-        self.painter.draw_overlay_rect(
-            position,
-            size,
-            fill,
-            corner_radius,
+        let shape = Shape { path, fill };
+        self.painter.draw_overlay_shape(
+            shape,
             border_width,
             border_color,
             blur_radius,
@@ -765,16 +758,21 @@ impl Ui {
 
             let full_clip = [0.0, 0.0, window_size[0], window_size[1]];
 
-            self.painter.draw_overlay_rect(
-                [tooltip_pos[0] - 4.0, tooltip_pos[1] - 4.0],
-                [width + 8.0, height + 8.0],
-                Fill::Solid(Color {
+            let shadow_shape = Shape {
+                path: MeasurablePath::rect(
+                    [tooltip_pos[0] - 4.0, tooltip_pos[1] - 4.0],
+                    [width + 8.0, height + 8.0],
+                    [12.0; 4],
+                ),
+                fill: Fill::Solid(Color {
                     r: 0.0,
                     g: 0.0,
                     b: 0.0,
                     a: if self.theme.is_dark { 0.55 } else { 0.12 },
                 }),
-                12.0,
+            };
+            self.painter.draw_overlay_shape(
+                shadow_shape,
                 0.0,
                 Color::TRANSPARENT,
                 14.0,
@@ -783,11 +781,12 @@ impl Ui {
                 0.0,
             );
 
-            self.painter.draw_overlay_rect(
-                tooltip_pos,
-                [width, height],
-                Fill::Solid(self.theme.surface_elevated),
-                8.0,
+            let card_shape = Shape {
+                path: MeasurablePath::rect(tooltip_pos, [width, height], [8.0; 4]),
+                fill: Fill::Solid(self.theme.surface_elevated),
+            };
+            self.painter.draw_overlay_shape(
+                card_shape,
                 1.0,
                 self.theme.border_strong,
                 0.0,

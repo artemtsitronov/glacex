@@ -44,7 +44,6 @@ impl Widget for ColorDemo {
             text_color: Color::WHITE,
             border_width: 1.0,
             border_color: Color::WHITE.with_alpha(0.2),
-            corner_radius: Theme::RADIUS_MD,
             padding: [14.0, 8.0],
             shadow: Some(ShadowStyle {
                 color: parsed_color.with_alpha(0.35),
@@ -52,6 +51,7 @@ impl Widget for ColorDemo {
                 offset: [0.0, 4.0],
             }),
             sharp: false,
+            path: glacex::Path::rect([Theme::RADIUS_MD; 4]),
         });
 
         let mut badge_row = row![&mut badge].align(Alignment::Start);
@@ -71,7 +71,7 @@ impl Widget for ColorDemo {
 
         let mut card = Card::new(&mut card_content).style(CardStyle {
             padding: [24.0, 24.0],
-            corner_radius: 16.0,
+            path: glacex::Path::rect([16.0; 4]),
             ..Default::default()
         });
 

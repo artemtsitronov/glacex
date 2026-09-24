@@ -1,6 +1,7 @@
 use crate::color::Color;
 use crate::fill::Fill;
-use crate::geometry::center_text_in;
+use crate::geometry::Path;
+use crate::misc::center_text_in;
 use crate::painter::FontWeight;
 use crate::theme::Theme;
 use crate::ui::Ui;
@@ -18,14 +19,14 @@ pub enum BadgeVariant {
     Error,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct BadgeStyle {
     pub fill: Fill,
     pub text_color: Color,
     pub border_width: f32,
     pub border_color: Color,
-    pub corner_radius: f32,
     pub padding: [f32; 2],
+    pub path: Path,
 }
 
 impl Default for BadgeStyle {
@@ -35,8 +36,8 @@ impl Default for BadgeStyle {
             text_color: Theme::TEXT_SECONDARY,
             border_width: 1.0,
             border_color: Theme::BORDER,
-            corner_radius: Theme::RADIUS_FULL,
             padding: [8.0, 2.0],
+            path: Path::rect([Theme::RADIUS_FULL; 4]),
         }
     }
 }
@@ -151,48 +152,48 @@ impl Badge {
                 },
                 border_width: 1.0,
                 border_color: Color::TRANSPARENT,
-                corner_radius: Theme::RADIUS_FULL,
                 padding: [8.0, 2.0],
+                path: Path::rect([Theme::RADIUS_FULL; 4]),
             },
             BadgeVariant::Secondary => BadgeStyle {
                 fill: Fill::Solid(theme.surface_subtle),
                 text_color: theme.text_secondary,
                 border_width: 1.0,
                 border_color: theme.border_faint,
-                corner_radius: Theme::RADIUS_FULL,
                 padding: [8.0, 2.0],
+                path: Path::rect([Theme::RADIUS_FULL; 4]),
             },
             BadgeVariant::Outline => BadgeStyle {
                 fill: Fill::Solid(Color::TRANSPARENT),
                 text_color: theme.text_primary,
                 border_width: 1.0,
                 border_color: theme.border,
-                corner_radius: Theme::RADIUS_FULL,
                 padding: [8.0, 2.0],
+                path: Path::rect([Theme::RADIUS_FULL; 4]),
             },
             BadgeVariant::Success => BadgeStyle {
                 fill: Fill::Solid(theme.success.with_alpha(0.12)),
                 text_color: theme.success,
                 border_width: 1.0,
                 border_color: theme.success.with_alpha(0.28),
-                corner_radius: Theme::RADIUS_FULL,
                 padding: [8.0, 2.0],
+                path: Path::rect([Theme::RADIUS_FULL; 4]),
             },
             BadgeVariant::Warning => BadgeStyle {
                 fill: Fill::Solid(theme.warning.with_alpha(0.12)),
                 text_color: theme.warning,
                 border_width: 1.0,
                 border_color: theme.warning.with_alpha(0.28),
-                corner_radius: Theme::RADIUS_FULL,
                 padding: [8.0, 2.0],
+                path: Path::rect([Theme::RADIUS_FULL; 4]),
             },
             BadgeVariant::Error => BadgeStyle {
                 fill: Fill::Solid(theme.error.with_alpha(0.12)),
                 text_color: theme.error,
                 border_width: 1.0,
                 border_color: theme.error.with_alpha(0.28),
-                corner_radius: Theme::RADIUS_FULL,
                 padding: [8.0, 2.0],
+                path: Path::rect([Theme::RADIUS_FULL; 4]),
             },
         }
     }
@@ -230,11 +231,9 @@ impl Measurable for Badge {
             ],
         );
 
-        ui.draw_rect(
-            position,
-            size,
+        ui.draw_shape(
+            (style.path)(position, size),
             style.fill,
-            style.corner_radius,
             style.border_width,
             style.border_color,
             0.0,

@@ -1,5 +1,6 @@
 use crate::color::Color;
 use crate::fill::Fill;
+use crate::geometry::MeasurablePath;
 use crate::theme::Theme;
 use crate::ui::Ui;
 use crate::widget::{Accessible, IntoId, Measurable, Widget, hash_id};
@@ -122,11 +123,9 @@ impl Measurable for Divider {
             );
         }
 
-        ui.draw_rect(
-            position,
-            size,
+        ui.draw_shape(
+            MeasurablePath::rect(position, size, [0.0; 4]),
             Fill::Solid(self.color),
-            0.0,
             0.0,
             Color::TRANSPARENT,
             0.0,

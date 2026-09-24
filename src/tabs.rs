@@ -1,7 +1,7 @@
 use crate::animation::{Motion, animate_towards};
 use crate::color::Color;
 use crate::fill::Fill;
-use crate::geometry::contains;
+use crate::geometry::{MeasurablePath, Path};
 use crate::painter::FontWeight;
 use crate::theme::Theme;
 use crate::ui::Ui;
@@ -24,7 +24,7 @@ impl TabItem {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct TabsStyle {
     pub height: f32,
     pub tab_padding_x: f32,
@@ -32,8 +32,8 @@ pub struct TabsStyle {
     pub text_color: Color,
     pub hover_text_color: Color,
     pub active_fill: Fill,
-    pub pill_corner_radius: f32,
     pub pill_inset_y: f32,
+    pub path: Path,
 }
 
 impl Default for TabsStyle {
@@ -45,8 +45,8 @@ impl Default for TabsStyle {
             text_color: Theme::TEXT_SECONDARY,
             hover_text_color: Theme::TEXT_PRIMARY,
             active_fill: Fill::Solid(Theme::ACTIVE),
-            pill_corner_radius: Theme::RADIUS_MD,
             pill_inset_y: 4.0,
+            path: Path::rect([Theme::RADIUS_MD; 4]),
         }
     }
 }
@@ -199,7 +199,9 @@ impl Measurable for Tabs {
         for (i, &(tab_x, tab_w)) in tabs.iter().enumerate() {
             let tab_pos = [position[0] + tab_x, position[1]];
             let tab_size = [tab_w, size[1]];
-            let hit = !blocked && in_clip && contains(tab_pos, tab_size, 0.0, mouse_pos);
+            let hit = !blocked
+                && in_clip
+                && MeasurablePath::rect(tab_pos, tab_size, [0.0; 4]).contains(mouse_pos);
             if hit {
                 hovered_index = Some(i);
                 if mouse_pressed {
@@ -247,14 +249,15 @@ impl Measurable for Tabs {
             ],
         );
 
-        ui.draw_rect(
-            [
-                position[0] + state.indicator_x,
-                position[1] + style.pill_inset_y,
-            ],
-            [state.indicator_w, size[1] - style.pill_inset_y * 2.0],
+        ui.draw_shape(
+            (style.path)(
+                [
+                    position[0] + state.indicator_x,
+                    position[1] + style.pill_inset_y,
+                ],
+                [state.indicator_w, size[1] - style.pill_inset_y * 2.0],
+            ),
             style.active_fill.clone(),
-            style.pill_corner_radius,
             0.0,
             Color::TRANSPARENT,
             0.0,

@@ -1,6 +1,7 @@
 use crate::animation::{Motion, animate_towards};
 use crate::color::Color;
 use crate::fill::Fill;
+use crate::geometry::Path;
 use crate::theme::Theme;
 use crate::ui::Ui;
 use crate::widget::{Accessible, IntoId, Measurable, StatefulWidget, Widget, hash_id};
@@ -12,13 +13,13 @@ pub struct ProgressBarState {
     pub initialized: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ProgressBarStyle {
     pub track_fill: Fill,
     pub progress_fill: Fill,
     pub border_width: f32,
     pub border_color: Color,
-    pub corner_radius: f32,
+    pub path: Path,
 }
 
 impl Default for ProgressBarStyle {
@@ -28,7 +29,7 @@ impl Default for ProgressBarStyle {
             progress_fill: Fill::Solid(Theme::ACTIVE),
             border_width: 1.0,
             border_color: Theme::BORDER,
-            corner_radius: 4.0,
+            path: Path::rect([4.0; 4]),
         }
     }
 }
@@ -140,7 +141,7 @@ impl Measurable for ProgressBar {
                 progress_fill: Fill::Solid(progress_fill),
                 border_width: 1.0,
                 border_color: theme.border,
-                corner_radius: 4.0,
+                path: Path::rect([4.0; 4]),
             }
         });
         let dt = ui.dt();
@@ -160,11 +161,9 @@ impl Measurable for ProgressBar {
             );
         }
 
-        ui.draw_rect(
-            position,
-            size,
+        ui.draw_shape(
+            (style.path)(position, size),
             style.track_fill.clone(),
-            style.corner_radius,
             style.border_width,
             style.border_color,
             0.0,
@@ -187,11 +186,9 @@ impl Measurable for ProgressBar {
 
         let filled_width = (size[0] * current_progress).max(0.0);
         if filled_width > 0.0 {
-            ui.draw_rect(
-                position,
-                [filled_width, size[1]],
+            ui.draw_shape(
+                (style.path)(position, [filled_width, size[1]]),
                 style.progress_fill.clone(),
-                style.corner_radius,
                 0.0,
                 Color::TRANSPARENT,
                 0.0,

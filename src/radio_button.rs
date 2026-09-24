@@ -1,5 +1,6 @@
 use crate::color::Color;
 use crate::fill::Fill;
+use crate::geometry::{MeasurablePath, Path};
 use crate::interaction::Interaction;
 use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::theme::Theme;
@@ -17,19 +18,19 @@ pub struct RadioButtonResponse {
     pub hovered: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct RadioButtonStyle {
     pub fill: Fill,
     pub hover_fill: Fill,
     pub selected_fill: Fill,
     pub border_width: f32,
     pub border_color: Color,
-    pub corner_radius: f32,
     pub shadow: Option<ShadowStyle>,
     pub sharp: bool,
     /// Color of the inner dot, shown once selected (or animating toward
     /// it). Only sits on `selected_fill`, so it should contrast with that.
     pub dot_color: Color,
+    pub path: Path,
 }
 
 impl Default for RadioButtonStyle {
@@ -40,10 +41,10 @@ impl Default for RadioButtonStyle {
             selected_fill: Fill::Solid(Theme::ACTIVE),
             border_width: 1.0,
             border_color: Theme::BORDER,
-            corner_radius: 9.0,
             shadow: Some(ShadowStyle::default()),
             sharp: false,
             dot_color: Color::WHITE,
+            path: Path::ellipse(0.0),
         }
     }
 }
@@ -138,14 +139,15 @@ impl Measurable for RadioButton {
             selected_fill: Fill::Solid(theme.active),
             border_width: 1.0,
             border_color: theme.border,
-            corner_radius: 9.0,
             shadow: Some(theme.shadow_sm()[0]),
             sharp: false,
             dot_color: theme.on_active(),
+            path: Path::ellipse(0.0),
         });
         let dt = ui.dt();
 
-        let interaction = Interaction::update(position, size, style.corner_radius, ui);
+        let shape = (style.path)(position, size);
+        let interaction = Interaction::update(&shape, ui);
         self.interaction = interaction;
 
         ui.register_accessible(
@@ -206,14 +208,12 @@ impl Measurable for RadioButton {
         };
 
         if let Some(shadow) = &style.shadow {
-            draw_shadow(shadow, position, size, style.corner_radius, ui);
+            draw_shadow(shadow, position, size, &style.path, ui);
         }
 
-        ui.draw_rect(
-            position,
-            size,
+        ui.draw_shape(
+            (style.path)(position, size),
             fill,
-            style.corner_radius,
             style.border_width,
             border_color,
             0.0,
@@ -228,11 +228,9 @@ impl Measurable for RadioButton {
             let dot_pos = [position[0] + inset, position[1] + inset];
             let dot_radius = dot_size / 2.0;
             let dot_color = style.dot_color.with_alpha(dot_t);
-            ui.draw_rect(
-                dot_pos,
-                [dot_size, dot_size],
+            ui.draw_shape(
+                MeasurablePath::rect(dot_pos, [dot_size, dot_size], [dot_radius; 4]),
                 Fill::Solid(dot_color),
-                dot_radius,
                 0.0,
                 Color::TRANSPARENT,
                 0.0,

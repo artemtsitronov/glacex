@@ -7,7 +7,7 @@
 use crate::animation::{Motion, Spring, animate_towards};
 use crate::color::Color;
 use crate::fill::Fill;
-use crate::geometry::contains;
+use crate::geometry::{MeasurablePath, Path};
 use crate::painter::FontWeight;
 use crate::shadow::ShadowStyle;
 use crate::theme::Theme;
@@ -17,7 +17,7 @@ use accesskit::{NodeId, Role};
 use winit::keyboard::{Key, NamedKey};
 use winit::window::CursorIcon;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct SelectBoxStyle {
     pub fill: Fill,
     pub hover_fill: Fill,
@@ -28,7 +28,6 @@ pub struct SelectBoxStyle {
     pub border_color: Color,
     pub hover_border_color: Color,
     pub focus_border_color: Color,
-    pub corner_radius: f32,
     pub height: f32,
     pub padding_x: f32,
 
@@ -52,6 +51,8 @@ pub struct SelectBoxStyle {
     pub search_height: f32,
     pub search_fill: Color,
     pub search_placeholder: &'static str,
+
+    pub path: Path,
 }
 
 impl Default for SelectBoxStyle {
@@ -66,7 +67,6 @@ impl Default for SelectBoxStyle {
             border_color: Theme::BORDER_STRONG,
             hover_border_color: Theme::BORDER_STRONG,
             focus_border_color: Theme::FOCUS_BORDER,
-            corner_radius: Theme::RADIUS_MD,
             height: 36.0,
             padding_x: 12.0,
 
@@ -99,6 +99,8 @@ impl Default for SelectBoxStyle {
             search_height: 36.0,
             search_fill: Theme::SURFACE_SUBTLE,
             search_placeholder: "Search…",
+
+            path: Path::rect([Theme::RADIUS_MD; 4]),
         }
     }
 }
@@ -313,7 +315,7 @@ impl Measurable for SelectBox {
         let trigger_blocked = ui.is_input_blocked(mouse_pos) && !state.open;
         let in_clip = ui.point_in_current_clip(mouse_pos);
         let trigger_hovered =
-            !trigger_blocked && in_clip && contains(position, size, style.corner_radius, mouse_pos);
+            !trigger_blocked && in_clip && (style.path)(position, size).contains(mouse_pos);
 
         ui.register_focusable(self.focus_id());
         ui.register_accessible(
@@ -359,7 +361,7 @@ impl Measurable for SelectBox {
         let dropdown_size = [size[0], dropdown_h];
 
         if state.open && mouse_pressed_frame {
-            let in_trigger = contains(position, size, style.corner_radius, mouse_pos);
+            let in_trigger = (style.path)(position, size).contains(mouse_pos);
             let in_dropdown = mouse_pos[0] >= dropdown_pos[0]
                 && mouse_pos[0] <= dropdown_pos[0] + dropdown_size[0]
                 && mouse_pos[1] >= dropdown_pos[1]
@@ -515,11 +517,9 @@ impl Measurable for SelectBox {
         // part of one merged overlay surface below, so it doesn't double
         // up with (or get hidden under) the expanding dropdown.
         if open_ease <= 0.001 {
-            ui.draw_rect(
-                position,
-                size,
+            ui.draw_shape(
+                (style.path)(position, size),
                 trigger_fill.clone(),
-                style.corner_radius,
                 style.border_width,
                 trigger_border,
                 0.0,
@@ -603,14 +603,15 @@ impl Measurable for SelectBox {
             if let Some(shadow) = &style.dropdown_shadow {
                 let shadow_opacity = shadow.color.a * open_ease;
                 let shadow_color = shadow.color.with_alpha(shadow_opacity);
-                ui.draw_overlay_rect(
-                    [
-                        container_pos[0] + shadow.offset[0] - 6.0,
-                        container_pos[1] + shadow.offset[1] - 4.0,
-                    ],
-                    [container_size[0] + 12.0, container_size[1] + 8.0],
+                ui.draw_overlay_shape(
+                    (style.path)(
+                        [
+                            container_pos[0] + shadow.offset[0] - 6.0,
+                            container_pos[1] + shadow.offset[1] - 4.0,
+                        ],
+                        [container_size[0] + 12.0, container_size[1] + 8.0],
+                    ),
                     Fill::Solid(shadow_color),
-                    style.corner_radius + 4.0,
                     0.0,
                     Color::TRANSPARENT,
                     shadow.blur_radius,
@@ -634,11 +635,9 @@ impl Measurable for SelectBox {
             let merged_border_width =
                 style.border_width + (style.dropdown_border_width - style.border_width) * open_ease;
 
-            ui.draw_overlay_rect(
-                container_pos,
-                container_size,
+            ui.draw_overlay_shape(
+                (style.path)(container_pos, container_size),
                 merged_fill,
-                style.corner_radius,
                 merged_border_width,
                 merged_border,
                 0.0,
@@ -676,11 +675,9 @@ impl Measurable for SelectBox {
                 let search_pos = [dropdown_pos[0] + 6.0, content_y];
                 let search_size = [dropdown_size[0] - 12.0, style.search_height];
 
-                ui.draw_overlay_rect(
-                    search_pos,
-                    search_size,
+                ui.draw_overlay_shape(
+                    MeasurablePath::rect(search_pos, search_size, [Theme::RADIUS_SM; 4]),
                     Fill::Solid(style.search_fill),
-                    Theme::RADIUS_SM,
                     1.0,
                     style.dropdown_border_color.with_alpha(0.5 * open_ease),
                     0.0,
@@ -797,11 +794,9 @@ impl Measurable for SelectBox {
                 };
 
                 if item_bg.a > 0.005 {
-                    ui.draw_overlay_rect(
-                        item_pos,
-                        item_size,
+                    ui.draw_overlay_shape(
+                        MeasurablePath::rect(item_pos, item_size, [style.item_corner_radius; 4]),
                         Fill::Solid(item_bg),
-                        style.item_corner_radius,
                         0.0,
                         Color::TRANSPARENT,
                         0.0,
@@ -959,11 +954,13 @@ fn draw_line(ui: &mut Ui, a: [f32; 2], b: [f32; 2], thickness: f32, color: Color
     let mid_x = (a[0] + b[0]) / 2.0;
     let mid_y = (a[1] + b[1]) / 2.0;
 
-    ui.draw_rect(
-        [mid_x - len / 2.0, mid_y - thickness / 2.0],
-        [len, thickness],
+    ui.draw_shape(
+        MeasurablePath::rect(
+            [mid_x - len / 2.0, mid_y - thickness / 2.0],
+            [len, thickness],
+            [thickness / 2.0; 4],
+        ),
         Fill::Solid(color),
-        thickness / 2.0,
         0.0,
         Color::TRANSPARENT,
         0.0,
@@ -990,11 +987,13 @@ fn draw_line_overlay(
     let mid_x = (a[0] + b[0]) / 2.0;
     let mid_y = (a[1] + b[1]) / 2.0;
 
-    ui.draw_overlay_rect(
-        [mid_x - len / 2.0, mid_y - thickness / 2.0],
-        [len, thickness],
+    ui.draw_overlay_shape(
+        MeasurablePath::rect(
+            [mid_x - len / 2.0, mid_y - thickness / 2.0],
+            [len, thickness],
+            [thickness / 2.0; 4],
+        ),
         Fill::Solid(color),
-        thickness / 2.0,
         0.0,
         Color::TRANSPARENT,
         0.0,

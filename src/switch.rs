@@ -1,6 +1,7 @@
 use crate::animation::{Motion, animate_towards};
 use crate::color::Color;
 use crate::fill::Fill;
+use crate::geometry::{MeasurablePath, Path};
 use crate::interaction::Interaction;
 use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::theme::Theme;
@@ -25,15 +26,15 @@ pub struct SwitchResponse {
     pub hovered: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct SwitchStyle {
     pub track_off_fill: Fill,
     pub track_on_fill: Fill,
     pub thumb_fill: Fill,
     pub border_width: f32,
     pub border_color: Color,
-    pub corner_radius: f32,
     pub shadow: Option<ShadowStyle>,
+    pub path: Path,
 }
 
 impl Default for SwitchStyle {
@@ -44,8 +45,8 @@ impl Default for SwitchStyle {
             thumb_fill: Fill::Solid(Color::WHITE),
             border_width: 1.0,
             border_color: Theme::BORDER,
-            corner_radius: 11.0,
             shadow: Some(ShadowStyle::default()),
+            path: Path::rect([11.0; 4]),
         }
     }
 }
@@ -136,7 +137,8 @@ impl Measurable for Switch {
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) -> SwitchResponse {
         let theme = *ui.theme();
         let style = self.style.clone().unwrap_or_else(|| theme.switch_style());
-        let interaction = Interaction::update(position, size, style.corner_radius, ui);
+        let shape = (style.path)(position, size);
+        let interaction = Interaction::update(&shape, ui);
         self.interaction = interaction;
 
         ui.register_accessible(
@@ -217,14 +219,12 @@ impl Measurable for Switch {
         };
 
         if let Some(shadow) = &style.shadow {
-            draw_shadow(shadow, position, size, style.corner_radius, ui);
+            draw_shadow(shadow, position, size, &style.path, ui);
         }
 
-        ui.draw_rect(
-            position,
-            size,
+        ui.draw_shape(
+            (style.path)(position, size),
             track_fill,
-            style.corner_radius,
             style.border_width,
             border_color,
             0.0,
@@ -250,11 +250,13 @@ impl Measurable for Switch {
             } else {
                 knob_x
             };
-            ui.draw_rect(
-                [stretch_x, position[1] + padding],
-                [stretch_w, knob_size],
+            ui.draw_shape(
+                MeasurablePath::rect(
+                    [stretch_x, position[1] + padding],
+                    [stretch_w, knob_size],
+                    [knob_radius; 4],
+                ),
                 Fill::Solid(Color::WHITE.with_alpha(0.22)),
-                knob_radius,
                 0.0,
                 Color::TRANSPARENT,
                 3.0,
@@ -272,15 +274,13 @@ impl Measurable for Switch {
             &thumb_shadow,
             knob_pos,
             [knob_size, knob_size],
-            knob_radius,
+            &Path::rect([knob_radius; 4]),
             ui,
         );
 
-        ui.draw_rect(
-            knob_pos,
-            [knob_size, knob_size],
+        ui.draw_shape(
+            MeasurablePath::rect(knob_pos, [knob_size, knob_size], [knob_radius; 4]),
             thumb_fill,
-            knob_radius,
             0.0,
             Color::TRANSPARENT,
             0.0,

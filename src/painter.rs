@@ -1,13 +1,14 @@
-use crate::ImageHandle;
 use crate::color::Color;
 use crate::fill::{Fill, Gradient, GradientHandle, GradientKind, GradientStop};
-use crate::shapes::{QUAD_VERTICES, QuadVertex, RectInstance};
+use crate::shapes::{QUAD_VERTICES, QuadVertex, ShapeInstance};
 use crate::theme::Theme;
+use crate::{ImageHandle, MeasurablePath, Shape};
 use glyphon::{
     Attrs, Cache, Family, FontSystem, Metrics, Resolution, Shaping, SwashCache, TextArea,
     TextAtlas, TextBounds, TextRenderer, Viewport, Weight,
 };
 use image::{ImageError, ImageReader};
+use kurbo::Shape as KurboShape;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
@@ -293,10 +294,10 @@ pub struct Painter {
     bind_group: BindGroup,
 
     quad_vertex_buffer: Buffer,
-    rect_instance_buffer: Buffer,
-    rect_instance_capacity: usize,
-    pending_rects: Vec<([f32; 4], RectInstance)>,
-    pending_overlay_rects: Vec<([f32; 4], RectInstance)>,
+    shape_instance_buffer: Buffer,
+    shape_instance_capacity: usize,
+    pending_shapes: Vec<([f32; 4], ShapeInstance)>,
+    pending_overlay_shapes: Vec<([f32; 4], ShapeInstance)>,
 
     font_system: FontSystem,
     swash_cache: SwashCache,
@@ -475,7 +476,7 @@ impl Painter {
             vertex: VertexState {
                 module: &shader_module,
                 entry_point: Some("vs_main"),
-                buffers: &[Some(QuadVertex::LAYOUT), Some(RectInstance::LAYOUT)],
+                buffers: &[Some(QuadVertex::LAYOUT), Some(ShapeInstance::LAYOUT)],
                 compilation_options: PipelineCompilationOptions::default(),
             },
             fragment: Some(FragmentState {
@@ -501,10 +502,10 @@ impl Painter {
             usage: BufferUsages::VERTEX,
         });
 
-        let rect_instance_capacity: usize = 16;
-        let rect_instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        let shape_instance_capacity: usize = 16;
+        let shape_instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: None,
-            size: (rect_instance_capacity * std::mem::size_of::<RectInstance>()) as u64,
+            size: (shape_instance_capacity * std::mem::size_of::<ShapeInstance>()) as u64,
             usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -538,10 +539,10 @@ impl Painter {
             window_size_buffer,
             bind_group,
             quad_vertex_buffer,
-            rect_instance_buffer,
-            rect_instance_capacity,
-            pending_rects: vec![],
-            pending_overlay_rects: vec![],
+            shape_instance_buffer,
+            shape_instance_capacity,
+            pending_shapes: vec![],
+            pending_overlay_shapes: vec![],
             font_system,
             swash_cache,
             viewport,
@@ -624,9 +625,9 @@ impl Painter {
     pub fn begin_frame(&mut self) {
         self.frame_count += 1;
 
-        self.pending_rects.clear();
+        self.pending_shapes.clear();
         self.pending_labels.clear();
-        self.pending_overlay_rects.clear();
+        self.pending_overlay_shapes.clear();
         self.pending_overlay_labels.clear();
         self.text_shape_cache.retain(|_, cached| {
             self.frame_count - cached.last_used_frame <= TEXT_CACHE_EVICTION_FRAME
@@ -698,12 +699,92 @@ impl Painter {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn draw_rect(
+    fn lower_shape(
         &mut self,
-        position: [f32; 2],
-        size: [f32; 2],
-        fill: Fill,
-        corner_radius: f32,
+        shape: Shape,
+        border_width: f32,
+        border_color: Color,
+        blur_radius: f32,
+        sharp: f32,
+        rotation: f32,
+    ) -> ShapeInstance {
+        let (shape_kind, position, size, corner_radius, extra_rotation) = match &shape.path {
+            MeasurablePath::Rect(rounded_rect) => {
+                let rect = rounded_rect.rect();
+                let radii = rounded_rect.radii();
+                (
+                    0.0,
+                    [rect.x0 as f32, rect.y0 as f32],
+                    [(rect.x1 - rect.x0) as f32, (rect.y1 - rect.y0) as f32],
+                    [
+                        radii.top_left as f32,
+                        radii.top_right as f32,
+                        radii.bottom_right as f32,
+                        radii.bottom_left as f32,
+                    ],
+                    0.0,
+                )
+            }
+            MeasurablePath::Ellipse(ellipse) => {
+                let (radii, ellipse_rotation) = ellipse.radii_and_rotation();
+                let center = ellipse.center();
+                (
+                    1.0,
+                    [(center.x - radii.x) as f32, (center.y - radii.y) as f32],
+                    [(radii.x * 2.0) as f32, (radii.y * 2.0) as f32],
+                    [0.0; 4],
+                    ellipse_rotation as f32,
+                )
+            }
+            MeasurablePath::Free(_) => unimplemented!(),
+        };
+        let rotation = rotation + extra_rotation;
+
+        let (fill_kind, color, gradient_angle, gradient_center, gradient_row, image_uv) =
+            match shape.fill {
+                Fill::Solid(color) => (0.0, color, 0.0, [0.0, 0.0], 0.0, [0.0; 4]),
+                Fill::Gradient(gradient) => {
+                    let handle = self.gradient_atlas.bake_cached(&self.queue, &gradient);
+                    let row = match handle {
+                        GradientHandle::Ramp { row } => row as f32,
+                        GradientHandle::Mesh { .. } => 0.0,
+                    };
+                    let (kind, param0, center) = match &gradient.kind {
+                        GradientKind::Linear { angle } => (1.0, *angle, [0.0, 0.0]),
+                        GradientKind::Radial { center, radius } => (2.0, *radius, *center),
+                        GradientKind::Conic { center } => (3.0, 0.0, *center),
+                        GradientKind::Mesh { .. } => (4.0, 0.0, [0.0, 0.0]),
+                    };
+                    (kind, Color::TRANSPARENT, param0, center, row, [0.0; 4])
+                }
+                Fill::Image(handle) => {
+                    (5.0, Color::TRANSPARENT, 0.0, [0.0; 2], 0.0, handle.atlas_uv)
+                }
+            };
+
+        ShapeInstance {
+            position,
+            size,
+            color,
+            corner_radius,
+            border_width,
+            border_color,
+            blur_radius,
+            sharp,
+            fill_kind,
+            shape_kind,
+            gradient_angle,
+            gradient_row,
+            gradient_center,
+            rotation,
+            image_uv,
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn draw_shape(
+        &mut self,
+        shape: Shape,
         border_width: f32,
         border_color: Color,
         blur_radius: f32,
@@ -711,45 +792,37 @@ impl Painter {
         clip: [f32; 4],
         rotation: f32,
     ) {
-        let (fill_kind, color, gradient_angle, gradient_center, gradient_row, image_uv) = match fill
-        {
-            Fill::Solid(color) => (0.0, color, 0.0, [0.0, 0.0], 0.0, [0.0; 4]),
-            Fill::Gradient(gradient) => {
-                let handle = self.gradient_atlas.bake_cached(&self.queue, &gradient);
-                let row = match handle {
-                    GradientHandle::Ramp { row } => row as f32,
-                    GradientHandle::Mesh { .. } => 0.0, // not handled yet
-                };
-                let (kind, param0, center) = match &gradient.kind {
-                    GradientKind::Linear { angle } => (1.0, *angle, [0.0, 0.0]),
-                    GradientKind::Radial { center, radius } => (2.0, *radius, *center),
-                    GradientKind::Conic { center } => (3.0, 0.0, *center),
-                    GradientKind::Mesh { .. } => (4.0, 0.0, [0.0, 0.0]),
-                };
-                (kind, Color::TRANSPARENT, param0, center, row, [0.0; 4])
-            }
-            Fill::Image(handle) => (5.0, Color::TRANSPARENT, 0.0, [0.0; 2], 0.0, handle.atlas_uv),
-        };
+        let instance = self.lower_shape(
+            shape,
+            border_width,
+            border_color,
+            blur_radius,
+            sharp,
+            rotation,
+        );
+        self.pending_shapes.push((clip, instance));
+    }
 
-        self.pending_rects.push((
-            clip,
-            RectInstance {
-                position,
-                size,
-                fill_kind,
-                gradient_angle,
-                gradient_center,
-                gradient_row,
-                color,
-                corner_radius,
-                border_width,
-                border_color,
-                blur_radius,
-                sharp,
-                rotation,
-                image_uv,
-            },
-        ));
+    #[allow(clippy::too_many_arguments)]
+    pub fn draw_overlay_shape(
+        &mut self,
+        shape: Shape,
+        border_width: f32,
+        border_color: Color,
+        blur_radius: f32,
+        sharp: f32,
+        clip: [f32; 4],
+        rotation: f32,
+    ) {
+        let instance = self.lower_shape(
+            shape,
+            border_width,
+            border_color,
+            blur_radius,
+            sharp,
+            rotation,
+        );
+        self.pending_overlay_shapes.push((clip, instance));
     }
 
     pub fn draw_text(&mut self, text: &str, position: [f32; 2], bounds: [f32; 4]) {
@@ -792,61 +865,6 @@ impl Painter {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn draw_overlay_rect(
-        &mut self,
-        position: [f32; 2],
-        size: [f32; 2],
-        fill: Fill,
-        corner_radius: f32,
-        border_width: f32,
-        border_color: Color,
-        blur_radius: f32,
-        sharp: f32,
-        clip: [f32; 4],
-        rotation: f32,
-    ) {
-        let (fill_kind, color, gradient_angle, gradient_center, gradient_row, image_uv) = match fill
-        {
-            Fill::Solid(color) => (0.0, color, 0.0, [0.0, 0.0], 0.0, [0.0; 4]),
-            Fill::Gradient(gradient) => {
-                let handle = self.gradient_atlas.bake_cached(&self.queue, &gradient);
-                let row = match handle {
-                    GradientHandle::Ramp { row } => row as f32,
-                    GradientHandle::Mesh { .. } => 0.0,
-                };
-                let (kind, param0, center) = match &gradient.kind {
-                    GradientKind::Linear { angle } => (1.0, *angle, [0.0, 0.0]),
-                    GradientKind::Radial { center, radius } => (2.0, *radius, *center),
-                    GradientKind::Conic { center } => (3.0, 0.0, *center),
-                    GradientKind::Mesh { .. } => (4.0, 0.0, [0.0, 0.0]),
-                };
-                (kind, Color::TRANSPARENT, param0, center, row, [0.0; 4])
-            }
-            Fill::Image(handle) => (5.0, Color::TRANSPARENT, 0.0, [0.0; 2], 0.0, handle.atlas_uv),
-        };
-
-        self.pending_overlay_rects.push((
-            clip,
-            RectInstance {
-                position,
-                size,
-                fill_kind,
-                gradient_angle,
-                gradient_center,
-                gradient_row,
-                color,
-                corner_radius,
-                border_width,
-                border_color,
-                blur_radius,
-                sharp,
-                rotation,
-                image_uv,
-            },
-        ));
-    }
-
-    #[allow(clippy::too_many_arguments)]
     pub fn draw_overlay_text_styled(
         &mut self,
         text: &str,
@@ -864,36 +882,38 @@ impl Painter {
     }
 
     pub fn present(&mut self) {
-        let total_rects = self.pending_rects.len() + self.pending_overlay_rects.len();
-        if total_rects > self.rect_instance_capacity {
-            self.rect_instance_capacity = total_rects * 2;
-            let placeholder = RectInstance {
+        let total_rects = self.pending_shapes.len() + self.pending_overlay_shapes.len();
+        if total_rects > self.shape_instance_capacity {
+            self.shape_instance_capacity = total_rects * 2;
+            let placeholder = ShapeInstance {
                 position: [0.0; 2],
                 size: [0.0; 2],
                 color: Color::TRANSPARENT,
-                corner_radius: 8.0,
+                corner_radius: [8.0; 4],
                 border_width: 5.0,
                 border_color: Color::TRANSPARENT,
                 blur_radius: 5.0,
                 sharp: 0.0,
                 fill_kind: 0.0,
+                shape_kind: 0.0,
                 gradient_angle: 0.0,
                 gradient_row: 0.0,
                 gradient_center: [0.0; 2],
                 rotation: 0.0,
                 image_uv: [0.0; 4],
             };
-            self.rect_instance_buffer = self.device.create_buffer_init(&BufferInitDescriptor {
+            self.shape_instance_buffer = self.device.create_buffer_init(&BufferInitDescriptor {
                 label: None,
-                contents: bytemuck::cast_slice(&vec![placeholder; self.rect_instance_capacity]),
+                contents: bytemuck::cast_slice(&vec![placeholder; self.shape_instance_capacity]),
                 usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
             });
         }
 
-        let mut instances: Vec<RectInstance> = self.pending_rects.iter().map(|(_, r)| *r).collect();
-        instances.extend(self.pending_overlay_rects.iter().map(|(_, r)| *r));
+        let mut instances: Vec<ShapeInstance> =
+            self.pending_shapes.iter().map(|(_, r)| *r).collect();
+        instances.extend(self.pending_overlay_shapes.iter().map(|(_, r)| *r));
         self.queue.write_buffer(
-            &self.rect_instance_buffer,
+            &self.shape_instance_buffer,
             0,
             bytemuck::cast_slice(&instances),
         );
@@ -1011,7 +1031,7 @@ impl Painter {
 
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_vertex_buffer(0, self.quad_vertex_buffer.slice(..));
-            render_pass.set_vertex_buffer(1, self.rect_instance_buffer.slice(..));
+            render_pass.set_vertex_buffer(1, self.shape_instance_buffer.slice(..));
             render_pass.set_bind_group(0, &self.bind_group, &[]);
             render_pass.set_bind_group(1, &self.gradient_bind_group, &[]);
             render_pass.set_bind_group(2, &self.image_bind_group, &[]);
@@ -1024,11 +1044,11 @@ impl Painter {
             let surface_h = self.surface_config.height;
 
             let mut range_start = 0usize;
-            while range_start < self.pending_rects.len() {
-                let clip = self.pending_rects[range_start].0;
+            while range_start < self.pending_shapes.len() {
+                let clip = self.pending_shapes[range_start].0;
                 let mut range_end = range_start + 1;
-                while range_end < self.pending_rects.len()
-                    && self.pending_rects[range_end].0 == clip
+                while range_end < self.pending_shapes.len()
+                    && self.pending_shapes[range_end].0 == clip
                 {
                     range_end += 1;
                 }
@@ -1067,7 +1087,7 @@ impl Painter {
 
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_vertex_buffer(0, self.quad_vertex_buffer.slice(..));
-            render_pass.set_vertex_buffer(1, self.rect_instance_buffer.slice(..));
+            render_pass.set_vertex_buffer(1, self.shape_instance_buffer.slice(..));
             render_pass.set_bind_group(0, &self.bind_group, &[]);
             render_pass.set_bind_group(1, &self.gradient_bind_group, &[]);
 
@@ -1075,14 +1095,14 @@ impl Painter {
             // top of all base geometry and base text. Overlay rects (card +
             // shadow) draw first, then overlay text on top of them — the
             // other way around and the rect fill paints over the text.
-            if !self.pending_overlay_rects.is_empty() {
-                let overlay_offset = self.pending_rects.len();
+            if !self.pending_overlay_shapes.is_empty() {
+                let overlay_offset = self.pending_shapes.len();
                 let mut range_start = 0usize;
-                while range_start < self.pending_overlay_rects.len() {
-                    let clip = self.pending_overlay_rects[range_start].0;
+                while range_start < self.pending_overlay_shapes.len() {
+                    let clip = self.pending_overlay_shapes[range_start].0;
                     let mut range_end = range_start + 1;
-                    while range_end < self.pending_overlay_rects.len()
-                        && self.pending_overlay_rects[range_end].0 == clip
+                    while range_end < self.pending_overlay_shapes.len()
+                        && self.pending_overlay_shapes[range_end].0 == clip
                     {
                         range_end += 1;
                     }

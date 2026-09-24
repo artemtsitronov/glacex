@@ -1,4 +1,4 @@
-use crate::{Color, Fill, Ui};
+use crate::{Color, Fill, Path, Ui};
 
 /// Soft drop shadow configuration for a single shadow layer.
 #[derive(Debug, Clone, Copy)]
@@ -23,18 +23,16 @@ pub fn draw_shadow(
     style: &ShadowStyle,
     position: [f32; 2],
     size: [f32; 2],
-    corner_radius: f32,
+    path: &Path,
     ui: &mut Ui,
 ) {
     if style.color.a < 0.001 {
         return;
     }
     let shadow_position = [position[0] + style.offset[0], position[1] + style.offset[1]];
-    ui.draw_rect(
-        shadow_position,
-        size,
+    ui.draw_shape(
+        path(shadow_position, size),
         Fill::Solid(style.color),
-        corner_radius,
         0.0,
         Color::TRANSPARENT,
         style.blur_radius,
@@ -48,9 +46,9 @@ pub fn draw_shadow_layers(
     layers: &[ShadowStyle; 2],
     position: [f32; 2],
     size: [f32; 2],
-    corner_radius: f32,
+    path: &Path,
     ui: &mut Ui,
 ) {
-    draw_shadow(&layers[0], position, size, corner_radius, ui);
-    draw_shadow(&layers[1], position, size, corner_radius, ui);
+    draw_shadow(&layers[0], position, size, path, ui);
+    draw_shadow(&layers[1], position, size, path, ui);
 }

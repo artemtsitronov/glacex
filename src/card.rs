@@ -1,19 +1,20 @@
 use crate::color::Color;
 use crate::fill::Fill;
+use crate::geometry::Path;
 use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::theme::Theme;
 use crate::ui::Ui;
 use crate::widget::{Accessible, AnyWidget, IntoId, Measurable, Widget, hash_id};
 use accesskit::{NodeId, Role};
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct CardStyle {
     pub fill: Fill,
     pub border_width: f32,
     pub border_color: Color,
-    pub corner_radius: f32,
     pub padding: [f32; 2],
     pub shadow: Option<ShadowStyle>,
+    pub path: Path,
 }
 
 impl Default for CardStyle {
@@ -22,13 +23,13 @@ impl Default for CardStyle {
             fill: Fill::Solid(Theme::SURFACE),
             border_width: 1.0,
             border_color: Theme::BORDER,
-            corner_radius: Theme::RADIUS_LG,
             padding: [Theme::SPACE_4, Theme::SPACE_4],
             shadow: Some(ShadowStyle {
                 color: Theme::SURFACE_SHADOW,
                 blur_radius: 12.0,
                 offset: [0.0, 3.0],
             }),
+            path: Path::rect([Theme::RADIUS_LG; 4]),
         }
     }
 }
@@ -39,9 +40,9 @@ impl CardStyle {
             fill: Fill::Solid(Theme::SURFACE_SUBTLE),
             border_width: 1.0,
             border_color: Theme::BORDER_FAINT,
-            corner_radius: Theme::RADIUS_MD,
             padding: [Theme::SPACE_3, Theme::SPACE_3],
             shadow: None,
+            path: Path::rect([Theme::RADIUS_MD; 4]),
         }
     }
 
@@ -50,13 +51,13 @@ impl CardStyle {
             fill: Fill::Solid(Theme::SURFACE_ELEVATED),
             border_width: 1.0,
             border_color: Theme::BORDER_STRONG,
-            corner_radius: Theme::RADIUS_LG,
             padding: [Theme::SPACE_4, Theme::SPACE_4],
             shadow: Some(ShadowStyle {
                 color: Theme::SHADOW_KEY,
                 blur_radius: 18.0,
                 offset: [0.0, 6.0],
             }),
+            path: Path::rect([Theme::RADIUS_LG; 4]),
         }
     }
 }
@@ -194,14 +195,12 @@ impl<'a> Measurable for Card<'a> {
         }
 
         if let Some(shadow) = &style.shadow {
-            draw_shadow(shadow, position, size, style.corner_radius, ui);
+            draw_shadow(shadow, position, size, &style.path, ui);
         }
 
-        ui.draw_rect(
-            position,
-            size,
+        ui.draw_shape(
+            (style.path)(position, size),
             style.fill,
-            style.corner_radius,
             style.border_width,
             style.border_color,
             0.0,

@@ -20,7 +20,7 @@ Glacex operates as an immediate-mode, GPU-accelerated UI framework:
       [ Widget ]
    (Hit-testing, animation step, draw calls)
           |
-   Ui::draw_rect() / Ui::draw_text()
+   Ui::draw_shape() / Ui::draw_text()
           |
           v
      [ Painter ]

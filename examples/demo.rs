@@ -165,6 +165,7 @@ impl Widget for DemoApp {
                                                         ],
                                                         kind: GradientKind::Linear { angle: 45.0 },
                                                     }),
+                                                    path: Path::ellipse(0.0),
                                                     ..Default::default()
                                                 }
                                             ),

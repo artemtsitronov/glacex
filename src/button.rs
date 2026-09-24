@@ -1,8 +1,9 @@
 use crate::Fill;
 use crate::animation::{Motion, animate_towards};
 use crate::color::Color;
-use crate::geometry::center_text_in;
+use crate::geometry::Path;
 use crate::interaction::Interaction;
+use crate::misc::center_text_in;
 use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::theme::Theme;
 use crate::ui::Ui;
@@ -12,7 +13,7 @@ use winit::window::CursorIcon;
 
 pub type ButtonResponse = Interaction;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ButtonStyle {
     pub fill: Fill,
     pub hover_fill: Fill,
@@ -20,10 +21,10 @@ pub struct ButtonStyle {
     pub text_color: Color,
     pub border_width: f32,
     pub border_color: Color,
-    pub corner_radius: f32,
     pub padding: [f32; 2],
     pub shadow: Option<ShadowStyle>,
     pub sharp: bool,
+    pub path: Path,
 }
 
 impl Default for ButtonStyle {
@@ -35,10 +36,10 @@ impl Default for ButtonStyle {
             text_color: Theme::TEXT_PRIMARY,
             border_width: 1.0,
             border_color: Theme::BORDER,
-            corner_radius: Theme::RADIUS_MD,
             padding: [14.0, 8.0],
             shadow: Some(ShadowStyle::default()),
             sharp: false,
+            path: Path::rect([Theme::RADIUS_MD; 4]),
         }
     }
 }
@@ -52,7 +53,6 @@ impl ButtonStyle {
             text_color: Color::WHITE,
             border_width: 1.0,
             border_color: Color::WHITE.with_alpha(0.18),
-            corner_radius: Theme::RADIUS_MD,
             padding: [14.0, 8.0],
             shadow: Some(ShadowStyle {
                 color: Theme::ACTIVE.with_alpha(0.35),
@@ -60,6 +60,7 @@ impl ButtonStyle {
                 offset: [0.0, 2.0],
             }),
             sharp: false,
+            path: Path::rect([Theme::RADIUS_MD; 4]),
         }
     }
 
@@ -71,10 +72,10 @@ impl ButtonStyle {
             text_color: Theme::TEXT_PRIMARY,
             border_width: 1.0,
             border_color: Theme::BORDER_STRONG,
-            corner_radius: Theme::RADIUS_MD,
             padding: [14.0, 8.0],
             shadow: None,
             sharp: false,
+            path: Path::rect([Theme::RADIUS_MD; 4]),
         }
     }
 
@@ -86,10 +87,10 @@ impl ButtonStyle {
             text_color: Theme::TEXT_SECONDARY,
             border_width: 0.0,
             border_color: Color::TRANSPARENT,
-            corner_radius: Theme::RADIUS_MD,
             padding: [14.0, 8.0],
             shadow: None,
             sharp: false,
+            path: Path::rect([Theme::RADIUS_MD; 4]),
         }
     }
 
@@ -101,7 +102,6 @@ impl ButtonStyle {
             text_color: Theme::ERROR,
             border_width: 1.0,
             border_color: Theme::ERROR.with_alpha(0.35),
-            corner_radius: Theme::RADIUS_MD,
             padding: [14.0, 8.0],
             shadow: Some(ShadowStyle {
                 color: Theme::ERROR.with_alpha(0.25),
@@ -109,6 +109,7 @@ impl ButtonStyle {
                 offset: [0.0, 1.0],
             }),
             sharp: false,
+            path: Path::rect([Theme::RADIUS_MD; 4]),
         }
     }
 }
@@ -277,7 +278,8 @@ impl Measurable for Button {
         let style = self.resolved_style(&theme);
         let dt = ui.dt();
 
-        let interaction = Interaction::update(position, size, style.corner_radius, ui);
+        let shape = (style.path)(position, size);
+        let interaction = Interaction::update(&shape, ui);
         self.interaction = interaction;
 
         ui.register_accessible(
@@ -326,14 +328,12 @@ impl Measurable for Button {
             let mut s = *shadow;
             s.offset[1] -= press_t * press_offset;
             s.blur_radius = (s.blur_radius - press_t * 2.0).max(1.0);
-            draw_shadow(&s, draw_position, size, style.corner_radius, ui);
+            draw_shadow(&s, draw_position, size, &style.path, ui);
         }
 
-        ui.draw_rect(
-            draw_position,
-            size,
+        ui.draw_shape(
+            (style.path)(draw_position, size),
             color,
-            style.corner_radius,
             style.border_width,
             border_color,
             0.0,

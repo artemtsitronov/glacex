@@ -40,16 +40,17 @@ pub const QUAD_VERTICES: [QuadVertex; 6] = [
 
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct RectInstance {
+pub struct ShapeInstance {
     pub position: [f32; 2],
     pub size: [f32; 2],
     pub color: Color,
-    pub corner_radius: f32,
+    pub corner_radius: [f32; 4],
     pub border_width: f32,
     pub border_color: Color,
     pub blur_radius: f32,
     pub sharp: f32,
     pub fill_kind: f32,
+    pub shape_kind: f32, // 0 = rect, 1 = ellipse
     pub gradient_angle: f32,
     pub gradient_row: f32,
     pub gradient_center: [f32; 2],
@@ -57,7 +58,7 @@ pub struct RectInstance {
     pub image_uv: [f32; 4],
 }
 
-impl RectInstance {
+impl ShapeInstance {
     pub const LAYOUT: VertexBufferLayout<'static> = VertexBufferLayout {
         array_stride: size_of::<Self>() as BufferAddress,
         step_mode: VertexStepMode::Instance,
@@ -67,7 +68,7 @@ impl RectInstance {
             1 => Float32x2,
             2 => Float32x2,
             3 => Float32x4,
-            4 => Float32,
+            4 => Float32x4,
             5 => Float32,
             6 => Float32x4,
             7 => Float32,
@@ -75,9 +76,10 @@ impl RectInstance {
             9 => Float32,
             10 => Float32,
             11 => Float32,
-            12 => Float32x2,
-            13 => Float32,
-            14 => Float32x4,
+            12 => Float32,
+            13 => Float32x2,
+            14 => Float32,
+            15 => Float32x4,
         ],
     };
 }

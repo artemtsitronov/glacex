@@ -1,7 +1,7 @@
 use crate::animation::{Motion, animate_towards};
 use crate::color::Color;
 use crate::fill::Fill;
-use crate::geometry::contains;
+use crate::geometry::{MeasurablePath, Path};
 use crate::scrolling::{ScrollAxisState, ScrollConfig, compute_geometry, handle_drag};
 use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::text_edit::TextEditState;
@@ -20,14 +20,13 @@ struct TextAreaExtra {
     text_dragging: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct TextAreaStyle {
     pub fill: Fill,
     pub text_color: Color,
     pub border_width: f32,
     pub border_color: Color,
     pub focus_border_color: Color,
-    pub corner_radius: f32,
     pub padding: [f32; 2],
     pub selection_color: Color,
     pub cursor_color: Color,
@@ -35,6 +34,7 @@ pub struct TextAreaStyle {
     pub thumb_dragging_fill: Fill,
     pub shadow: Option<ShadowStyle>,
     pub sharp: bool,
+    pub path: Path,
 }
 
 impl Default for TextAreaStyle {
@@ -45,7 +45,6 @@ impl Default for TextAreaStyle {
             border_width: 1.0,
             border_color: Theme::BORDER,
             focus_border_color: Theme::FOCUS_BORDER,
-            corner_radius: Theme::RADIUS_MD,
             padding: [10.0, 10.0],
             selection_color: Theme::SELECTION,
             cursor_color: Theme::ACTIVE,
@@ -57,6 +56,7 @@ impl Default for TextAreaStyle {
                 offset: [0.0, 1.0],
             }),
             sharp: false,
+            path: Path::rect([Theme::RADIUS_MD; 4]),
         }
     }
 }
@@ -237,7 +237,7 @@ impl Measurable for TextArea {
         let mouse_pos = ui.mouse_position();
         let hovered = !ui.is_input_blocked(mouse_pos)
             && ui.point_in_current_clip(mouse_pos)
-            && contains(position, size, style.corner_radius, mouse_pos);
+            && (style.path)(position, size).contains(mouse_pos);
 
         let focused = self.focused(ui);
 
@@ -322,7 +322,8 @@ impl Measurable for TextArea {
         let track_x = position[0] + size[0] - config.thickness - config.padding;
         let track_rect_position = [track_x, position[1]];
         let track_rect_size = [config.thickness + config.padding, size[1]];
-        let track_hovered = contains(track_rect_position, track_rect_size, 0.0, mouse_pos);
+        let track_hovered = MeasurablePath::rect(track_rect_position, track_rect_size, [0.0; 4])
+            .contains(mouse_pos);
         // Keep resetting the "last activity" clock while the pointer is on
         // the track, so the linger countdown only starts once it actually
         // leaves — not from whatever scroll/drag last happened.
@@ -422,7 +423,8 @@ impl Measurable for TextArea {
             position[1] + config.padding + geometry.thumb_position_along_track,
         ];
         let thumb_size = [config.thickness, geometry.thumb_size];
-        let thumb_hovered = contains(thumb_position, thumb_size, 0.0, mouse_pos);
+        let thumb_hovered =
+            MeasurablePath::rect(thumb_position, thumb_size, [0.0; 4]).contains(mouse_pos);
 
         if let Some(new_offset) = handle_drag(
             &mut extra.scroll,
@@ -501,14 +503,12 @@ impl Measurable for TextArea {
                     .lerp(style.focus_border_color.with_alpha(0.25), focus_t);
                 s.blur_radius += focus_t * 6.0;
             }
-            draw_shadow(&s, position, size, style.corner_radius, ui);
+            draw_shadow(&s, position, size, &style.path, ui);
         }
 
-        ui.draw_rect(
-            position,
-            size,
+        ui.draw_shape(
+            (style.path)(position, size),
             style.fill,
-            style.corner_radius,
             border_width,
             border_color,
             0.0,
@@ -553,11 +553,9 @@ impl Measurable for TextArea {
                     ];
                     let highlight_size = [(x_end - x_start).max(2.0), line_height];
 
-                    ui.draw_rect(
-                        highlight_position,
-                        highlight_size,
+                    ui.draw_shape(
+                        MeasurablePath::rect(highlight_position, highlight_size, [0.0; 4]),
                         Fill::Solid(style.selection_color),
-                        0.0,
                         0.0,
                         Color::TRANSPARENT,
                         0.0,
@@ -586,11 +584,9 @@ impl Measurable for TextArea {
                     (text_origin[0] + cursor_x).round(),
                     text_origin[1] + line_index as f32 * line_height,
                 ];
-                ui.draw_rect(
-                    cursor_position,
-                    [2.0, line_height],
+                ui.draw_shape(
+                    MeasurablePath::rect(cursor_position, [2.0, line_height], [0.0; 4]),
                     Fill::Solid(style.cursor_color),
-                    0.0,
                     0.0,
                     Color::TRANSPARENT,
                     0.0,
@@ -611,11 +607,13 @@ impl Measurable for TextArea {
             } else {
                 style.thumb_fill
             };
-            ui.draw_rect(
-                thumb_position,
-                [config.thickness, geometry_final.thumb_size],
+            ui.draw_shape(
+                MeasurablePath::rect(
+                    thumb_position,
+                    [config.thickness, geometry_final.thumb_size],
+                    [config.thickness / 2.0; 4],
+                ),
                 thumb_fill,
-                config.thickness / 2.0,
                 0.0,
                 Color::TRANSPARENT,
                 0.0,

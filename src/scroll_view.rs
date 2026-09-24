@@ -1,6 +1,6 @@
 use crate::color::Color;
 use crate::fill::Fill;
-use crate::geometry::contains;
+use crate::geometry::{MeasurablePath, Path};
 use crate::scrolling::{ScrollAxisState, ScrollConfig, compute_geometry, handle_drag};
 use crate::ui::Ui;
 use crate::widget::{Accessible, AnyWidget, Measurable, StatefulWidget, Widget, hash_id};
@@ -13,11 +13,11 @@ pub struct ScrollState {
     pub y: ScrollAxisState,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ScrollViewStyle {
     pub thumb_fill: Fill,
     pub thumb_dragging_fill: Fill,
-    pub thumb_corner_radius: f32,
+    pub path: Path,
 }
 
 impl Default for ScrollViewStyle {
@@ -25,7 +25,7 @@ impl Default for ScrollViewStyle {
         ScrollViewStyle {
             thumb_fill: Fill::Solid(Color::rgb(113, 113, 122).with_alpha(0.5)),
             thumb_dragging_fill: Fill::Solid(Color::rgb(82, 82, 91).with_alpha(0.75)),
-            thumb_corner_radius: ScrollConfig::default().thickness / 2.0,
+            path: Path::rect([ScrollConfig::default().thickness / 2.0; 4]),
         }
     }
 }
@@ -135,13 +135,13 @@ impl<'a> Measurable for ScrollView<'a> {
                 ScrollViewStyle {
                     thumb_fill: Fill::Solid(Color::WHITE.with_alpha(0.35)),
                     thumb_dragging_fill: Fill::Solid(Color::WHITE.with_alpha(0.65)),
-                    thumb_corner_radius: ScrollConfig::default().thickness / 2.0,
+                    path: Path::rect([ScrollConfig::default().thickness / 2.0; 4]),
                 }
             } else {
                 ScrollViewStyle {
                     thumb_fill: Fill::Solid(theme.text_secondary.with_alpha(0.60)),
                     thumb_dragging_fill: Fill::Solid(theme.text_primary.with_alpha(0.85)),
-                    thumb_corner_radius: ScrollConfig::default().thickness / 2.0,
+                    path: Path::rect([ScrollConfig::default().thickness / 2.0; 4]),
                 }
             }
         });
@@ -156,7 +156,7 @@ impl<'a> Measurable for ScrollView<'a> {
             ],
         );
 
-        let hovered = contains(position, size, 0.0, ui.mouse_position());
+        let hovered = MeasurablePath::rect(position, size, [0.0; 4]).contains(ui.mouse_position());
         let mut state = ui.take_widget_state_or(&self.id, self.initial_state());
 
         // Applying the wheel event is deferred until after `self.child` has
@@ -179,12 +179,9 @@ impl<'a> Measurable for ScrollView<'a> {
         let track_x = position[0] + size[0] - self.config.thickness - self.config.padding;
         let track_rect_position_y = [track_x, position[1]];
         let track_rect_size_y = [self.config.thickness + self.config.padding, size[1]];
-        let track_hovered_y = contains(
-            track_rect_position_y,
-            track_rect_size_y,
-            0.0,
-            ui.mouse_position(),
-        );
+        let track_hovered_y =
+            MeasurablePath::rect(track_rect_position_y, track_rect_size_y, [0.0; 4])
+                .contains(ui.mouse_position());
         // Keep resetting the "last activity" clock while the pointer is on
         // the track, so the linger countdown only starts once it actually
         // leaves — not from whatever scroll/drag last happened.
@@ -197,7 +194,8 @@ impl<'a> Measurable for ScrollView<'a> {
             position[1] + self.config.padding + geometry_y.thumb_position_along_track,
         ];
         let thumb_size_y = [self.config.thickness, geometry_y.thumb_size];
-        let thumb_hovered_y = contains(thumb_position_y, thumb_size_y, 0.0, ui.mouse_position());
+        let thumb_hovered_y = MeasurablePath::rect(thumb_position_y, thumb_size_y, [0.0; 4])
+            .contains(ui.mouse_position());
 
         if let Some(new_offset) = handle_drag(
             &mut state.y,
@@ -225,12 +223,9 @@ impl<'a> Measurable for ScrollView<'a> {
         let track_y = position[1] + size[1] - self.config.thickness - self.config.padding;
         let track_rect_position_x = [position[0], track_y];
         let track_rect_size_x = [size[0], self.config.thickness + self.config.padding];
-        let track_hovered_x = contains(
-            track_rect_position_x,
-            track_rect_size_x,
-            0.0,
-            ui.mouse_position(),
-        );
+        let track_hovered_x =
+            MeasurablePath::rect(track_rect_position_x, track_rect_size_x, [0.0; 4])
+                .contains(ui.mouse_position());
         if track_hovered_x {
             state.x.mark_activity();
         }
@@ -240,7 +235,8 @@ impl<'a> Measurable for ScrollView<'a> {
             track_y,
         ];
         let thumb_size_x = [geometry_x.thumb_size, self.config.thickness];
-        let thumb_hovered_x = contains(thumb_position_x, thumb_size_x, 0.0, ui.mouse_position());
+        let thumb_hovered_x = MeasurablePath::rect(thumb_position_x, thumb_size_x, [0.0; 4])
+            .contains(ui.mouse_position());
 
         if let Some(new_offset) = handle_drag(
             &mut state.x,
@@ -363,11 +359,12 @@ impl<'a> Measurable for ScrollView<'a> {
             } else {
                 style.thumb_fill.clone()
             };
-            ui.draw_rect(
-                thumb_position_y,
-                [self.config.thickness, geometry_y_final.thumb_size],
+            ui.draw_shape(
+                (style.path)(
+                    thumb_position_y,
+                    [self.config.thickness, geometry_y_final.thumb_size],
+                ),
                 thumb_fill,
-                style.thumb_corner_radius,
                 0.0,
                 Color::TRANSPARENT,
                 0.0,
@@ -382,11 +379,12 @@ impl<'a> Measurable for ScrollView<'a> {
             } else {
                 style.thumb_fill
             };
-            ui.draw_rect(
-                thumb_position_x,
-                [geometry_x_final.thumb_size, self.config.thickness],
+            ui.draw_shape(
+                (style.path)(
+                    thumb_position_x,
+                    [geometry_x_final.thumb_size, self.config.thickness],
+                ),
                 thumb_fill,
-                style.thumb_corner_radius,
                 0.0,
                 Color::TRANSPARENT,
                 0.0,
