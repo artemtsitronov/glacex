@@ -1,9 +1,3 @@
-//! SelectBox / Combobox widget.
-//!
-//! Renders a trigger button that opens a spring-animated floating dropdown
-//! with keyboard navigation (↑/↓ arrow keys, Enter to select, Escape to
-//! close) and optional type-to-filter search.
-
 use crate::animation::{Motion, Spring, animate_towards};
 use crate::color::Color;
 use crate::fill::Fill;
@@ -16,6 +10,16 @@ use crate::widget::{Accessible, FocusId, Measurable, StatefulWidget, Widget, has
 use accesskit::{NodeId, Role};
 use winit::keyboard::{Key, NamedKey};
 use winit::window::CursorIcon;
+
+#[macro_export]
+macro_rules! select_box {    // quick macro to use uuid as id for the widget
+    ( $( $options:expr ),+ ) => {
+        use uuid::Uuid;
+
+        let id = Uuid::new_v4().to_string();
+        SelectBox::new(id, $( $options ),+)
+    };
+}
 
 #[derive(Clone)]
 pub struct SelectBoxStyle {

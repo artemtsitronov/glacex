@@ -10,6 +10,17 @@ use crate::widget::{Accessible, FocusId, Measurable, StatefulWidget, Widget, has
 use accesskit::{NodeId, Role};
 use winit::window::CursorIcon;
 
+#[macro_export]
+macro_rules! text_input {
+    // quick macro to use uuid as id for the widget
+    () => {
+        use uuid::Uuid;
+
+        let id = Uuid::new_v4().to_string();
+        TextInput::new(id)
+    };
+}
+
 #[derive(Clone)]
 pub struct TextInputStyle {
     pub fill: Fill,

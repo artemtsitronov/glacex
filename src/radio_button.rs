@@ -11,6 +11,16 @@ use winit::window::CursorIcon;
 
 use crate::animation::{Motion, animate_towards};
 
+#[macro_export]
+macro_rules! radio_button {    // quick macro to use uuid as id for the widget
+    ( $( $group_id:expr ),+ ) => {
+        use uuid::Uuid;
+
+        let id = Uuid::new_v4().to_string();
+        RadioButton::new($( $group_id ),+, id)
+    };
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct RadioButtonResponse {
     pub selected: bool,

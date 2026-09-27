@@ -10,6 +10,17 @@ use crate::widget::{Accessible, Measurable, StatefulWidget, Widget, hash_id};
 use accesskit::{NodeId, Role};
 use winit::window::CursorIcon;
 
+#[macro_export]
+macro_rules! switch {
+    // quick macro to use uuid as id for the widget
+    () => {
+        use uuid::Uuid;
+
+        let id = Uuid::new_v4().to_string();
+        Switch::new(id)
+    };
+}
+
 #[derive(Default)]
 pub struct SwitchState {
     pub enabled: bool,

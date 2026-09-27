@@ -13,6 +13,16 @@ use winit::window::CursorIcon;
 
 pub type ButtonResponse = Interaction;
 
+#[macro_export]
+macro_rules! button {    // quick macro to use uuid as id for the widget
+    ( $( $text:expr ),+ ) => {
+        use uuid::Uuid;
+
+        let id = Uuid::new_v4().to_string();
+        Button::new(id, $( $text ),+)
+    };
+}
+
 #[derive(Clone)]
 pub struct ButtonStyle {
     pub fill: Fill,

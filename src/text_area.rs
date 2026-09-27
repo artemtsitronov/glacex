@@ -12,6 +12,17 @@ use accesskit::{NodeId, Role};
 use winit::keyboard::{Key, NamedKey};
 use winit::window::CursorIcon;
 
+#[macro_export]
+macro_rules! text_area {
+    // quick macro to use uuid as id for the widget
+    () => {
+        use uuid::Uuid;
+
+        let id = Uuid::new_v4().to_string();
+        TextArea::new(id)
+    };
+}
+
 #[derive(Default)]
 struct TextAreaExtra {
     preferred_column: Option<usize>,
