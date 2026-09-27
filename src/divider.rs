@@ -3,7 +3,7 @@ use crate::fill::Fill;
 use crate::geometry::MeasurablePath;
 use crate::theme::Theme;
 use crate::ui::Ui;
-use crate::widget::{Accessible, IntoId, Measurable, Widget, hash_id};
+use crate::widget::{Accessible, Measurable, Widget, hash_id};
 use accesskit::{NodeId, Role};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

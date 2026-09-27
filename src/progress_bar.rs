@@ -4,7 +4,7 @@ use crate::fill::Fill;
 use crate::geometry::{MeasurablePath, Path};
 use crate::theme::Theme;
 use crate::ui::Ui;
-use crate::widget::{Accessible, IntoId, Measurable, StatefulWidget, Widget, hash_id};
+use crate::widget::{Accessible, Measurable, StatefulWidget, Widget, hash_id};
 use accesskit::{NodeId, Role};
 
 #[derive(Default)]

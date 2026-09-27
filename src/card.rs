@@ -4,7 +4,7 @@ use crate::geometry::Path;
 use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::theme::Theme;
 use crate::ui::Ui;
-use crate::widget::{Accessible, AnyWidget, IntoId, Measurable, Widget, hash_id};
+use crate::widget::{Accessible, AnyWidget, Measurable, Widget, hash_id};
 use accesskit::{NodeId, Role};
 
 #[derive(Clone)]
