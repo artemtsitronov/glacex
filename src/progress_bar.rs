@@ -48,7 +48,7 @@ pub enum ProgressBarVariant {
 }
 
 pub struct ProgressBar {
-    id: Option<String>,
+    id: String,
     progress: f32,
     width: f32,
     height: f32,
@@ -62,7 +62,7 @@ impl ProgressBar {
 
     pub fn new(progress: f32) -> Self {
         ProgressBar {
-            id: None,
+            id: uuid::Uuid::new_v4().to_string(),
             progress: progress.clamp(0.0, 1.0),
             width: Self::DEFAULT_WIDTH,
             height: Self::DEFAULT_HEIGHT,
@@ -71,8 +71,8 @@ impl ProgressBar {
         }
     }
 
-    pub fn id(mut self, id: impl IntoId) -> Self {
-        self.id = id.into_id();
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = id.into();
         self
     }
 
@@ -151,17 +151,15 @@ impl Measurable for ProgressBar {
         let dt = ui.dt();
 
         // anonymous progress bars share a fallback id, only register named ones
-        if self.id.is_some() {
-            ui.register_accessible(
-                self,
-                [
-                    position[0],
-                    position[1],
-                    position[0] + size[0],
-                    position[1] + size[1],
-                ],
-            );
-        }
+        ui.register_accessible(
+            self,
+            [
+                position[0],
+                position[1],
+                position[0] + size[0],
+                position[1] + size[1],
+            ],
+        );
 
         ui.draw_shape(
             (style.path)(position, size),
@@ -173,11 +171,7 @@ impl Measurable for ProgressBar {
             0.0,
         );
 
-        let id = self
-            .id
-            .clone()
-            .unwrap_or_else(|| format!("__prog_{}_{}", position[0] as i32, position[1] as i32));
-        let state = ui.widget_state::<ProgressBarState>(&id);
+        let state = ui.widget_state::<ProgressBarState>(&self.id);
         if !state.initialized {
             state.animated_progress = self.progress;
             state.initialized = true;
@@ -206,7 +200,7 @@ impl StatefulWidget for ProgressBar {
     type State = ProgressBarState;
 
     fn state_id(&self) -> &str {
-        self.id.as_deref().unwrap_or("__default_progressbar")
+        &self.id
     }
 
     fn initial_state(&self) -> ProgressBarState {
@@ -219,9 +213,7 @@ impl StatefulWidget for ProgressBar {
 
 impl Accessible for ProgressBar {
     fn accessibility_id(&self) -> NodeId {
-        NodeId(hash_id(
-            self.id.as_deref().unwrap_or("__default_progressbar"),
-        ))
+        NodeId(hash_id(&self.id))
     }
     fn accessibility_role(&self) -> Role {
         Role::ProgressIndicator

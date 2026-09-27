@@ -12,17 +12,6 @@ use accesskit::{NodeId, Role};
 use winit::keyboard::{Key, NamedKey};
 use winit::window::CursorIcon;
 
-#[macro_export]
-macro_rules! text_area {
-    // quick macro to use uuid as id for the widget
-    () => {
-        use uuid::Uuid;
-
-        let id = Uuid::new_v4().to_string();
-        TextArea::new(id)
-    };
-}
-
 #[derive(Default)]
 struct TextAreaExtra {
     preferred_column: Option<usize>,
@@ -87,8 +76,8 @@ impl TextArea {
     pub const DEFAULT_WIDTH: f32 = 240.0;
     pub const DEFAULT_HEIGHT: f32 = 120.0;
 
-    pub fn new(id: impl Into<String>) -> Self {
-        let id = id.into();
+    pub fn new() -> Self {
+        let id = uuid::Uuid::new_v4().to_string();
         let extra_id = format!("{id}__extra");
         TextArea {
             focus_id: FocusId::new(&id),
@@ -100,6 +89,14 @@ impl TextArea {
             default_text: String::new(),
             custom_padding: None,
         }
+    }
+
+    pub fn id(mut self, id_into: impl Into<String>) -> Self {
+        let id = id_into.into();
+        self.id = id.clone();
+        self.focus_id = FocusId::new(&id);
+        self.extra_id = format!("{id}__extra");
+        self
     }
 
     pub fn padding(mut self, padding: [f32; 2]) -> Self {

@@ -9,16 +9,6 @@ use crate::widget::{Accessible, Measurable, StatefulWidget, Widget, hash_id};
 use accesskit::{NodeId, Role};
 use winit::window::CursorIcon;
 
-#[macro_export]
-macro_rules! progress_bar {    // quick macro to use uuid as id for the widget
-    ( $( $min:expr, $max:expr ),+ ) => {
-        use uuid::Uuid;
-
-        let id = Uuid::new_v4().to_string();
-        ProgressBar::new(id, $( $min, $max ),+)
-    };
-}
-
 #[derive(Clone, Default)]
 pub struct SliderState {
     pub value: f32,
@@ -83,9 +73,9 @@ pub struct Slider {
 impl Slider {
     pub const DEFAULT_WIDTH: f32 = 200.0;
 
-    pub fn new(id: impl Into<String>, min: f32, max: f32) -> Self {
+    pub fn new(min: f32, max: f32) -> Self {
         Slider {
-            id: id.into(),
+            id: uuid::Uuid::new_v4().to_string(),
             min,
             max,
             width: Self::DEFAULT_WIDTH,
@@ -93,6 +83,11 @@ impl Slider {
             style: None,
             default_value: 0.0,
         }
+    }
+
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = id.into();
+        self
     }
 
     pub fn width(mut self, width: f32) -> Self {

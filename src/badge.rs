@@ -5,7 +5,7 @@ use crate::misc::center_text_in;
 use crate::painter::FontWeight;
 use crate::theme::Theme;
 use crate::ui::Ui;
-use crate::widget::{Accessible, IntoId, Measurable, Widget, hash_id};
+use crate::widget::{Accessible, Measurable, Widget, hash_id};
 use accesskit::{NodeId, Role};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -43,7 +43,7 @@ impl Default for BadgeStyle {
 }
 
 pub struct Badge {
-    id: Option<String>,
+    id: String,
     text: String,
     variant: BadgeVariant,
     style: Option<BadgeStyle>,
@@ -55,7 +55,7 @@ pub struct Badge {
 impl Badge {
     pub fn new(text: impl Into<String>) -> Self {
         Badge {
-            id: None,
+            id: uuid::Uuid::new_v4().to_string(),
             text: text.into(),
             variant: BadgeVariant::Default,
             style: None,
@@ -70,8 +70,8 @@ impl Badge {
         self
     }
 
-    pub fn id(mut self, id: impl IntoId) -> Self {
-        self.id = id.into_id();
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = id.into();
         self
     }
 
@@ -264,7 +264,7 @@ impl Measurable for Badge {
 
 impl Accessible for Badge {
     fn accessibility_id(&self) -> NodeId {
-        NodeId(hash_id(self.id.as_deref().unwrap_or(&self.text)))
+        NodeId(hash_id(&self.id))
     }
     fn accessibility_role(&self) -> Role {
         Role::Label

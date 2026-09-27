@@ -11,16 +11,6 @@ use accesskit::{NodeId, Role};
 use winit::keyboard::{Key, NamedKey};
 use winit::window::CursorIcon;
 
-#[macro_export]
-macro_rules! select_box {    // quick macro to use uuid as id for the widget
-    ( $( $options:expr ),+ ) => {
-        use uuid::Uuid;
-
-        let id = Uuid::new_v4().to_string();
-        SelectBox::new(id, $( $options ),+)
-    };
-}
-
 #[derive(Clone)]
 pub struct SelectBoxStyle {
     pub fill: Fill,
@@ -216,9 +206,9 @@ pub struct SelectBox {
 }
 
 impl SelectBox {
-    pub fn new(id: impl Into<String>, options: Vec<SelectOption>) -> Self {
+    pub fn new(options: Vec<SelectOption>) -> Self {
         SelectBox {
-            id: id.into(),
+            id: uuid::Uuid::new_v4().to_string(),
             options,
             placeholder: "Select an option…".into(),
             style: None,
@@ -226,6 +216,11 @@ impl SelectBox {
             tooltip: None,
             searchable: false,
         }
+    }
+
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = id.into();
+        self
     }
 
     pub fn placeholder(mut self, placeholder: impl Into<String>) -> Self {

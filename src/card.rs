@@ -71,7 +71,7 @@ pub enum CardVariant {
 }
 
 pub struct Card<'a> {
-    id: Option<String>,
+    id: String,
     child: Box<dyn AnyWidget + 'a>,
     variant: CardVariant,
     style: Option<CardStyle>,
@@ -83,7 +83,7 @@ pub struct Card<'a> {
 impl<'a> Card<'a> {
     pub fn new(child: &'a mut impl Measurable) -> Self {
         Card {
-            id: None,
+            id: uuid::Uuid::new_v4().to_string(),
             child: Box::new(child),
             variant: CardVariant::Default,
             style: None,
@@ -93,8 +93,8 @@ impl<'a> Card<'a> {
         }
     }
 
-    pub fn id(mut self, id: impl IntoId) -> Self {
-        self.id = id.into_id();
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = id.into();
         self
     }
 
@@ -179,17 +179,15 @@ impl<'a> Measurable for Card<'a> {
         let style = self.resolved_style(ui.theme());
 
         // anonymous cards share a fallback id, only register named ones
-        if self.id.is_some() {
-            ui.register_accessible(
-                self,
-                [
-                    position[0],
-                    position[1],
-                    position[0] + size[0],
-                    position[1] + size[1],
-                ],
-            );
-        }
+        ui.register_accessible(
+            self,
+            [
+                position[0],
+                position[1],
+                position[0] + size[0],
+                position[1] + size[1],
+            ],
+        );
 
         if let Some(shadow) = &style.shadow {
             draw_shadow(shadow, position, size, &style.path, ui);
@@ -220,7 +218,7 @@ impl<'a> Measurable for Card<'a> {
 
 impl<'a> Accessible for Card<'a> {
     fn accessibility_id(&self) -> NodeId {
-        NodeId(hash_id(self.id.as_deref().unwrap_or("card")))
+        NodeId(hash_id(&self.id))
     }
     fn accessibility_role(&self) -> Role {
         Role::GenericContainer

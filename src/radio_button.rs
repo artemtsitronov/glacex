@@ -1,3 +1,4 @@
+use crate::animation::{Motion, animate_towards};
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::geometry::{MeasurablePath, Path};
@@ -8,18 +9,6 @@ use crate::ui::Ui;
 use crate::widget::{Accessible, Measurable, Widget, hash_id};
 use accesskit::{NodeId, Role};
 use winit::window::CursorIcon;
-
-use crate::animation::{Motion, animate_towards};
-
-#[macro_export]
-macro_rules! radio_button {    // quick macro to use uuid as id for the widget
-    ( $( $group_id:expr ),+ ) => {
-        use uuid::Uuid;
-
-        let id = Uuid::new_v4().to_string();
-        RadioButton::new($( $group_id ),+, id)
-    };
-}
 
 #[derive(Debug, Clone, Copy)]
 pub struct RadioButtonResponse {
@@ -82,15 +71,20 @@ pub struct RadioButton {
 }
 
 impl RadioButton {
-    pub fn new(group_id: impl Into<String>, option_id: impl Into<String>) -> Self {
+    pub fn new(group_id: impl Into<String>) -> Self {
         RadioButton {
             group_id: group_id.into(),
-            option_id: option_id.into(),
+            option_id: uuid::Uuid::new_v4().to_string(),
             style: None,
             interaction: Interaction::default(),
             width: None,
             height: None,
         }
+    }
+
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.option_id = id.into();
+        self
     }
 
     pub fn width(mut self, width: f32) -> Self {

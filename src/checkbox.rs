@@ -10,17 +10,6 @@ use crate::widget::{Accessible, Measurable, StatefulWidget, Widget, hash_id};
 use accesskit::{NodeId, Role};
 use winit::window::CursorIcon;
 
-#[macro_export]
-macro_rules! checkbox {
-    // quick macro to use uuid as id for the widget
-    () => {
-        use uuid::Uuid;
-
-        let id = Uuid::new_v4().to_string();
-        Checkbox::new(id)
-    };
-}
-
 #[derive(Debug, Clone, Copy)]
 pub struct CheckboxState {
     pub checked: bool,
@@ -90,15 +79,20 @@ pub struct Checkbox {
 }
 
 impl Checkbox {
-    pub fn new(id: impl Into<String>) -> Self {
+    pub fn new() -> Self {
         Checkbox {
-            id: id.into(),
+            id: uuid::Uuid::new_v4().to_string(),
             interaction: Interaction::default(),
             style: None,
             default_checked: false,
             width: None,
             height: None,
         }
+    }
+
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = id.into();
+        self
     }
 
     pub fn width(mut self, width: f32) -> Self {

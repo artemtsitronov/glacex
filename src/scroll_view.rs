@@ -7,16 +7,6 @@ use crate::widget::{Accessible, AnyWidget, Measurable, StatefulWidget, Widget, h
 use accesskit::{NodeId, Role};
 use winit::window::CursorIcon;
 
-#[macro_export]
-macro_rules! scroll_view {    // quick macro to use uuid as id for the widget
-    ( $( $child:expr ),+ ) => {
-        use uuid::Uuid;
-
-        let id = Uuid::new_v4().to_string();
-        ScrollView::new(id, $( $child ),+)
-    };
-}
-
 #[derive(Default)]
 pub struct ScrollState {
     pub x: ScrollAxisState,
@@ -55,9 +45,9 @@ impl<'a> ScrollView<'a> {
     pub const DEFAULT_WIDTH: f32 = 300.0;
     pub const DEFAULT_HEIGHT: f32 = 200.0;
 
-    pub fn new(id: impl Into<String>, child: &'a mut impl Measurable) -> Self {
+    pub fn new(child: &'a mut impl Measurable) -> Self {
         ScrollView {
-            id: id.into(),
+            id: uuid::Uuid::new_v4().to_string(),
             width: Self::DEFAULT_WIDTH,
             height: Self::DEFAULT_HEIGHT,
             padding: [0.0, 0.0],
@@ -66,6 +56,11 @@ impl<'a> ScrollView<'a> {
             child: Box::new(child),
             default_offset: [0.0; 2],
         }
+    }
+
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = id.into();
+        self
     }
 
     pub fn padding(mut self, padding: [f32; 2]) -> Self {

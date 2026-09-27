@@ -4,16 +4,6 @@ use crate::ui::Ui;
 use crate::widget::{Accessible, Measurable, Widget, hash_id};
 use accesskit::{NodeId, Role};
 
-#[macro_export]
-macro_rules! label {    // quick macro to use uuid as id for the widget
-    ( $( $text:expr ),+ ) => {
-        use uuid::Uuid;
-
-        let id = Uuid::new_v4().to_string();
-        Label::new(id, $( $text ),+)
-    };
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum LabelVariant {
     #[default]
@@ -40,9 +30,9 @@ pub struct Label {
 }
 
 impl Label {
-    pub fn new(id: impl Into<String>, text: impl Into<String>) -> Self {
+    pub fn new(text: impl Into<String>) -> Self {
         Label {
-            id: id.into(),
+            id: uuid::Uuid::new_v4().to_string(),
             text: text.into(),
             variant: LabelVariant::Primary,
             font_size: 14.0,
@@ -52,6 +42,11 @@ impl Label {
             width: None,
             height: None,
         }
+    }
+
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = id.into();
+        self
     }
 
     pub fn width(mut self, width: f32) -> Self {

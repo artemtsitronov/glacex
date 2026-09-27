@@ -39,18 +39,18 @@ impl Widget for DemoApp {
         // We get the window size
         let window_size = ui.window_size();
 
-        // The Label widget requires an id and text. If you don't want to provide an explicit id,
-        // you can use the label! macro to generate it for you.
-        let mut window_size_label = Label::new(
-            "window_size_label",
-            format!("Window size: {:.2} x {:.2}", window_size[0], window_size[1]),
-        );
-        let mut theme_label = label!(format!("Current theme: {}", current_theme.name)); // This is an application of the label! macro
-        let mut theme_btn = Button::new("theme_btn", "Change Theme");
+        // When you do "Widget::new()", it defaults the id to a uuid::Uuid::new_v4().to_string().
+        // If you want to provide a custom id, you can use the id() method on the widget.
+        let mut window_size_label = Label::new(format!(
+            "Window size: {:.2} x {:.2}",
+            window_size[0], window_size[1]
+        ));
+        let mut theme_label = Label::new(format!("Current theme: {}", current_theme.name));
+        let mut theme_btn = Button::new("Change Theme").id("theme_btn");
 
-        let mut good_switch = Switch::new("good_switch");
-        let mut fast_switch = Switch::new("fast_switch");
-        let mut cheap_switch = Switch::new("cheap_switch");
+        let mut good_switch = Switch::new().id("good_switch");
+        let mut fast_switch = Switch::new().id("fast_switch");
+        let mut cheap_switch = Switch::new().id("cheap_switch");
 
         // Glacex uses a persistent state system to store widget state across frames.
         // Here, we take the widget state for the triple toggle order.
@@ -86,30 +86,30 @@ impl Widget for DemoApp {
 
         // RadioButton widget takes a group_id and an option_id. The group id links all the radio buttons together,
         // and it's used to retrieve the selected one
-        let mut radio_yes_option = RadioButton::new("radio_group", "radio_button_yes");
-        let mut radio_yes_label = Label::new("_19", "Yes");
+        let mut radio_yes_option = RadioButton::new("radio_group").id("yes");
+        let mut radio_yes_label = Label::new("Yes");
         let mut radio_button_yes = row![&mut radio_yes_option, &mut radio_yes_label]; // We create a layout using row! and column! macros
 
-        let mut radio_no_option = RadioButton::new("radio_group", "radio_button_no");
-        let mut radio_no_label = Label::new("_10", "No");
+        let mut radio_no_option = RadioButton::new("radio_group").id("no");
+        let mut radio_no_label = Label::new("No");
         let mut radio_button_no = row![&mut radio_no_option, &mut radio_no_label];
 
         let mut radio_button_group =
             glacex::column![&mut radio_button_yes, &mut radio_button_no].align(Alignment::End);
 
-        let mut joke_label = Label::new("_11", {
+        let mut joke_label = Label::new({
             // I know, I know, I'm hilarious.
             format!(
                 "{}, I'm gay",
                 match ui.selected_option("radio_group") {
-                    Some("radio_button_yes") => "Yes",
-                    Some("radio_button_no") => "No",
+                    Some("yes") => "Yes",
+                    Some("no") => "No",
                     _ => "...",
                 }
             )
         });
 
-        let mut slider = Slider::new("slider", 0.0, 1.0); // The Slider widget takes as arguments the id, and the min/max values.
+        let mut slider = Slider::new(0.0, 1.0); // The Slider widget takes as arguments the id, and the min/max values.
         let mut progress_bar = ProgressBar::new(slider.value(ui)).id("slider_progress_bar"); // In this widget, id is optional, so we define it using .id()
 
         let theme_options: Vec<SelectOption> = themes
@@ -117,7 +117,8 @@ impl Widget for DemoApp {
             .enumerate()
             .map(|(i, t)| SelectOption::new(i.to_string(), t.name)) // We map each theme to a SelectOption
             .collect();
-        let mut theme_select = SelectBox::new("theme_select", theme_options)
+        let mut theme_select = SelectBox::new(theme_options)
+            .id("theme_select")
             .placeholder("Select theme...")
             .width(200.0);
 
@@ -126,16 +127,12 @@ impl Widget for DemoApp {
         {
             row![
                 &mut ScrollView::new(
-                    "scroll_wrapper",
                     &mut glacex::column![
-                        &mut Tabs::new(
-                            "tabs",
-                            vec![
-                                TabItem::new("tab1", "Tab 1"),
-                                TabItem::new("tab2", "Tab 2"),
-                                TabItem::new("tab3", "Tab 3"),
-                            ]
-                        ),
+                        &mut Tabs::new(vec![
+                            TabItem::new("Tab 1"),
+                            TabItem::new("Tab 2"),
+                            TabItem::new("Tab 3"),
+                        ]),
                         &mut row![
                             &mut window_size_label,
                             &mut Divider::vertical(24.0).thickness(2.0),
@@ -145,9 +142,8 @@ impl Widget for DemoApp {
                         &mut row![
                             &mut Card::new(
                                 &mut ScrollView::new(
-                                    "scroll_view",
                                     &mut glacex::column![
-                                        &mut Card::new(&mut Label::new("_", "Kitty!"))
+                                        &mut Card::new(&mut Label::new("Kitty!"))
                                             .style(CardStyle {
                                                 fill: Fill::Image(kitty_image),
                                                 ..CardStyle::subtle()
@@ -160,27 +156,25 @@ impl Widget for DemoApp {
                                             &mut Badge::new("Dangerous stuff").error(),
                                         ],
                                         &mut row![
-                                            &mut Button::new("btn_a", "Button"),
-                                            &mut Button::new("btn_b", "Fashion button").style(
-                                                ButtonStyle {
-                                                    fill: Fill::Gradient(Gradient {
-                                                        stops: vec![
-                                                            GradientStop {
-                                                                position: 0.0,
-                                                                color: Color::rgb(230, 230, 230)
-                                                            },
-                                                            GradientStop {
-                                                                position: 1.0,
-                                                                color: Color::rgb(120, 200, 180)
-                                                            }
-                                                        ],
-                                                        kind: GradientKind::Linear { angle: 45.0 },
-                                                    }),
-                                                    path: Path::ellipse(0.0),
-                                                    ..Default::default()
-                                                }
-                                            ),
-                                            &mut Button::new("btn_c", "Fat button")
+                                            &mut Button::new("Button"),
+                                            &mut Button::new("Fashion button").style(ButtonStyle {
+                                                fill: Fill::Gradient(Gradient {
+                                                    kind: GradientKind::Linear { angle: 45.0 },
+                                                    stops: vec![
+                                                        GradientStop {
+                                                            position: 0.0,
+                                                            color: Color::rgb(230, 230, 230)
+                                                        },
+                                                        GradientStop {
+                                                            position: 1.0,
+                                                            color: Color::rgb(120, 200, 180)
+                                                        }
+                                                    ],
+                                                }),
+                                                path: Path::ellipse(0.0),
+                                                ..Default::default()
+                                            }),
+                                            &mut Button::new("Fat button")
                                                 .size([100.0, 50.0])
                                                 .tooltip(
                                                     "In case you missed it, this is a fat button."
@@ -190,31 +184,31 @@ impl Widget for DemoApp {
                                         &mut row![
                                             &mut glacex::column![
                                                 &mut row![
-                                                    &mut Label::new("_3", "Checkboxy"),
-                                                    &mut Checkbox::new("checkbox_1"),
+                                                    &mut Label::new("Checkboxy"),
+                                                    &mut Checkbox::new(),
                                                 ],
                                                 &mut row![
-                                                    &mut Label::new("_4", "Another one"),
-                                                    &mut Checkbox::new("checkbox_2"),
+                                                    &mut Label::new("Another one"),
+                                                    &mut Checkbox::new(),
                                                 ],
                                                 &mut row![
-                                                    &mut Label::new("_5", "Hehe"),
-                                                    &mut Checkbox::new("checkbox_3"),
+                                                    &mut Label::new("Hehe"),
+                                                    &mut Checkbox::new(),
                                                 ]
                                             ]
                                             .align(Alignment::End),
                                             &mut glacex::column![
                                                 &mut row![
                                                     &mut good_switch,
-                                                    &mut Label::new("_6", "Good"),
+                                                    &mut Label::new("Good"),
                                                 ],
                                                 &mut row![
                                                     &mut fast_switch,
-                                                    &mut Label::new("_7", "Fast"),
+                                                    &mut Label::new("Fast"),
                                                 ],
                                                 &mut row![
                                                     &mut cheap_switch,
-                                                    &mut Label::new("_8", "Cheap"),
+                                                    &mut Label::new("Cheap"),
                                                 ]
                                             ]
                                             .align(Alignment::Start)
@@ -222,9 +216,8 @@ impl Widget for DemoApp {
                                         .align(Alignment::Center)
                                         .spacing(100.0),
                                         &mut theme_select,
-                                        &mut TextInput::new("text_input")
-                                            .placeholder("Here goes text."),
-                                        &mut TextArea::new("text_area"),
+                                        &mut TextInput::new().placeholder("Here goes text."),
+                                        &mut TextArea::new(),
                                     ]
                                     .spacing(24.0)
                                 )
@@ -238,15 +231,15 @@ impl Widget for DemoApp {
                                         .spacing(24.0)
                                         .align(Alignment::Center),
                                     &mut glacex::column![
-                                        &mut Label::new("_33", "Heading").heading(),
-                                        &mut Label::new("_34", "Subheading").subheading(),
-                                        &mut Label::new("_35", "Captionist").caption(),
+                                        &mut Label::new("Heading").heading(),
+                                        &mut Label::new("Subheading").subheading(),
+                                        &mut Label::new("Captionist").caption(),
                                     ]
                                     .spacing(12.0)
                                     .align(Alignment::Start),
                                     &mut slider,
                                     &mut progress_bar,
-                                    &mut Card::new(&mut Label::new("_", "Another kitty!"))
+                                    &mut Card::new(&mut Label::new("Another kitty!"))
                                         .style(CardStyle {
                                             fill: Fill::Image(kitty_image),
                                             ..CardStyle::subtle()
@@ -260,11 +253,10 @@ impl Widget for DemoApp {
                         ],
                         &mut glacex::column![
                             &mut Label::new(
-                                "_36",
                                 "And here ladies and gentleman, I'm afraid our demo ended."
                             )
                             .size_preset(18.0),
-                            &mut Label::new("_37", "Be free to check out Glacex's github. <3")
+                            &mut Label::new("Be free to check out Glacex's github. <3")
                                 .size_preset(14.0),
                         ],
                     ]

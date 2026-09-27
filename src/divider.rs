@@ -13,7 +13,7 @@ pub enum DividerOrientation {
 }
 
 pub struct Divider {
-    id: Option<String>,
+    id: String,
     orientation: DividerOrientation,
     length: f32,
     thickness: f32,
@@ -25,7 +25,7 @@ pub struct Divider {
 impl Divider {
     pub fn horizontal(length: f32) -> Self {
         Divider {
-            id: None,
+            id: uuid::Uuid::new_v4().to_string(),
             orientation: DividerOrientation::Horizontal,
             length,
             thickness: 1.0,
@@ -37,7 +37,7 @@ impl Divider {
 
     pub fn vertical(length: f32) -> Self {
         Divider {
-            id: None,
+            id: uuid::Uuid::new_v4().to_string(),
             orientation: DividerOrientation::Vertical,
             length,
             thickness: 1.0,
@@ -47,8 +47,8 @@ impl Divider {
         }
     }
 
-    pub fn id(mut self, id: impl IntoId) -> Self {
-        self.id = id.into_id();
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = id.into();
         self
     }
 
@@ -107,17 +107,15 @@ impl Measurable for Divider {
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
         // anonymous dividers share a fallback id, only register named ones
-        if self.id.is_some() {
-            ui.register_accessible(
-                self,
-                [
-                    position[0],
-                    position[1],
-                    position[0] + size[0],
-                    position[1] + size[1],
-                ],
-            );
-        }
+        ui.register_accessible(
+            self,
+            [
+                position[0],
+                position[1],
+                position[0] + size[0],
+                position[1] + size[1],
+            ],
+        );
 
         ui.draw_shape(
             MeasurablePath::rect(position, size, [0.0; 4]),
@@ -133,7 +131,7 @@ impl Measurable for Divider {
 
 impl Accessible for Divider {
     fn accessibility_id(&self) -> NodeId {
-        NodeId(hash_id(self.id.as_deref().unwrap_or("divider")))
+        NodeId(hash_id(&self.id))
     }
     fn accessibility_role(&self) -> Role {
         Role::Splitter

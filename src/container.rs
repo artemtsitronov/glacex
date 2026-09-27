@@ -1,9 +1,9 @@
 use crate::ui::Ui;
-use crate::widget::{Accessible, AnyWidget, IntoId, Measurable, Widget, hash_id};
+use crate::widget::{Accessible, AnyWidget, Measurable, Widget, hash_id};
 use accesskit::{NodeId, Role};
 
 pub struct Container<'a> {
-    id: Option<String>,
+    id: String,
     width: f32,
     height: f32,
     padding: [f32; 2],
@@ -16,7 +16,7 @@ impl<'a> Container<'a> {
 
     pub fn new(child: &'a mut impl Measurable) -> Self {
         Container {
-            id: None,
+            id: uuid::Uuid::new_v4().to_string(),
             width: Self::DEFAULT_WIDTH,
             height: Self::DEFAULT_HEIGHT,
             padding: [0.0, 0.0],
@@ -24,8 +24,8 @@ impl<'a> Container<'a> {
         }
     }
 
-    pub fn id(mut self, id: impl IntoId) -> Self {
-        self.id = id.into_id();
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = id.into();
         self
     }
 
@@ -70,17 +70,15 @@ impl<'a> Measurable for Container<'a> {
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
         // anonymous containers share a fallback id, only register named ones
-        if self.id.is_some() {
-            ui.register_accessible(
-                self,
-                [
-                    position[0],
-                    position[1],
-                    position[0] + size[0],
-                    position[1] + size[1],
-                ],
-            );
-        }
+        ui.register_accessible(
+            self,
+            [
+                position[0],
+                position[1],
+                position[0] + size[0],
+                position[1] + size[1],
+            ],
+        );
 
         let child_position = [position[0] + self.padding[0], position[1] + self.padding[1]];
         let child_size = [
@@ -93,7 +91,7 @@ impl<'a> Measurable for Container<'a> {
 
 impl<'a> Accessible for Container<'a> {
     fn accessibility_id(&self) -> NodeId {
-        NodeId(hash_id(self.id.as_deref().unwrap_or("container")))
+        NodeId(hash_id(&self.id))
     }
     fn accessibility_role(&self) -> Role {
         Role::GenericContainer
