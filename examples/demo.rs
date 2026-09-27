@@ -1,5 +1,6 @@
 use glacex::*;
 
+// First of all, we create out application state struct
 struct DemoApp {
     current_theme_idx: usize,
     kitty_image: Option<ImageHandle>,
@@ -19,38 +20,44 @@ struct TripleToggleOrder {
     order: Vec<&'static str>,
 }
 
+// Now, we implement the Widget trait for our state, creating this way a UI
 impl Widget for DemoApp {
+    // This widget will be the root, so it will not output anything
     type Output = ();
 
     fn on_start(&mut self, ui: &mut Ui) {
+        // We load an image in our state using ui.load_image().
         self.kitty_image = Some(ui.load_image("assets/test/1.webp"));
     }
 
     fn ui(&mut self, ui: &mut Ui) {
+        // This way we get all the avaiable themes
         let themes = Theme::all();
         let current_theme = themes[self.current_theme_idx % themes.len()];
         ui.set_theme(current_theme);
 
+        // We get the window size
         let window_size = ui.window_size();
 
+        // The Label widget requires an id and text. If you don't want to provide an explicit id,
+        // you can use the label! macro to generate it for you.
         let mut window_size_label = Label::new(
             "window_size_label",
             format!("Window size: {:.2} x {:.2}", window_size[0], window_size[1]),
         );
-        let mut theme_label = Label::new(
-            "theme_label",
-            format!("Current theme: {}", current_theme.name),
-        );
+        let mut theme_label = label!(format!("Current theme: {}", current_theme.name)); // This is an application of the label! macro
         let mut theme_btn = Button::new("theme_btn", "Change Theme");
 
         let mut good_switch = Switch::new("good_switch");
         let mut fast_switch = Switch::new("fast_switch");
         let mut cheap_switch = Switch::new("cheap_switch");
 
+        // Glacex uses a persistent state system to store widget state across frames.
+        // Here, we take the widget state for the triple toggle order.
         let mut order_state = ui.take_widget_state::<TripleToggleOrder>("triple_toggle_order");
 
         let states = [
-            ("good_switch", &mut good_switch.enabled(ui)),
+            ("good_switch", &mut good_switch.enabled(ui)), // We check if the Switch widget is enabled
             ("fast_switch", &mut fast_switch.enabled(ui)),
             ("cheap_switch", &mut cheap_switch.enabled(ui)),
         ];
@@ -74,11 +81,14 @@ impl Widget for DemoApp {
             }
         }
 
+        // Here, we put the updated order state back into the Ui.
         ui.put_widget_state("triple_toggle_order", order_state);
 
+        // RadioButton widget takes a group_id and an option_id. The group id links all the radio buttons together,
+        // and it's used to retrieve the selected one
         let mut radio_yes_option = RadioButton::new("radio_group", "radio_button_yes");
         let mut radio_yes_label = Label::new("_19", "Yes");
-        let mut radio_button_yes = row![&mut radio_yes_option, &mut radio_yes_label];
+        let mut radio_button_yes = row![&mut radio_yes_option, &mut radio_yes_label]; // We create a layout using row! and column! macros
 
         let mut radio_no_option = RadioButton::new("radio_group", "radio_button_no");
         let mut radio_no_label = Label::new("_10", "No");
@@ -88,6 +98,7 @@ impl Widget for DemoApp {
             glacex::column![&mut radio_button_yes, &mut radio_button_no].align(Alignment::End);
 
         let mut joke_label = Label::new("_11", {
+            // I know, I know, I'm hilarious.
             format!(
                 "{}, I'm gay",
                 match ui.selected_option("radio_group") {
@@ -98,13 +109,13 @@ impl Widget for DemoApp {
             )
         });
 
-        let mut slider = Slider::new("slider", 0.0, 1.0);
-        let mut progress_bar = ProgressBar::new(slider.value(ui)).id("slider_progress_bar");
+        let mut slider = Slider::new("slider", 0.0, 1.0); // The Slider widget takes as arguments the id, and the min/max values.
+        let mut progress_bar = ProgressBar::new(slider.value(ui)).id("slider_progress_bar"); // In this widget, id is optional, so we define it using .id()
 
         let theme_options: Vec<SelectOption> = themes
             .iter()
             .enumerate()
-            .map(|(i, t)| SelectOption::new(i.to_string(), t.name))
+            .map(|(i, t)| SelectOption::new(i.to_string(), t.name)) // We map each theme to a SelectOption
             .collect();
         let mut theme_select = SelectBox::new("theme_select", theme_options)
             .placeholder("Select theme...")
@@ -265,7 +276,7 @@ impl Widget for DemoApp {
                 .size([window_size[0], window_size[1]])
             ]
             .align(Alignment::Center)
-            .arrange_at([0.0; 2], ui);
+            .arrange_at([0.0; 2], ui); // In the end, we need to arrange the layout to a position and a Ui.
         }
 
         if theme_btn.clicked() {
