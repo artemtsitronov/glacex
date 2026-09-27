@@ -42,6 +42,7 @@ Built by **Artem Tsitronov** and **Soumalya Das**.
   - [ShadowStyle](#shadowstyle)
   - [Color Type](#color)
   - [Fills, Gradients & Images](#fills-gradients--images)
+  - [Custom Shapes / Paths](#custom-shapes--paths)
   - [Theme Palette](#theme)
   - [Window Control](#window-title-and-background)
 - [Accessibility](#accessibility)
@@ -70,6 +71,7 @@ There's no retained widget tree and no markup — you describe the UI in plain R
 ## Features
 
 - Custom renderer: instanced rounded rects (anti-aliased SDF), borders, and soft drop shadows, batched into one draw call per shared clip rect.
+- Arbitrary Bezier paths (`MeasurablePath::Free`) via a second tessellated-mesh pipeline, for shapes beyond rect/ellipse — see [Custom Shapes / Paths](#custom-shapes--paths).
 - Text rendering via `glyphon` with independent clip bounds per widget.
 - Fills: solid colors, gradients (linear, radial, conic), and images, cached into a GPU atlas.
 - `Color` is `#[repr(C)]` + `Pod`/`Zeroable`, so it maps straight onto GPU vertex buffers. Hex, RGB, HSV, alpha blending, `lerp`, lighten/darken.
@@ -454,6 +456,33 @@ let fill = Fill::Image(logo);
 
 `ImageHandle::width()` / `height()` / `size()` return the image's natural pixel dimensions, handy for sizing a widget to match it.
 
+### Custom Shapes / Paths
+
+Every built-in widget draws a rounded rect or an ellipse (`MeasurablePath::Rect` / `Ellipse`), but the renderer also supports arbitrary shapes via `MeasurablePath::Free(BezPath)`, using [`kurbo`](https://docs.rs/kurbo)'s `BezPath` for the outline:
+
+```rust
+use glacex::{Color, Fill, MeasurablePath};
+use kurbo::BezPath;
+
+let mut star = BezPath::new();
+star.move_to((160.0, 90.0));
+star.line_to((188.0, 152.0));
+// ...remaining points...
+star.close_path();
+
+ui.draw_shape(
+    MeasurablePath::free(star),
+    Fill::Solid(Color::hex_str("#f59e0b")),
+    4.0,                          // border_width
+    Color::hex_str("#1e293b"),    // border_color
+    0.0,                          // blur_radius — not supported for Free paths, ignored
+    false,                        // sharp
+    0.0,                          // rotation, radians
+);
+```
+
+Free paths are tessellated on the CPU (flatten + ear-clip) into a triangle mesh and rendered through a second, non-instanced pipeline, separate from the SDF pipeline that draws every rect/ellipse. Solid and gradient fills are supported (gradient color is evaluated per vertex, so it's exact for `Linear` and a close approximation for `Radial`/`Conic` — finer curves tessellate into more vertices and sharpen it further); `Fill::Image` isn't supported on a `Free` path yet and renders transparent, same as `GradientKind::Mesh`. Borders are drawn as a separately tessellated stroke outline (via `kurbo::stroke`), so they read as a classic SVG-style outline around the shape rather than the inset border used by rect/ellipse widgets. Free-path shapes are batched and clipped the same way as everything else, but currently always draw after all rect/ellipse shapes within the same frame — paint-order interleaving with them isn't implemented yet. Only the outer contour of a self-intersecting or multi-hole path is filled correctly; simple (non-self-intersecting) contours are the supported case.
+
 ### Theme
 
 9 built-in palettes, switchable at runtime with `ui.set_theme(...)`. Defaults to a light, shadcn-inspired theme.
@@ -593,6 +622,7 @@ glacex/
 
 - `GradientKind::Mesh` is reserved but not implemented yet — it currently falls back to transparent. Use Linear, Radial, or Conic.
 - `Fill::Image` shares one atlas slot with no packing/eviction yet, so only one image is supported at a time. A real atlas packer is planned for 0.2.0.
+- `MeasurablePath::Free` (see [Custom Shapes / Paths](#custom-shapes--paths)) doesn't support `Fill::Image`, blur/shadow, or holes/self-intersection, and doesn't interleave paint order with rect/ellipse shapes sharing the same clip rect — it always draws after them.
 - Pre-1.0, so the API still moves around between releases.
 
 ## Documentation

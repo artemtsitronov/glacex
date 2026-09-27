@@ -1,7 +1,7 @@
 use crate::animation::{Motion, animate_towards};
 use crate::color::Color;
 use crate::fill::Fill;
-use crate::geometry::Path;
+use crate::geometry::{MeasurablePath, Path};
 use crate::theme::Theme;
 use crate::ui::Ui;
 use crate::widget::{Accessible, IntoId, Measurable, StatefulWidget, Widget, hash_id};
@@ -11,6 +11,10 @@ use accesskit::{NodeId, Role};
 pub struct ProgressBarState {
     pub animated_progress: f32,
     pub initialized: bool,
+}
+
+fn default_track_path() -> Path {
+    Path::from_fn(|position, size| MeasurablePath::rect(position, size, [size[1] * 0.5; 4]))
 }
 
 #[derive(Clone)]
@@ -29,7 +33,7 @@ impl Default for ProgressBarStyle {
             progress_fill: Fill::Solid(Theme::ACTIVE),
             border_width: 1.0,
             border_color: Theme::BORDER,
-            path: Path::rect([4.0; 4]),
+            path: default_track_path(),
         }
     }
 }
@@ -141,14 +145,12 @@ impl Measurable for ProgressBar {
                 progress_fill: Fill::Solid(progress_fill),
                 border_width: 1.0,
                 border_color: theme.border,
-                path: Path::rect([4.0; 4]),
+                path: default_track_path(),
             }
         });
         let dt = ui.dt();
 
-        // Same reasoning as `Card`/`Container`/`Divider`: without an
-        // explicit `.id(..)`, every anonymous progress bar in the frame
-        // would collide under the shared fallback id.
+        // anonymous progress bars share a fallback id, only register named ones
         if self.id.is_some() {
             ui.register_accessible(
                 self,
@@ -184,7 +186,8 @@ impl Measurable for ProgressBar {
             animate_towards(state.animated_progress, self.progress, dt, Motion::FLUID);
         let current_progress = state.animated_progress;
 
-        let filled_width = (size[0] * current_progress).max(0.0);
+        let filled_width = current_progress * size[0];
+
         if filled_width > 0.0 {
             ui.draw_shape(
                 (style.path)(position, [filled_width, size[1]]),

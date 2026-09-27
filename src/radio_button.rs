@@ -27,8 +27,7 @@ pub struct RadioButtonStyle {
     pub border_color: Color,
     pub shadow: Option<ShadowStyle>,
     pub sharp: bool,
-    /// Color of the inner dot, shown once selected (or animating toward
-    /// it). Only sits on `selected_fill`, so it should contrast with that.
+    // sits on selected_fill so it should contrast with it
     pub dot_color: Color,
     pub path: Path,
 }

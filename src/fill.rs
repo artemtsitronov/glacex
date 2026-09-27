@@ -1,5 +1,62 @@
 use crate::Color;
 
+#[macro_export]
+macro_rules! linear_gradient {
+    ( $( ($r:expr, $g:expr, $b:expr, $a:expr) ),+ ) => {
+        let colors = vec![ $( Color::rgba($r, $g, $b, $a) ),+ ];
+        let count = colors.len();
+
+        Gradient {
+            kind: GradientKind::Linear { angle: 0.0 },
+            stops: colors.into_iter().enumerate().map(|(i, color)| {
+                let position = if count == 1 { 0.0 } else { i as f32 / (count - 1) as f32 };
+                GradientStop {
+                    position,
+                    color,
+                }
+            }).collect(),
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! radial_gradient {
+    ( $( ($r:expr, $g:expr, $b:expr, $a:expr) ),+ ) => {
+        let colors = vec![ $( Color::rgba($r, $g, $b, $a) ),+ ];
+        let count = colors.len();
+
+        Gradient {
+            kind: GradientKind::Radial { angle: 0.0 },
+            stops: colors.into_iter().enumerate().map(|(i, color)| {
+                let position = if count == 1 { 0.0 } else { i as f32 / (count - 1) as f32 };
+                GradientStop {
+                    position,
+                    color,
+                }
+            }).collect(),
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! conic_gradient {
+    ( $( ($r:expr, $g:expr, $b:expr, $a:expr) ),+ ) => {
+        let colors = vec![ $( Color::rgba($r, $g, $b, $a) ),+ ];
+        let count = colors.len();
+
+        Gradient {
+            kind: GradientKind::Conic { angle: 0.0 },
+            stops: colors.into_iter().enumerate().map(|(i, color)| {
+                let position = if count == 1 { 0.0 } else { i as f32 / (count - 1) as f32 };
+                GradientStop {
+                    position,
+                    color,
+                }
+            }).collect(),
+        }
+    };
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct GradientStop {
     pub position: f32,
@@ -11,7 +68,7 @@ pub enum GradientKind {
     Linear { angle: f32 },
     Radial { center: [f32; 2], radius: f32 },
     Conic { center: [f32; 2] },
-    Mesh { corners: [Color; 4] }, //top-right, top-left, bottom-left, bottom-right
+    Mesh { corners: [Color; 4] }, // order top right top left bottom left bottom right
 }
 
 #[derive(Debug, Clone, Copy)]

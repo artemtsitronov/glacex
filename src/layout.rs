@@ -131,26 +131,22 @@ impl<'a> Column<'a> {
         self
     }
 
-    /// Overrides the column's own width — by default it hugs its content.
     pub fn width(mut self, width: f32) -> Self {
         self.width = Some(width);
         self
     }
 
-    /// Overrides the column's own height — by default it hugs its content.
     pub fn height(mut self, height: f32) -> Self {
         self.height = Some(height);
         self
     }
 
-    /// Shorthand for `.width(size[0]).height(size[1])`.
     pub fn size(mut self, size: [f32; 2]) -> Self {
         self.width = Some(size[0]);
         self.height = Some(size[1]);
         self
     }
 
-    /// Insets children from the column's own bounds on every side.
     pub fn padding(mut self, padding: [f32; 2]) -> Self {
         self.padding = padding;
         self
@@ -163,7 +159,6 @@ impl<'a> Column<'a> {
             .downcast_mut::<T>()
     }
 
-    /// Measure then arrange in one call, at the given origin.
     pub fn arrange_at(&mut self, position: [f32; 2], ui: &mut Ui) {
         let size = Measurable::measure(self, ui);
         Measurable::arrange(self, position, size, ui);
@@ -249,26 +244,22 @@ impl<'a> Row<'a> {
         self
     }
 
-    /// Overrides the row's own width — by default it hugs its content.
     pub fn width(mut self, width: f32) -> Self {
         self.width = Some(width);
         self
     }
 
-    /// Overrides the row's own height — by default it hugs its content.
     pub fn height(mut self, height: f32) -> Self {
         self.height = Some(height);
         self
     }
 
-    /// Shorthand for `.width(size[0]).height(size[1])`.
     pub fn size(mut self, size: [f32; 2]) -> Self {
         self.width = Some(size[0]);
         self.height = Some(size[1]);
         self
     }
 
-    /// Insets children from the row's own bounds on every side.
     pub fn padding(mut self, padding: [f32; 2]) -> Self {
         self.padding = padding;
         self

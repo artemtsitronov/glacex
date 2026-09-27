@@ -329,7 +329,7 @@ impl Measurable for SelectBox {
         );
 
         let search_bar_h = if style.searchable {
-            style.search_height + 8.0 // bar height + bottom padding
+            style.search_height + 8.0
         } else {
             0.0
         };
@@ -347,12 +347,11 @@ impl Measurable for SelectBox {
             .collect();
 
         let item_list_h = filtered_indices.len() as f32 * style.item_height;
-        let inner_padding = 6.0; // top+bottom padding inside card
+        let inner_padding = 6.0;
         let content_h = search_bar_h + item_list_h + inner_padding * 2.0;
         let dropdown_h = content_h.min(style.dropdown_max_height);
 
-        // No gap: the items band grows flush against the trigger band since
-        // they're now one continuous surface rather than two separate rects.
+        // items band stays flush against the trigger, one continuous surface
         let below_y = position[1] + size[1];
         let above_y = position[1] - dropdown_h;
         let opens_upward = below_y + dropdown_h > window_size[1] - 8.0 && above_y > 8.0;
@@ -425,7 +424,7 @@ impl Measurable for SelectBox {
                 let typed = ui.typed_text();
                 for ch in typed.chars() {
                     if ch == '\x08' {
-                        // Backspace
+                        // backspace
                         state.search_text.pop();
                     } else if !ch.is_control() {
                         state.search_text.push(ch);
@@ -454,7 +453,7 @@ impl Measurable for SelectBox {
         state.open_spring.update(dt);
         let open_t = state.open_spring.value.clamp(0.0, 1.0);
 
-        let open_ease = 1.0 - (1.0 - open_t).powi(3); // ease-out-cubic
+        let open_ease = 1.0 - (1.0 - open_t).powi(3);
 
         let chevron_target = if state.open { 180.0f32 } else { 0.0 };
         state.chevron_angle =
@@ -512,10 +511,7 @@ impl Measurable for SelectBox {
         ];
         let text_y = position[1] + (size[1] - 20.0) / 2.0;
 
-        // Fully closed: draw the trigger as a plain, self-contained rect.
-        // Once it starts opening, the trigger band is instead painted as
-        // part of one merged overlay surface below, so it doesn't double
-        // up with (or get hidden under) the expanding dropdown.
+        // closed trigger draws standalone, open trigger is part of the merged surface below
         if open_ease <= 0.001 {
             ui.draw_shape(
                 (style.path)(position, size),
@@ -558,11 +554,7 @@ impl Measurable for SelectBox {
         if open_ease > 0.001 {
             let mouse_blocked_by_others = ui.is_input_blocked(mouse_pos);
 
-            // Merged container: the trigger band plus the currently-grown
-            // items band, drawn as *one* directly-resized surface (not a
-            // fixed-size shape with a clip cut) so its corners stay
-            // correctly rounded at every point of the animation instead of
-            // showing a hard-edged seam.
+            // resized as one surface, not clipped, so corners stay rounded mid animation
             let grown_h = open_ease * dropdown_h;
             let container_pos = if opens_upward {
                 [position[0], position[1] - grown_h]
@@ -582,7 +574,6 @@ impl Measurable for SelectBox {
 
             let visible_h = dropdown_size[1] * open_ease;
             let clip_top = if opens_upward {
-                // Slide upward: reveal from bottom edge
                 dropdown_pos[1] + dropdown_size[1] - visible_h
             } else {
                 dropdown_pos[1]
@@ -621,9 +612,7 @@ impl Measurable for SelectBox {
                 );
             }
 
-            // One background for the whole surface — color/border cross-fade
-            // from the trigger's resting look to the dropdown surface look
-            // as it grows, instead of two separately-styled rects.
+            // one background, cross fades trigger look into dropdown look as it grows
             let merged_fill = if let (Fill::Solid(trig), Fill::Solid(drop)) =
                 (&trigger_fill, &style.dropdown_fill)
             {
@@ -646,9 +635,7 @@ impl Measurable for SelectBox {
                 0.0,
             );
 
-            // Trigger label + chevron now live on the overlay layer too, so
-            // they sit on top of the merged background above instead of
-            // being hidden underneath it.
+            // overlay layer so label and chevron sit above the merged background
             ui.draw_overlay_text_styled(
                 label_text,
                 [position[0] + style.padding_x, text_y],

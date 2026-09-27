@@ -25,16 +25,19 @@ pub mod label;
 pub mod layout;
 pub mod misc;
 pub mod painter;
+pub mod path_sdf_atlas;
 pub mod progress_bar;
 pub mod radio_button;
 pub mod scroll_view;
 pub mod scrolling;
+pub mod sdf;
 pub mod select_box;
 pub mod shadow;
 pub mod shapes;
 pub mod slider;
 pub mod switch;
 pub mod tabs;
+pub mod tessellate;
 pub mod text_area;
 pub mod text_edit;
 pub mod text_input;
@@ -59,16 +62,19 @@ pub use label::*;
 pub use layout::*;
 pub use misc::*;
 pub use painter::*;
+pub use path_sdf_atlas::*;
 pub use progress_bar::*;
 pub use radio_button::*;
 pub use scroll_view::*;
 pub use scrolling::*;
+pub use sdf::*;
 pub use select_box::*;
 pub use shadow::*;
 pub use shapes::*;
 pub use slider::*;
 pub use switch::*;
 pub use tabs::*;
+pub use tessellate::*;
 pub use text_area::*;
 pub use text_edit::*;
 pub use text_input::*;
@@ -116,23 +122,17 @@ impl<W: Widget> App<W> {
         }
     }
 
-    /// Customizes initial window attributes (e.g. title, inner size).
     pub fn window_attributes(mut self, attributes: winit::window::WindowAttributes) -> Self {
         self.window_attributes = Some(attributes);
         self
     }
 
-    /// Enables or disables accessibility support (`accesskit`: AT-SPI on
-    /// Linux, UIA on Windows, NSAccessibility on macOS). Disabled by
-    /// default — call `.accessibility_enabled(true)` to stand up the
-    /// adapter and expose the widget tree to screen readers and other
-    /// assistive tools.
+    // accesskit backs this with at spi on linux uia on windows nsaccessibility on macos
     pub fn accessibility_enabled(mut self, enabled: bool) -> Self {
         self.accessibility_enabled = enabled;
         self
     }
 
-    /// Sets the initial window size in logical pixels.
     pub fn window_size(mut self, width: u32, height: u32) -> Self {
         let size = winit::dpi::LogicalSize::new(width, height);
         let attrs = self
@@ -143,7 +143,6 @@ impl<W: Widget> App<W> {
         self
     }
 
-    /// Sets the initial window title.
     pub fn title(mut self, title: impl Into<String>) -> Self {
         let attrs = self
             .window_attributes
@@ -153,9 +152,7 @@ impl<W: Widget> App<W> {
         self
     }
 
-    /// Registers a callback that runs once per frame, before drawing.
-    /// Use `Column::get_mut`/`Row::get_mut` inside it to pull concrete
-    /// widgets (e.g. a `Button`) back out of the tree and check state.
+    // runs before drawing, use Column::get_mut/Row::get_mut to pull widgets back out
     pub fn update(mut self, f: impl FnMut(&mut W) + 'static) -> Self {
         self.update_fn = Some(Box::new(f));
         self

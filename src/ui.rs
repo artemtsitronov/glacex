@@ -80,9 +80,7 @@ pub struct Ui {
 
 impl Ui {
     pub async fn new(window: Arc<Window>) -> Ui {
-        let mut painter = Painter::new(window.clone()).await;
-        painter.test_image_atlas();
-
+        let painter = Painter::new(window.clone()).await;
         Ui {
             painter,
             window,
@@ -249,16 +247,11 @@ impl Ui {
         self.scroll_delta_y = delta;
     }
 
-    /// Whether some scrollable widget has already claimed this frame's wheel
-    /// event. Widgets should skip reacting to `scroll_delta_x`/`_y` once
-    /// this is `true`, so a wheel tick only ever moves the one scrollable
-    /// area actually under the cursor instead of every hovered ancestor.
+    // true once a scrollable widget has claimed this frame's wheel event
     pub fn scroll_consumed(&self) -> bool {
         self.scroll_consumed
     }
 
-    /// Claims this frame's wheel event so no other (e.g. ancestor) scrollable
-    /// widget also reacts to it. Call after actually applying the delta.
     pub fn consume_scroll(&mut self) {
         self.scroll_consumed = true;
     }
@@ -326,9 +319,8 @@ impl Ui {
         };
 
         self.focused = Some(self.focus_order[next_index]);
-        self.focus_requested_this_frame = true; // Tab counts as a focus request too,
-        // so the empty-click-clears-focus
-        // check doesn't fight with it
+        // tab counts as a focus request too, keeps it from fighting the empty click clear check
+        self.focus_requested_this_frame = true;
     }
 
     pub fn copy_to_clipboard(&mut self, text: &str) {
@@ -585,7 +577,6 @@ impl Ui {
         &self.theme
     }
 
-    /// Sets the active theme and updates the window clear color.
     pub fn set_theme(&mut self, theme: Theme) {
         self.set_bgcolor(theme.bg_canvas);
         self.theme = theme;
@@ -620,6 +611,32 @@ impl Ui {
             if sharp { 1.0 } else { 0.0 },
             clip,
             rotation,
+        );
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn draw_open_shape(
+        &mut self,
+        path: MeasurablePath,
+        fill: Fill,
+        border_width: f32,
+        border_color: Color,
+        blur_radius: f32,
+        sharp: bool,
+        rotation: f32,
+        reveal: f32,
+    ) {
+        let clip = self.current_clip();
+        let shape = Shape { path, fill };
+        self.painter.draw_open_shape(
+            shape,
+            border_width,
+            border_color,
+            blur_radius,
+            if sharp { 1.0 } else { 0.0 },
+            clip,
+            rotation,
+            reveal,
         );
     }
 
@@ -676,8 +693,6 @@ impl Ui {
         );
     }
 
-    /// Draws a shape on the overlay pass (renders on top of all normal-pass content).
-    /// Use this for dropdowns, popovers, and other floating surfaces.
     #[allow(clippy::too_many_arguments)]
     pub fn draw_overlay_shape(
         &mut self,
@@ -702,8 +717,6 @@ impl Ui {
         );
     }
 
-    /// Draws text on the overlay pass (renders on top of all normal-pass content).
-    /// Use this for dropdown text, popover labels, etc.
     #[allow(clippy::too_many_arguments)]
     pub fn draw_overlay_text_styled(
         &mut self,
@@ -734,7 +747,7 @@ impl Ui {
 
     pub fn render(&mut self) {
         if let Some((text, pos)) = self.pending_tooltip.take() {
-            // Measure with Geist 12px (caption scale) — same font used by Label::caption()
+            // matches the font used by Label::caption()
             let text_width = self.painter.measure_text_styled(
                 &text,
                 12.0,

@@ -14,6 +14,10 @@ var gradient_sampler: sampler;
 var image_atlas: texture_2d<f32>;
 @group(2) @binding(1)
 var image_sampler: sampler;
+@group(3) @binding(0)
+var path_sdf_atlas: texture_2d<f32>;
+@group(3) @binding(1)
+var path_sdf_sampler: sampler;
 
 struct QuadVertex {
     @location(0) local_position: vec2<f32>,
@@ -24,17 +28,13 @@ struct ShapeInstance {
     @location(2) size: vec2<f32>,
     @location(3) color: vec4<f32>,
     @location(4) corner_radius: vec4<f32>,
-    @location(5) border_width: f32,
-    @location(6) border_color: vec4<f32>,
-    @location(7) blur_radius: f32,
-    @location(8) sharp: f32,
-    @location(9) fill_kind: f32,
-    @location(10) shape_kind: f32,
-    @location(11) gradient_angle: f32,
-    @location(12) gradient_row: f32,
-    @location(13) gradient_center: vec2<f32>,
-    @location(14) rotation: f32,
-    @location(15) image_uv: vec4<f32>,
+    @location(5) border_color: vec4<f32>,
+    @location(6) render_params: vec4<f32>,
+    @location(7) shape_params: vec4<f32>,
+    @location(8) gradient_center: vec2<f32>,
+    @location(9) image_uv: vec4<f32>,
+    @location(10) sdf_uv: vec4<f32>,
+    @location(11) path_params: vec4<f32>,
 }
 
 struct VertexOutput {
@@ -43,17 +43,13 @@ struct VertexOutput {
     @location(1) local_pos: vec2<f32>,
     @location(2) half_size: vec2<f32>,
     @location(3) corner_radius: vec4<f32>,
-    @location(4) blur_radius: f32,
-    @location(5) border_width: f32,
-    @location(6) border_color: vec4<f32>,
-    @location(7) sharp: f32,
-    @location(8) fill_kind: f32,
-    @location(9) shape_kind: f32,
-    @location(10) gradient_angle: f32,
-    @location(11) gradient_row: f32,
-    @location(12) gradient_center: vec2<f32>,
-    @location(13) rotation: f32,
-    @location(14) image_uv: vec4<f32>,
+    @location(4) border_color: vec4<f32>,
+    @location(5) render_params: vec4<f32>,
+    @location(6) shape_params: vec4<f32>,
+    @location(7) gradient_center: vec2<f32>,
+    @location(8) image_uv: vec4<f32>,
+    @location(9) sdf_uv: vec4<f32>,
+    @location(10) path_params: vec4<f32>,
 }
 
 // Must be >= AA_PADDING below, or the fade band extends past the padded
@@ -79,6 +75,12 @@ fn sd_ellipse(p: vec2<f32>, half_size: vec2<f32>) -> f32 {
     return k0 * (k0 - 1.0) / k1;
 }
 
+fn sample_path_sdf(p: vec2<f32>, half_size: vec2<f32>, sdf_uv: vec4<f32>) -> vec2<f32> {
+    let local_uv = clamp((p + half_size) / (half_size * 2.0), vec2<f32>(0.0), vec2<f32>(1.0));
+    let uv = mix(sdf_uv.xy, sdf_uv.zw, local_uv);
+    return textureSample(path_sdf_atlas, path_sdf_sampler, uv).rg;
+}
+
 fn shape_distance(p: vec2<f32>, half_size: vec2<f32>, radii: vec4<f32>, shape_kind: f32) -> f32 {
     if shape_kind < 0.5 {
         return sd_rounded_box(p, half_size, radii);
@@ -96,9 +98,13 @@ fn rotate(p: vec2<f32>, angle: f32) -> vec2<f32> {
 fn vs_main(vertex: QuadVertex, instance: ShapeInstance) -> VertexOutput {
     var out: VertexOutput;
 
+    let border_width = instance.render_params.x;
+    let blur_radius = instance.render_params.y;
+    let rotation = instance.shape_params.w;
+
     let diagonal = length(instance.size * 0.5);
-let rotation_padding = select(0.0, diagonal - max(instance.size.x, instance.size.y) * 0.5, instance.rotation != 0.0);
-let padding = max(AA_PADDING, max(instance.blur_radius * 2.0, max(instance.border_width + AA_PADDING, rotation_padding + AA_PADDING)));
+    let rotation_padding = select(0.0, diagonal - max(instance.size.x, instance.size.y) * 0.5, rotation != 0.0);
+    let padding = max(AA_PADDING, max(blur_radius * 2.0, max(border_width + AA_PADDING, rotation_padding + AA_PADDING)));
     let padded_size = instance.size + vec2<f32>(padding * 2.0);
     let padded_local = vertex.local_position * padded_size - vec2<f32>(padding);
     let pixel_position = instance.position + padded_local;
@@ -111,65 +117,84 @@ let padding = max(AA_PADDING, max(instance.blur_radius * 2.0, max(instance.borde
     out.local_pos = padded_local - instance.size * 0.5;
     out.half_size = instance.size * 0.5;
     out.corner_radius = instance.corner_radius;
-    out.blur_radius = instance.blur_radius;
-    out.border_width = instance.border_width;
     out.border_color = instance.border_color;
-    out.sharp = instance.sharp;
-    out.shape_kind = instance.shape_kind;
-    out.fill_kind = instance.fill_kind;
-    out.gradient_angle = instance.gradient_angle;
-    out.gradient_row = instance.gradient_row;
+    out.render_params = instance.render_params;
+    out.shape_params = instance.shape_params;
     out.gradient_center = instance.gradient_center;
-    out.rotation = instance.rotation;
     out.image_uv = instance.image_uv;
+    out.sdf_uv = instance.sdf_uv;
+    out.path_params = instance.path_params;
 
     return out;
 }
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    if in.blur_radius > 0.0 {
-        let dist = shape_distance(in.local_pos, in.half_size, in.corner_radius, in.shape_kind);
-        let alpha = 1.0 - smoothstep(-in.blur_radius, in.blur_radius, dist);
+    let border_width = in.render_params.x;
+    let blur_radius = in.render_params.y;
+    let sharp = in.render_params.z;
+    let fill_kind = in.render_params.w;
+    let shape_kind = in.shape_params.x;
+    let gradient_angle = in.shape_params.y;
+    let gradient_row = in.shape_params.z;
+    let rotation = in.shape_params.w;
+
+    if blur_radius > 0.0 {
+        let dist = select(
+            shape_distance(in.local_pos, in.half_size, in.corner_radius, shape_kind),
+            sample_path_sdf(in.local_pos, in.half_size, in.sdf_uv).x,
+            shape_kind == 2.0
+        );
+        let alpha = 1.0 - smoothstep(-blur_radius, blur_radius, dist);
         return vec4<f32>(in.color.rgb, in.color.a * alpha);
     }
 
     var t: f32 = 0.0;
-    if in.fill_kind == 1.0 { // linear
-        let angle_rad = radians(in.gradient_angle);
+    if fill_kind == 1.0 { // linear
+        let angle_rad = radians(gradient_angle);
         let direction = vec2<f32>(cos(angle_rad), sin(angle_rad));
         let projected = dot(in.local_pos, direction);
         t = (projected + in.half_size.x) / (in.half_size.x * 2.0);
-    } else if in.fill_kind == 2.0 { // radial
+    } else if fill_kind == 2.0 { // radial
         let dist = length(in.local_pos - in.gradient_center);
-        t = dist / in.gradient_angle; // gradient_angle holds radius here
-    } else if in.fill_kind == 3.0 { // conic
+        t = dist / gradient_angle; // gradient_angle holds radius here
+    } else if fill_kind == 3.0 { // conic
         let angle = atan2(in.local_pos.y - in.gradient_center.y, in.local_pos.x - in.gradient_center.x);
         t = (angle + 3.14159265) / (2.0 * 3.14159265);
     }
 
     var fill_color = in.color;
-    if in.fill_kind >= 1.0 && in.fill_kind <= 3.0 {
+    if fill_kind >= 1.0 && fill_kind <= 3.0 {
         let row_count = 64.0;
-        let v = (in.gradient_row + 0.5) / row_count;
+        let v = (gradient_row + 0.5) / row_count;
         fill_color = textureSample(gradient_atlas, gradient_sampler, vec2<f32>(clamp(t, 0.0, 1.0), v));
     }
 
-    if in.fill_kind == 5.0 { // image
+    if fill_kind == 5.0 { // image
         let local_uv = (in.local_pos + in.half_size) / (in.half_size * 2.0);
         let uv = mix(in.image_uv.xy, in.image_uv.zw, local_uv);
         fill_color = textureSample(image_atlas, image_sampler, uv);
     }
 
-    let rotated_pos = rotate(in.local_pos, -in.rotation);
+    let rotated_pos = rotate(in.local_pos, -rotation);
 
-    let inner_dist = shape_distance(rotated_pos, in.half_size, in.corner_radius, in.shape_kind);
-    let outer_dist = shape_distance(
-        rotated_pos,
-        in.half_size + vec2<f32>(in.border_width),
-        in.corner_radius + vec4<f32>(in.border_width),
-        in.shape_kind,
-    );
+    var inner_dist: f32;
+    var outer_dist: f32;
+    var length_param: f32 = 0.0;
+    if shape_kind == 2.0 {
+        let sdf_sample = sample_path_sdf(rotated_pos, in.half_size, in.sdf_uv);
+        inner_dist = sdf_sample.x;
+        outer_dist = inner_dist - border_width;
+        length_param = sdf_sample.y;
+    } else {
+        inner_dist = shape_distance(rotated_pos, in.half_size, in.corner_radius, shape_kind);
+        outer_dist = shape_distance(
+            rotated_pos,
+            in.half_size + vec2<f32>(border_width),
+            in.corner_radius + vec4<f32>(border_width),
+            shape_kind,
+        );
+    }
 
     let fill_alpha = 1.0 - smoothstep(0.0, AA_FADE_WIDTH, inner_dist);
     let color = mix(in.border_color, fill_color, fill_alpha);
@@ -177,7 +202,12 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let alpha = select(
         1.0 - smoothstep(0.0, AA_FADE_WIDTH, outer_dist),
         select(1.0, 0.0, outer_dist > 0.0),
-        in.sharp > 0.5
+        sharp > 0.5
     );
-    return vec4<f32>(color.rgb, color.a * alpha);
+
+    let reveal = in.path_params.x;
+    let reveal_epsilon = AA_FADE_WIDTH / in.path_params.y;
+    let reveal_alpha = 1.0 - smoothstep(reveal - reveal_epsilon, reveal + reveal_epsilon, length_param);
+
+    return vec4<f32>(color.rgb, color.a * alpha * reveal_alpha);
 }

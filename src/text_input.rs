@@ -271,10 +271,7 @@ impl Measurable for TextInput {
             0.0,
         );
 
-        // Selection highlight, text, and cursor are all clipped to the
-        // field's own inner (padding-inset) bounds — otherwise a selection
-        // spanning off-screen text (once scrolled) would paint past the
-        // edges of the input instead of just disappearing under it.
+        // clipped to the padded inner bounds or scrolled selection paints past the edges
         let clip_rect = [
             position[0] + padding,
             position[1],

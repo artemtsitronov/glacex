@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Added
+- `MeasurablePath::Free(BezPath)` now actually renders. Free paths are tessellated on the CPU (flatten + ear-clip triangulation) and drawn through a new, second render pipeline (`vs_mesh`/`fs_mesh` in `shader.wgsl`) alongside the existing SDF quad pipeline. Supports solid and gradient fills (gradient color evaluated per vertex) and borders (drawn as a separately tessellated `kurbo::stroke` outline). `Fill::Image` and blur/shadow aren't supported on `Free` paths yet — see README's Known Limitations.
+
+### Fixed
+- `Ui::new()` no longer calls a leftover debug method (`Painter::test_image_atlas`) that unconditionally loaded `assets/test/1.webp` from the working directory and `unwrap()`-panicked if it wasn't there — this asset isn't published to crates.io, so any consumer running from a directory without it hit an immediate panic on startup.
+- `Tabs`' `contrasting_text_color` no longer panics (`todo!()`) when a tab's active fill is `Fill::Image`; falls back to `Color::WHITE`, matching the existing empty-gradient-stops fallback in the same function.
+
 ## [0.1.9]
 
 ### Added

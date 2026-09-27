@@ -13,10 +13,10 @@ use winit::window::CursorIcon;
 #[derive(Debug, Clone, Copy)]
 pub struct CheckboxState {
     pub checked: bool,
-    /// 0 = unchecked, 1 = fully checked (drives checkmark draw and box fill).
+    // 0 unchecked 1 fully checked, drives checkmark draw and box fill
     pub anim_progress: f32,
     pub hover_t: f32,
-    /// 0 = baseline, 1 = fully popped (used for scale-pop spring on check).
+    // 0 baseline 1 fully popped, scale pop spring on check
     pub pop_t: f32,
     pub initialized: bool,
 }
@@ -146,21 +146,17 @@ impl Widget for Checkbox {
     }
 }
 
-/// Draws the animated checkmark as two strokes that "draw on" in sequence.
-/// `t` goes 0 → 1: left arm draws first (0..0.40), right arm follows (0.30..1.0).
-/// Using a cubic ease on each arm gives a natural pen-stroke deceleration.
+// two strokes draw in sequence, left arm then right arm, t goes 0 to 1
 fn draw_checkmark(cx: f32, cy: f32, t: f32, color: Color, size: f32, ui: &mut Ui) {
-    let scale = size / 18.0; // normalize to the default 18px box
+    let scale = size / 18.0; // normalized to an 18px box
     let alpha = t.clamp(0.0, 1.0);
     let c = color.with_alpha(color.a * alpha);
     let stroke_w = 2.0 * scale;
 
-    // Anchor points (designed for a 18px box centered at cx, cy)
     let left = [cx - 4.0 * scale, cy + 0.5 * scale];
     let valley = [cx - 1.2 * scale, cy + 3.2 * scale];
     let right = [cx + 4.6 * scale, cy - 3.4 * scale];
 
-    // Left arm: t ∈ 0..0.42 — ease-out-cubic so it starts fast, decelerates
     let left_t_raw = (t / 0.42).clamp(0.0, 1.0);
     let left_t = ease_out_cubic(left_t_raw);
     if left_t > 0.01 {
@@ -168,7 +164,6 @@ fn draw_checkmark(cx: f32, cy: f32, t: f32, color: Color, size: f32, ui: &mut Ui
         draw_stroke(left, end, stroke_w, c, ui);
     }
 
-    // Right arm: t ∈ 0.32..1.0 — same curve
     if t > 0.32 {
         let right_t_raw = ((t - 0.32) / 0.68).clamp(0.0, 1.0);
         let right_t = ease_out_cubic(right_t_raw);
@@ -246,7 +241,6 @@ impl Measurable for Checkbox {
 
         if interaction.clicked {
             state.checked = !state.checked;
-            // Kick the pop spring: push pop_t to 1, it will decay back
             state.pop_t = 1.0;
         }
 
@@ -264,8 +258,7 @@ impl Measurable for Checkbox {
         let hover_t = state.hover_t;
         let pop_t = state.pop_t;
 
-        // Scale the box: +8% at peak pop, then settle back to 1.0
-        // The scale is applied by inflating the draw rect from its center.
+        // inflates the draw rect from its center, +8% at peak pop
         let scale = 1.0 + pop_t * 0.08;
         let inflated_w = size[0] * scale;
         let inflated_h = size[1] * scale;

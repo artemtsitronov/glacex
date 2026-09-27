@@ -7,6 +7,7 @@ pub enum MeasurablePath {
     Rect(RoundedRect),
     Ellipse(Ellipse),
     Free(BezPath),
+    Open { centerline: BezPath, thickness: f32 },
 }
 
 impl MeasurablePath {
@@ -32,6 +33,12 @@ impl MeasurablePath {
     pub fn free(bez_path: BezPath) -> Self {
         Self::Free(bez_path)
     }
+    pub fn open(centerline: BezPath, thickness: f32) -> Self {
+        Self::Open {
+            centerline,
+            thickness,
+        }
+    }
 
     pub fn contains(&self, point: [f32; 2]) -> bool {
         let p = Point::new(point[0] as f64, point[1] as f64);
@@ -39,6 +46,7 @@ impl MeasurablePath {
             Self::Rect(rect) => rect.contains(p),
             Self::Ellipse(ellipse) => ellipse.contains(p),
             Self::Free(bez_path) => bez_path.contains(p),
+            Self::Open { .. } => false,
         }
     }
 }
@@ -77,6 +85,20 @@ impl std::ops::Deref for Path {
     fn deref(&self) -> &Self::Target {
         &*self.0
     }
+}
+
+pub fn straight_path(length: f32, thickness: f32) -> MeasurablePath {
+    let mut path = BezPath::new();
+    path.move_to((0.0, 0.0));
+    path.line_to((length as f64, 0.0));
+    MeasurablePath::open(path, thickness)
+}
+
+#[macro_export]
+macro_rules! straight_path {
+    ($length:expr, $thickness:expr) => {
+        $crate::straight_path($length, $thickness)
+    };
 }
 
 #[derive(Debug, Clone)]

@@ -171,7 +171,6 @@ impl Measurable for Switch {
         let enabled = state.enabled;
         let target_progress = if enabled { 1.0 } else { 0.0 };
 
-        // Knob flip uses SNAPPY (45ms half-life) — crisp, physical, no overshoot.
         state.anim_progress =
             animate_towards(state.anim_progress, target_progress, dt, Motion::SNAPPY);
 
@@ -195,11 +194,7 @@ impl Measurable for Switch {
             style.track_off_fill
         };
 
-        // The thumb sits on the track, which itself lerps off -> on color
-        // above. Most themes' on-color is dark/saturated enough for a white
-        // thumb, but shadcn-dark's `active` is near-white, so blend toward
-        // a contrasting color as the track approaches "on" — otherwise the
-        // thumb goes white-on-white right when it matters most.
+        // blends toward a contrasting color near on, avoids white on white on near white themes
         let thumb_fill = if let Fill::Solid(thumb_color) = style.thumb_fill {
             Fill::Solid(if progress > 0.01 {
                 thumb_color.lerp(theme.on_active(), progress)
@@ -240,7 +235,6 @@ impl Measurable for Switch {
         let knob_pos = [knob_x, position[1] + padding];
         let knob_radius = knob_size / 2.0;
 
-        // Motion-blur stretch trail: widens in the direction of travel
         let speed = velocity.abs();
         if speed > 8.0 {
             let stretch_amount = (speed * 0.010).min(10.0);

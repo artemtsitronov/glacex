@@ -53,57 +53,57 @@ impl Default for Theme {
 
 impl Theme {
     pub const LIGHT: Theme = Theme {
-        name: "shadcn-light",
+        name: "light",
         is_dark: false,
-        bg_canvas: Color::rgb(255, 255, 255),
+        bg_canvas: Color::rgb(246, 247, 250),
         surface: Color::rgb(255, 255, 255),
-        surface_subtle: Color::rgb(244, 244, 245),
+        surface_subtle: Color::rgb(235, 237, 242),
         surface_elevated: Color::rgb(255, 255, 255),
-        idle: Color::rgb(244, 244, 245),
-        hovered: Color::rgb(228, 228, 228),
-        pressed: Color::rgb(212, 212, 212),
-        active: Color::rgb(228, 228, 228),
-        active_hover: Color::rgb(212, 212, 212),
-        border_faint: Color::rgb(0, 0, 0),
-        border: Color::rgb(0, 0, 0),
-        border_strong: Color::rgb(0, 0, 0),
-        focus_border: Color::rgb(24, 24, 27),
-        text_primary: Color::rgb(9, 9, 11),
-        text_secondary: Color::rgb(113, 113, 122),
-        text_muted: Color::rgb(161, 161, 170),
-        success: Color::rgb(22, 163, 74),
-        warning: Color::rgb(217, 119, 6),
-        error: Color::rgb(225, 29, 72),
-        shadow_ambient: Color::rgb(0, 0, 0),
-        shadow_key: Color::rgb(0, 0, 0),
-        selection: Color::rgb(0, 0, 0),
+        idle: Color::rgb(235, 237, 242),
+        hovered: Color::rgb(222, 225, 233),
+        pressed: Color::rgb(206, 210, 222),
+        active: Color::rgb(65, 68, 196),
+        active_hover: Color::rgb(89, 92, 214),
+        border_faint: Color::rgba(30, 33, 54, 0.05),
+        border: Color::rgba(30, 33, 54, 0.10),
+        border_strong: Color::rgba(30, 33, 54, 0.18),
+        focus_border: Color::rgba(65, 68, 196, 0.85),
+        text_primary: Color::rgb(23, 25, 38),
+        text_secondary: Color::rgb(83, 88, 107),
+        text_muted: Color::rgb(137, 142, 158),
+        success: Color::rgb(34, 139, 101),
+        warning: Color::rgb(180, 120, 20),
+        error: Color::rgb(196, 48, 66),
+        shadow_ambient: Color::rgba(30, 33, 54, 0.04),
+        shadow_key: Color::rgba(30, 33, 54, 0.08),
+        selection: Color::rgba(65, 68, 196, 0.16),
     };
 
     pub const DARK: Theme = Theme {
-        name: "shadcn-dark",
+        name: "dark",
         is_dark: true,
-        bg_canvas: Color::rgb(0, 0, 0),
-        surface: Color::rgb(9, 9, 11),
-        surface_subtle: Color::rgb(18, 18, 21),
-        surface_elevated: Color::rgb(24, 24, 27),
-        idle: Color::rgb(18, 18, 21),
-        hovered: Color::rgb(32, 32, 36),
-        pressed: Color::rgb(39, 39, 42),
-        active: Color::rgb(250, 250, 250),
-        active_hover: Color::rgb(228, 228, 231),
-        border_faint: Color::rgba(255, 255, 255, 0.08),
-        border: Color::rgba(255, 255, 255, 0.14),
-        border_strong: Color::rgba(255, 255, 255, 0.25),
-        focus_border: Color::rgba(250, 250, 250, 0.85),
-        text_primary: Color::rgb(250, 250, 250),
-        text_secondary: Color::rgb(161, 161, 170),
-        text_muted: Color::rgb(113, 113, 122),
-        success: Color::rgb(34, 197, 94),
-        warning: Color::rgb(245, 158, 11),
-        error: Color::rgb(244, 63, 94),
-        shadow_ambient: Color::rgba(0, 0, 0, 0.28),
-        shadow_key: Color::rgba(0, 0, 0, 0.40),
-        selection: Color::rgba(99, 102, 241, 0.30),
+        bg_canvas: Color::rgb(10, 11, 16),
+        surface: Color::rgb(17, 19, 26),
+        surface_subtle: Color::rgb(24, 27, 36),
+        surface_elevated: Color::rgb(32, 36, 48),
+        idle: Color::rgb(24, 27, 36),
+        hovered: Color::rgb(34, 38, 50),
+        pressed: Color::rgb(44, 49, 64),
+        active: Color::rgb(13, 148, 136),
+        active_hover: Color::rgb(45, 212, 191),
+        border_faint: Color::rgba(203, 213, 225, 0.06),
+        border: Color::rgba(203, 213, 225, 0.12),
+        border_strong: Color::rgba(203, 213, 225, 0.22),
+        focus_border: Color::rgb(45, 212, 191),
+        text_primary: Color::rgb(230, 234, 240),
+        text_secondary: Color::rgb(163, 171, 184),
+        text_muted: Color::rgb(105, 113, 128),
+        success: Color::rgb(74, 222, 128),
+        warning: Color::rgb(250, 204, 21),
+        error: Color::rgb(248, 113, 113),
+        shadow_ambient: Color::rgba(0, 0, 0, 0.35),
+        shadow_key: Color::rgba(0, 0, 0, 0.55),
+        selection: Color::rgba(45, 212, 191, 0.22),
     };
 
     pub const CATPPUCCIN_MOCHA: Theme = Theme {
@@ -348,8 +348,8 @@ impl Theme {
     pub fn from_name(name: &str) -> Option<Theme> {
         let slug = name.trim().to_lowercase().replace(' ', "-");
         match slug.as_str() {
-            "light" | "shadcn-light" | "white" => Some(Self::LIGHT),
-            "dark" | "shadcn-dark" | "linear" => Some(Self::DARK),
+            "light" | "white" => Some(Self::LIGHT),
+            "dark" | "linear" => Some(Self::DARK),
             "catppuccin" | "catppuccin-mocha" | "mocha" => Some(Self::CATPPUCCIN_MOCHA),
             "catppuccin-latte" | "latte" => Some(Self::CATPPUCCIN_LATTE),
             "tokyo-night" | "tokyonight" => Some(Self::TOKYO_NIGHT),
@@ -590,10 +590,7 @@ impl Theme {
         }
     }
 
-    /// A color that stays legible drawn on top of `active`. Most themes'
-    /// `active` is dark/saturated enough for white to read fine, but
-    /// shadcn-dark's `active` is near-white — fall back to black there so
-    /// e.g. a switch thumb or a selected radio dot doesn't disappear.
+    // some dark themes have a near white active, white text would vanish on it
     pub fn on_active(&self) -> Color {
         if self.is_dark && self.active.r > 0.8 && self.active.g > 0.8 {
             Color::BLACK

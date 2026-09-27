@@ -159,12 +159,7 @@ impl<'a> Measurable for ScrollView<'a> {
         let hovered = MeasurablePath::rect(position, size, [0.0; 4]).contains(ui.mouse_position());
         let mut state = ui.take_widget_state_or(&self.id, self.initial_state());
 
-        // Applying the wheel event is deferred until after `self.child` has
-        // been arranged below — if the child is (or contains) a nested
-        // ScrollView, its own arrange() call claims the event first via
-        // `ui.consume_scroll()`, so a wheel tick over a nested scroll area
-        // only moves that inner view instead of every hovered ancestor too.
-
+        // wheel is applied after child arrange so a nested scroll view can consume it first
         let content_size = self.child.measure(ui);
 
         let track_length_y = size[1] - self.config.padding * 2.0;
@@ -182,9 +177,7 @@ impl<'a> Measurable for ScrollView<'a> {
         let track_hovered_y =
             MeasurablePath::rect(track_rect_position_y, track_rect_size_y, [0.0; 4])
                 .contains(ui.mouse_position());
-        // Keep resetting the "last activity" clock while the pointer is on
-        // the track, so the linger countdown only starts once it actually
-        // leaves — not from whatever scroll/drag last happened.
+        // linger countdown should start from pointer leave not last scroll
         if track_hovered_y {
             state.y.mark_activity();
         }
@@ -288,9 +281,6 @@ impl<'a> Measurable for ScrollView<'a> {
         let active_y = track_hovered_y || state.y.dragging || state.y.recently_active(&self.config);
         let active_x = track_hovered_x || state.x.dragging || state.x.recently_active(&self.config);
 
-        // Thumb only shows up once the pointer actually touches the track
-        // (or while dragging), then lingers for `config.linger_seconds`
-        // after the pointer leaves before hiding again.
         let show_y = has_scroll_y && active_y;
         let show_x = has_scroll_x && active_x;
 
@@ -324,11 +314,7 @@ impl<'a> Measurable for ScrollView<'a> {
 
         ui.pop_clip();
 
-        // Claim the wheel event now, after any nested scrollable inside
-        // `self.child` has had first crack at it. `state.offset` changing
-        // here lands visually next frame — an imperceptible one-frame lag
-        // in exchange for a wheel tick only ever moving the topmost/most
-        // specific hovered scroll area.
+        // claimed after nested children so only the topmost hovered view scrolls
         if !ui.scroll_consumed()
             && hovered
             && (ui.scroll_delta_x() != 0.0 || ui.scroll_delta_y() != 0.0)

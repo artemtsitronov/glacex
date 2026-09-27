@@ -324,9 +324,7 @@ impl Measurable for TextArea {
         let track_rect_size = [config.thickness + config.padding, size[1]];
         let track_hovered = MeasurablePath::rect(track_rect_position, track_rect_size, [0.0; 4])
             .contains(mouse_pos);
-        // Keep resetting the "last activity" clock while the pointer is on
-        // the track, so the linger countdown only starts once it actually
-        // leaves — not from whatever scroll/drag last happened.
+        // linger countdown should start from pointer leave not last scroll
         if track_hovered {
             extra.scroll.mark_activity();
         }

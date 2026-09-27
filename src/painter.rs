@@ -1,6 +1,8 @@
 use crate::color::Color;
 use crate::fill::{Fill, Gradient, GradientHandle, GradientKind, GradientStop};
+use crate::path_sdf_atlas::PathSdfAtlas;
 use crate::shapes::{QUAD_VERTICES, QuadVertex, ShapeInstance};
+use crate::tessellate::{FLATTEN_TOLERANCE, flatten_polyline};
 use crate::theme::Theme;
 use crate::{ImageHandle, MeasurablePath, Shape};
 use glyphon::{
@@ -8,7 +10,7 @@ use glyphon::{
     TextAtlas, TextBounds, TextRenderer, Viewport, Weight,
 };
 use image::{ImageError, ImageReader};
-use kurbo::Shape as KurboShape;
+use kurbo::{BezPath, PathEl, Shape as KurboShape};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
@@ -24,8 +26,7 @@ use wgpu::{
     MultisampleState, Operations, PipelineCompilationOptions, PipelineLayoutDescriptor,
     PrimitiveState, Queue, RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline,
     RenderPipelineDescriptor, RequestAdapterOptions, ShaderModuleDescriptor, ShaderSource,
-    ShaderStages, StoreOp, Surface, SurfaceConfiguration, Texture, TextureDescriptor,
-    TextureViewDescriptor, VertexState,
+    ShaderStages, StoreOp, Surface, SurfaceConfiguration, TextureViewDescriptor, VertexState,
 };
 use winit::window::Window;
 
@@ -37,6 +38,41 @@ struct CachedText {
 
 const TEXT_CACHE_EVICTION_FRAME: u64 = 180;
 const IMAGE_ATLAS_SIZE: f32 = 2048.0;
+
+fn hash_bezpath(path: &BezPath) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    for el in path.elements() {
+        match el {
+            PathEl::MoveTo(p) | PathEl::LineTo(p) => {
+                p.x.to_bits().hash(&mut hasher);
+                p.y.to_bits().hash(&mut hasher);
+            }
+            PathEl::QuadTo(p1, p2) => {
+                p1.x.to_bits().hash(&mut hasher);
+                p1.y.to_bits().hash(&mut hasher);
+                p2.x.to_bits().hash(&mut hasher);
+                p2.y.to_bits().hash(&mut hasher);
+            }
+            PathEl::CurveTo(p1, p2, p3) => {
+                p1.x.to_bits().hash(&mut hasher);
+                p1.y.to_bits().hash(&mut hasher);
+                p2.x.to_bits().hash(&mut hasher);
+                p2.y.to_bits().hash(&mut hasher);
+                p3.x.to_bits().hash(&mut hasher);
+                p3.y.to_bits().hash(&mut hasher);
+            }
+            PathEl::ClosePath => {}
+        }
+    }
+    hasher.finish()
+}
+
+fn hash_open_path(path: &BezPath, thickness: f32) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    hash_bezpath(path).hash(&mut hasher);
+    thickness.to_bits().hash(&mut hasher);
+    hasher.finish()
+}
 
 fn hash_text_key(
     text: &str,
@@ -76,8 +112,6 @@ fn sample_stops(stops: &[GradientStop], t: f32) -> Color {
 
 fn hash_gradient(gradient: &Gradient) -> u64 {
     let mut hasher = DefaultHasher::new();
-    // Hash each stop's position + color bytes — f32 doesn't implement Hash
-    // directly (NaN issues), so hash the bit pattern instead.
     for stop in &gradient.stops {
         stop.position.to_bits().hash(&mut hasher);
         stop.color.r.to_bits().hash(&mut hasher);
@@ -271,7 +305,7 @@ impl ImageAtlas {
             rgba_bytes,
             wgpu::TexelCopyBufferLayout {
                 offset: 0,
-                bytes_per_row: Some(width * 4), // 4 bytes per pixel (RGBA)
+                bytes_per_row: Some(width * 4),
                 rows_per_image: Some(height),
             },
             wgpu::Extent3d {
@@ -312,6 +346,9 @@ pub struct Painter {
 
     gradient_atlas: GradientAtlas,
     gradient_bind_group: BindGroup,
+
+    path_sdf_atlas: PathSdfAtlas,
+    path_sdf_bind_group: BindGroup,
 
     image_atlas: ImageAtlas,
     image_bind_group: BindGroup,
@@ -455,12 +492,53 @@ impl Painter {
             ],
         });
 
+        let path_sdf_atlas = PathSdfAtlas::new(&device);
+
+        let path_sdf_bind_group_layout =
+            device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+                label: Some("path sdf atlas bind group layout"),
+                entries: &[
+                    BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: ShaderStages::FRAGMENT,
+                        count: None,
+                        ty: BindingType::Texture {
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            multisampled: false,
+                        },
+                    },
+                    BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: ShaderStages::FRAGMENT,
+                        count: None,
+                        ty: BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    },
+                ],
+            });
+
+        let path_sdf_bind_group = device.create_bind_group(&BindGroupDescriptor {
+            label: Some("path sdf atlas bind group"),
+            layout: &path_sdf_bind_group_layout,
+            entries: &[
+                BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(path_sdf_atlas.texture_view()),
+                },
+                BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(path_sdf_atlas.sampler()),
+                },
+            ],
+        });
+
         let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: None,
             bind_group_layouts: &[
                 Some(&bind_group_layout),
                 Some(&gradient_bind_group_layout),
                 Some(&image_bind_group_layout),
+                Some(&path_sdf_bind_group_layout),
             ],
             immediate_size: 0,
         });
@@ -557,25 +635,11 @@ impl Painter {
             gradient_bind_group,
             image_atlas,
             image_bind_group,
+            path_sdf_atlas,
+            path_sdf_bind_group,
             bgcolor: WgpuColor::WHITE,
             frame_count: 0,
         }
-    }
-
-    pub fn test_image_atlas(&mut self) {
-        let img = image::ImageReader::open("assets/test/1.webp")
-            .unwrap()
-            .decode()
-            .unwrap();
-        let rgba = img.to_rgba8();
-        self.image_atlas.write_region(
-            &self.queue,
-            0,
-            0,
-            rgba.width(),
-            rgba.height(),
-            rgba.as_raw(),
-        );
     }
 
     fn get_or_shape_text(
@@ -600,7 +664,7 @@ impl Painter {
             Family::Name("Geist Mono")
         } else {
             Family::Name("Geist")
-        }; // adjust to your actual font setup
+        };
         let attrs = Attrs::new().weight(weight.to_glyphon()).family(family);
         buffer.set_text(text, &attrs, Shaping::Basic, None);
         buffer.shape_until_scroll(&mut self.font_system, false);
@@ -699,6 +763,7 @@ impl Painter {
     }
 
     #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)]
     fn lower_shape(
         &mut self,
         shape: Shape,
@@ -707,7 +772,32 @@ impl Painter {
         blur_radius: f32,
         sharp: f32,
         rotation: f32,
+        reveal: f32,
     ) -> ShapeInstance {
+        let path_sdf_handle = match &shape.path {
+            MeasurablePath::Free(bez_path) => {
+                let key = hash_bezpath(bez_path);
+                Some(self.path_sdf_atlas.bake_cached(&self.queue, bez_path, key))
+            }
+            MeasurablePath::Open {
+                centerline,
+                thickness,
+            } => {
+                let polyline = flatten_polyline(centerline, FLATTEN_TOLERANCE);
+                let key = hash_open_path(centerline, *thickness);
+                let tight = KurboShape::bounding_box(centerline);
+                let margin = *thickness as f64 * 0.5 + 24.0;
+                let bounds = tight.inset(margin);
+                Some(self.path_sdf_atlas.bake_open_cached(
+                    &self.queue,
+                    &polyline,
+                    *thickness,
+                    bounds,
+                    key,
+                ))
+            }
+            _ => None,
+        };
         let (shape_kind, position, size, corner_radius, extra_rotation) = match &shape.path {
             MeasurablePath::Rect(rounded_rect) => {
                 let rect = rounded_rect.rect();
@@ -736,7 +826,10 @@ impl Painter {
                     ellipse_rotation as f32,
                 )
             }
-            MeasurablePath::Free(_) => unimplemented!(),
+            MeasurablePath::Free(_) | MeasurablePath::Open { .. } => {
+                let handle = path_sdf_handle.unwrap();
+                (2.0, handle.origin, handle.size, [0.0; 4], 0.0)
+            }
         };
         let rotation = rotation + extra_rotation;
 
@@ -767,17 +860,20 @@ impl Painter {
             size,
             color,
             corner_radius,
-            border_width,
             border_color,
-            blur_radius,
-            sharp,
-            fill_kind,
-            shape_kind,
-            gradient_angle,
-            gradient_row,
+            render_params: [border_width, blur_radius, sharp, fill_kind],
+            shape_params: [shape_kind, gradient_angle, gradient_row, rotation],
             gradient_center,
-            rotation,
             image_uv,
+            sdf_uv: path_sdf_handle.map(|h| h.uv_rect).unwrap_or([0.0; 4]),
+            path_params: [
+                reveal,
+                path_sdf_handle
+                    .map(|h| h.total_length)
+                    .unwrap_or(1_000_000.0),
+                0.0,
+                0.0,
+            ],
         }
     }
 
@@ -799,6 +895,7 @@ impl Painter {
             blur_radius,
             sharp,
             rotation,
+            1.0,
         );
         self.pending_shapes.push((clip, instance));
     }
@@ -821,8 +918,33 @@ impl Painter {
             blur_radius,
             sharp,
             rotation,
+            1.0,
         );
         self.pending_overlay_shapes.push((clip, instance));
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn draw_open_shape(
+        &mut self,
+        shape: Shape,
+        border_width: f32,
+        border_color: Color,
+        blur_radius: f32,
+        sharp: f32,
+        clip: [f32; 4],
+        rotation: f32,
+        reveal: f32,
+    ) {
+        let instance = self.lower_shape(
+            shape,
+            border_width,
+            border_color,
+            blur_radius,
+            sharp,
+            rotation,
+            reveal,
+        );
+        self.pending_shapes.push((clip, instance));
     }
 
     pub fn draw_text(&mut self, text: &str, position: [f32; 2], bounds: [f32; 4]) {
@@ -890,17 +1012,13 @@ impl Painter {
                 size: [0.0; 2],
                 color: Color::TRANSPARENT,
                 corner_radius: [8.0; 4],
-                border_width: 5.0,
                 border_color: Color::TRANSPARENT,
-                blur_radius: 5.0,
-                sharp: 0.0,
-                fill_kind: 0.0,
-                shape_kind: 0.0,
-                gradient_angle: 0.0,
-                gradient_row: 0.0,
+                render_params: [5.0, 5.0, 0.0, 0.0],
+                shape_params: [0.0; 4],
                 gradient_center: [0.0; 2],
-                rotation: 0.0,
                 image_uv: [0.0; 4],
+                sdf_uv: [0.0; 4],
+                path_params: [1.0, 0.0, 0.0, 0.0],
             };
             self.shape_instance_buffer = self.device.create_buffer_init(&BufferInitDescriptor {
                 label: None,
@@ -1035,11 +1153,9 @@ impl Painter {
             render_pass.set_bind_group(0, &self.bind_group, &[]);
             render_pass.set_bind_group(1, &self.gradient_bind_group, &[]);
             render_pass.set_bind_group(2, &self.image_bind_group, &[]);
+            render_pass.set_bind_group(3, &self.path_sdf_bind_group, &[]);
 
-            // Group consecutive rects sharing the same clip rect into one
-            // draw call each, setting the scissor rect before every group.
-            // Submission order is preserved — only the *batching* changes,
-            // never the paint order.
+            // groups consecutive rects sharing a clip rect into one draw call, paint order unchanged
             let surface_w = self.surface_config.width;
             let surface_h = self.surface_config.height;
 
@@ -1053,9 +1169,7 @@ impl Painter {
                     range_end += 1;
                 }
 
-                // Clip rect -> scissor rect, clamped into the surface bounds.
-                // wgpu panics on a scissor rect that extends past the render
-                // target or has zero/negative size, so both are guarded here.
+                // clamped, wgpu panics on a scissor rect past the target or with zero size
                 let x = clip[0].max(0.0) as u32;
                 let y = clip[1].max(0.0) as u32;
                 let right = (clip[2].max(0.0) as u32).min(surface_w);
@@ -1068,17 +1182,10 @@ impl Painter {
                         range_start as u32..range_end as u32,
                     );
                 }
-                // else: this group's clip rect is fully offscreen/degenerate
-                // (e.g. scrolled entirely out of view) — correctly skipped,
-                // not drawn at all.
-
                 range_start = range_end;
             }
 
-            // Text clipping is handled per text area via glyphon's own
-            // `TextBounds`, not the pass's scissor rect — reset the scissor
-            // to the full surface first, or text would inherit whatever
-            // scissor the last base-rect group happened to leave behind.
+            // reset scissor first or text inherits whatever the last rect group left behind
             render_pass.set_scissor_rect(0, 0, surface_w, surface_h);
 
             self.text_renderer
@@ -1091,10 +1198,7 @@ impl Painter {
             render_pass.set_bind_group(0, &self.bind_group, &[]);
             render_pass.set_bind_group(1, &self.gradient_bind_group, &[]);
 
-            // Overlay pass (tooltips, popovers, modals): rendered strictly on
-            // top of all base geometry and base text. Overlay rects (card +
-            // shadow) draw first, then overlay text on top of them — the
-            // other way around and the rect fill paints over the text.
+            // overlay rects draw before overlay text or the fill paints over it
             if !self.pending_overlay_shapes.is_empty() {
                 let overlay_offset = self.pending_shapes.len();
                 let mut range_start = 0usize;

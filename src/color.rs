@@ -125,7 +125,7 @@ impl Color {
         Color::hex(value)
     }
 
-    /// `0xRRGGBB`, opaque.
+    // 0xRRGGBB opaque
     pub const fn hex(hex: u32) -> Color {
         let r = ((hex >> 16) & 0xFF) as u8;
         let g = ((hex >> 8) & 0xFF) as u8;
@@ -133,7 +133,7 @@ impl Color {
         Color::rgb(r, g, b)
     }
 
-    /// `0xRRGGBBAA`.
+    // 0xRRGGBBAA
     pub const fn hex_alpha(hex: u32) -> Color {
         let r = ((hex >> 24) & 0xFF) as u8;
         let g = ((hex >> 16) & 0xFF) as u8;
@@ -164,7 +164,7 @@ impl Color {
         ]
     }
 
-    /// 0-255 bytes, no alpha.
+    // no alpha
     pub fn to_rgb_bytes(&self) -> [u8; 3] {
         let [r, g, b, _] = self.to_rgba_bytes();
         [r, g, b]
