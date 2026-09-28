@@ -2,13 +2,12 @@
 
 API reference for all widgets provided by `glacex`.
 
-Most widgets take a stable string id as their first constructor argument. That id is what
-persistent state is keyed on across frames, and it's also what shows up in the accessibility
-tree (see [Accessibility](../README.md#accessibility)) when one is enabled. `Card`,
-`Container`, `Divider`, and `ProgressBar` don't require an id up front — call `.id("...")` on
-them if you need stable state or want that instance to be addressable by assistive tech;
-otherwise they're fine left anonymous. That `.id(..)` builder accepts anything implementing
-`IntoId` — `&str`, `String`, `Some("...")`, or `None` to explicitly clear it.
+By default, `Widget::new()` generates a UUID every time called, unless given an explicit ID via `.id()`.
+That id is what persistent state is keyed on across frames, and it's also what shows up in the accessibility
+tree (see [Accessibility](../README.md#accessibility)) when one is enabled.
+
+[ATTENTION]: Stateful widgets rely on ID to store their state. If it changes every time(which is the default), then they could malfuction.
+To avoid that, pass an explicit id.
 
 ## State access
 
@@ -44,9 +43,10 @@ this way, to remember which of three switches was flipped on most recently.
 
 ### Button
 Push button with hover/press animation.
-- **Constructor**: `Button::new("btn_id", "Label")`
+- **Constructor**: `Button::new("Label")`
 - **Variants**: `.primary()`, `.outline()`, `.ghost()`, `.danger()`
 - **Builder methods**:
+  - `.id("...")` 
   - `.style(ButtonStyle)` — fill, hover fill, pressed fill, text color, border, shadow
   - `.tooltip("text")` — floating tooltip on hover
   - `.size([w, h])` / `.width(px)` / `.height(px)`
@@ -56,14 +56,15 @@ Push button with hover/press animation.
 
 ### Checkbox
 Boolean toggle with an animated tick.
-- **Constructor**: `Checkbox::new("checkbox_id")`
-- **Builder methods**: `.style(CheckboxStyle)`, `.default_checked(bool)`, `.size([w, h])`
+- **Constructor**: `Checkbox::new()`
+- **Builder methods**: `.id("...")` / `.style(CheckboxStyle)`, `.default_checked(bool)`, `.size([w, h])`
 - **Reading/writing state**: `checkbox.is_checked(ui) -> bool`, `checkbox.check(ui, bool)`
 - **Animation**: `CheckboxState` tracks `anim_progress` and `hover_t` via `Motion::SNAPPY`. The tick draws in two overlapping strokes (left leg 0–35%, right leg 30–100%). Border moves toward `Theme::ACTIVE` when checked.
 
 ### RadioButton
 Mutually exclusive selection within a named group.
-- **Constructor**: `RadioButton::new("group_id", "option_id")`
+- **Builder methods**: `.id("...")` 
+- **Constructor**: `RadioButton::new("group_id")`
 - **Reading state**:
   ```rust
   let selected = ui.selected_option("group_id");
@@ -72,15 +73,15 @@ Mutually exclusive selection within a named group.
 
 ### Switch
 Compact toggle with a sliding knob.
-- **Constructor**: `Switch::new("switch_id")`
-- **Builder methods**: `.style(SwitchStyle)`, `.default_enabled(bool)`, `.size([w, h])`
+- **Constructor**: `Switch::new()`
+- **Builder methods**: `.id("...")` / `.style(SwitchStyle)`, `.default_enabled(bool)`, `.size([w, h])`
 - **Reading/writing state**: `switch.enabled(ui) -> bool`, `switch.set_enabled(ui, bool)`
 - **Animation**: `SwitchState` tracks `anim_progress` (`Motion::FLUID`) and `hover_t` (`Motion::SNAPPY`).
 
 ### Slider
 Continuous numeric range control.
-- **Constructor**: `Slider::new("slider_id", min, max)`
-- **Builder methods**: `.width(px)` / `.height(px)` / `.size([w, h])`, `.style(SliderStyle)`, `.default_value(f32)`
+- **Constructor**: `Slider::new(min, max)`
+- **Builder methods**: `.id("...")` / `.width(px)` / `.height(px)` / `.size([w, h])`, `.style(SliderStyle)`, `.default_value(f32)`
 - **Reading/writing state**: `slider.value(ui) -> f32`, `slider.set_value(ui, f32)`
 - **Animation**: `SliderState` tracks `hover_t` (`Motion::SNAPPY`) and `drag_t` (`Motion::INSTANT`). Thumb grows 2px while dragging.
 
@@ -89,8 +90,9 @@ Single-line text field.
 - Click/drag selection, double-click word select, triple-click select all
 - Clipboard: `Ctrl+C` / `Ctrl+V` / `Ctrl+A` / `Ctrl+X`
 - Blinking cursor, auto-scroll on overflow
-- **Constructor**: `TextInput::new("input_id")`
+- **Constructor**: `TextInput::new()`
 - **Builder methods**:
+  - `.id("...")` 
   - `.width(px)` / `.height(px)` / `.size([w, h])`
   - `.placeholder("...")` — shown in `Theme::TEXT_MUTED` when empty
   - `.default_text("...")` — initial value
@@ -102,8 +104,8 @@ Single-line text field.
 Multi-line editor with scrolling.
 - Vertical scroll with interactive scrollbar
 - Arrow-key navigation with column memory, `Enter` for newlines
-- **Constructor**: `TextArea::new("area_id")`
-- **Builder methods**: `.width(px)` / `.height(px)` / `.size([w, h])`, `.default_text("...")`, `.style(TextAreaStyle)`
+- **Constructor**: `TextArea::new()`
+- **Builder methods**: `.id("...")` `.width(px)` / `.height(px)` / `.size([w, h])`, `.default_text("...")`, `.style(TextAreaStyle)`
 - **Reading/writing state**: `area.text(ui) -> String`, `area.set_text(ui, String)`
 - **Animation**: same focus ring as `TextInput`.
 
@@ -111,14 +113,14 @@ Multi-line editor with scrolling.
 Combobox: a trigger button that opens a spring-animated floating dropdown.
 - Keyboard navigation (↑/↓, `Enter` to select, `Escape` to close), click-outside-to-close
 - Optional type-to-filter search bar, mouse-wheel scroll through long option lists
-- **Constructor**: `SelectBox::new("select_id", vec![SelectOption::new("value", "Label"), ...])`
+- **Constructor**: `SelectBox::new(vec![SelectOption::new("value", "Label"), ...])`
 - **Builder methods**: `.placeholder("...")`, `.width(px)`, `.searchable()`, `.style(SelectBoxStyle)`, `.tooltip("...")`
 - **Reading/writing state**: `select.selected(ui) -> Option<String>`, `select.set_selected(ui, Option<String>)`
 - **Animation**: open/close spring (stiffness 380, damping 30) drives the dropdown's slide and the chevron's 180° rotation; per-item hover fades via `Motion::SNAPPY`.
 
 ### Tabs
 Horizontal tab strip with an animated selection pill.
-- **Constructor**: `Tabs::new("tabs_id", vec![TabItem::new("tab1", "Tab 1"), TabItem::new("tab2", "Tab 2"), ...])`
+- **Constructor**: `Tabs::new(vec![TabItem::new("Tab 1"), TabItem::new("Tab 2"), ...])`
 - **Builder methods**: `.style(TabsStyle)`
 - **Reading/writing state**: `tabs.selected(ui) -> Option<String>`, `tabs.set_selected(ui, "tab_id")`
 - **Response**: `.ui(ui)` returns `TabsResponse { selected, changed, hovered_index }` — `changed` is `true` on the frame the selection moved, useful for driving a `match` over the selected id without re-reading state separately.
@@ -127,13 +129,13 @@ Horizontal tab strip with an animated selection pill.
 
 ```rust
 let tabs_response = Tabs::new(
-    "tabs",
     vec![
-        TabItem::new("tab1", "Tab 1"),
-        TabItem::new("tab2", "Tab 2"),
-        TabItem::new("tab3", "Tab 3"),
+        TabItem::new("Tab 1").id("tab1"),
+        TabItem::new("Tab 2").id("tab1"),
+        TabItem::new("Tab 3").id("tab1"),
     ],
 )
+.id("tabs")
 .ui(ui);
 
 match tabs_response.selected.as_str() {
@@ -155,20 +157,20 @@ Surface with rounded corners, padding, border, and an optional drop shadow.
 
 ### ScrollView
 Scrolling container with a draggable scrollbar.
-- **Constructor**: `ScrollView::new("scroll_id", &mut child)`
-- **Builder methods**: `.size([w, h])`, `.padding([x, y])`, `.default_offset([x, y])`, `.style(ScrollViewStyle)`
+- **Constructor**: `ScrollView::new(&mut child)`
+- **Builder methods**: `.id("...")` `.size([w, h])`, `.padding([x, y])`, `.default_offset([x, y])`, `.style(ScrollViewStyle)`
 - **Reading/writing state**: `scroll.offset(ui) -> [f32; 2]`, `scroll.set_offset(ui, [f32; 2])`
 
 ### Container
 Fixed-size wrapper around a child widget.
 - **Constructor**: `Container::new(&mut child)`
-- **Builder methods**: `.id("...")`, `.size([w, h])`, `.padding([x, y])`
+- **Builder methods**: `.id("..")` `.size([w, h])`, `.padding([x, y])`
 
 ### Divider
 Separator line.
 - **Constructor**: `Divider::horizontal(length)` / `Divider::vertical(length)`
 - **Builder methods**:
-  - `.id("...")` — only needed if you want it in the accessibility tree
+  - `.id("...")` 
   - `.faint()` — sets the border to `Theme::BORDER_FAINT`
   - `.thickness(px)`, `.color(Color)`
 
@@ -178,7 +180,7 @@ Separator line.
 
 ### Label
 Text, using the bundled Geist / Geist Mono fonts.
-- **Constructor**: `Label::new("label_id", "Text")` or `Label::new("label_id", format!("Count: {n}"))`
+- **Constructor**: `Label::new("Text")`
 - **Color variants**: `.secondary()`, `.muted()`, `.accent()`, `.success()`, `.warning()`, `.error()`, `.color(Color)`
 - **Size presets**: `.caption()` (12px), `.subheading()` (16px), `.heading()` (18px), `.title()` (22px), `.metric()` (28px, bold)
 - **Weight**: `.medium()`, `.semibold()`, `.bold()`
@@ -195,4 +197,4 @@ Completion bar.
 - **Constructor**: `ProgressBar::new(ratio)` where `ratio` is `0.0..=1.0`
 - **Variants**: `.success()`, `.warning()`, `.error()`
 - **Builder methods**: `.id("stable_id")`, `.size([w, h])`, `.style(ProgressBarStyle)`
-- **Animation**: `ProgressBarState` animates `animated_progress` via `Motion::FLUID` — but only if you gave it a stable `.id(...)`. Without one it just snaps to the raw ratio each frame.
+- **Animation**: `ProgressBarState` animates `animated_progress` via `Motion::FLUID`

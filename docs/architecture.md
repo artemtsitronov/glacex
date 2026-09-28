@@ -1,73 +1,73 @@
-# Glacex Architecture and Rendering Pipeline
+# The architecture and rendering pipeline
 
-This document details the internal architecture, GPU execution model, and rendering pipeline of `glacex`.
+Soo here we talk about the internal architecture, rendering pipelines, and other stuff related to the underlying work of `glacex`
 
-## 1. High-Level Architecture
+## 1. What's the architecture?
 
-Glacex operates as an immediate-mode, GPU-accelerated UI framework:
+Glacex's an immediate-mode library, but with persistent state.
+It operates on its own, without any underlying GUI frameworks:
 
 ```
-[ User Application Code ]
-          | (every frame via Widget::ui)
+[ Your code ]
+          | (every frame)
           v
-       [ Ui ]  <-- Mouse / Keyboard / Clipboard / dt (winit + arboard)
+       [ Ui ]  <-- Mouse / Keyboard / Clipboard / Window
           |
   +-------+--------+
   | Layout (Taffy) |
   +-------+--------+
-          | (Position & Size bounds)
+          | (position & size bounds)
           v
       [ Widget ]
    (Hit-testing, animation step, draw calls)
           |
-   Ui::draw_shape() / Ui::draw_text()
+   Queues a shape or text
           |
           v
      [ Painter ]
   +------+------------------------------+
   v                                     v
-[ wgpu SDF Quad Pipeline ]   [ glyphon Text Renderer ]
+[ wgpu SDF Shape Pipeline ]   [ glyphon Text Renderer ]
           |                                |
           +----------------+---------------+
                            v
                   [ GPU Command Buffer ]
                            |
                            v
-                  [ Native Window Surface ]
+                  [ Your Window Surface ]
 ```
 
-## 2. SDF Instanced Quad Pipeline
+## 2. SDF Shape Pipeline
 
-Glacex renders every shape (button backgrounds, card surfaces, checkmarks, scrollbar thumbs) as a Signed Distance Field quad evaluated per-fragment in `src/shader.wgsl`. No CPU-side polygon tessellation happens.
+Our wonderful Glacex renders every shape as a SDF quad.
+The only CPU-side thing that happens is the flattening.
 
-### Why SDF Quad Rendering
-- **No CPU Tessellation**: Corner rounding and borders are resolved in the fragment shader with zero polygon overhead.
-- **Sharp Anti-Aliasing**: `smoothstep` over the SDF gradient delivers sub-pixel-clean edges.
-- **Single-Pass Soft Shadows**: Drop shadows evaluate from the same SDF without extra blur render passes.
+### But why all the hassle?
+- **No CPU tesselation**: Corner radius, borders are resolved in the shader itself with zero polygon overhead. Your CPU is minimally used.
+- **Sharp Anti-Aliasing**: `smoothstep` on the SDF deliver very clean edges.
+- **Single pass Shadows**: Shadows are evalueated from the same SDF without extra render passes.
 
-### Quad Instance Data (`src/shapes.rs`)
-Each rectangle submitted to the GPU contains:
+### Shape Instance Data (`src/shapes.rs`)
+Each shape submitted to the GPU has:
 - `position`: `[f32; 2]`
 - `size`: `[f32; 2]`
-- `color`: `Color` (solid or gradient base)
-- `corner_radius`: `f32`
-- `border_width`: `f32`
+- `color`: `Color` (`src/color.rs`)
+- `corner_radius`: `[f32; 4]`
 - `border_color`: `Color`
-- `blur_radius`: drop shadow soft radius
-- `fill_kind`: `0.0` solid, `1.0` linear, `2.0` radial, `3.0` conic
-- `gradient_angle`, `gradient_row`, `gradient_center`: gradient parameters
-- `rotation`: `f32`
-- `image_handle`: `ImageHandle`
+- `rander_params`: `[f32; 4]`
+- `shape_params`: `[f32; 4]`
+- `gradient_center`: `[f32; 2]`
+- `image_uv`: `[f32; 4]`
+- `sdf_uv`: `[f32; 4]`
+- `path_params`: `[f32; 4]`
 
-## 3. Animation System (`src/animation.rs`)
+## 3. Animation (`src/animation.rs`)
 
-All widget transitions use frame-rate independent math -- no hardcoded frame counts.
+All transitions use frame-rate independent math!
 
-### `Motion` -- Named Timing Constants
-`Motion` is a unit struct that exposes named half-life constants consumed by every animated widget:
+### `Motion` - Named timing constants
+`Motion` is a unit struct that exposes half-life constants:
 
-| Constant | Half-life | Use |
-|---|---|---|
 | `Motion::MICRO` | 16ms | Single-frame color snaps |
 | `Motion::INSTANT` | 30ms | Press feedback, immediate state snaps |
 | `Motion::SNAPPY` | 45ms | Hover transitions, border highlights |
@@ -97,54 +97,26 @@ Standard linear interpolation helper.
 `Ui::dt()` returns elapsed seconds since the previous frame (clamped to 1..=100ms).
 Widgets read `dt` once at the top of `arrange` before borrowing mutable state.
 
+## 4. Scissor rects and draw batching
 
-## 4. Widget Animation Pattern
+- Widgets push and pop scissor rectangles via `ui.push_clip()` and `ui.pop_clip()`
+- Rects share the same clip bounds
+- `glyphon` clip independently, preventing text overflow
 
-All animated widgets follow this pattern:
-1. Cache `let dt = ui.dt()` before borrowing state.
-2. Get or create state struct (e.g. `CheckboxState`, `SwitchState`, `ButtonState`).
-3. Advance animation fields with `animate_towards(current, target, dt, half_life)`.
-4. Copy animated scalars out of the state borrow.
-5. Use the animated scalars to interpolate fill colors (`Color::lerp`) and layout values.
+## 5. Filling system
 
-## 5. Scissor Rects and Draw Batching
+Gradient and images bake onto a dedicated GPU ramp texture alias:
+- New gradients/images are sampled into an atlas row on first use
+- Gradients/images cache by content hash.
 
-- Widgets push and pop scissor rectangles with `ui.push_clip(rect)` / `ui.pop_clip()`.
-- Rectangles sharing the same clip bounds pack into a single instanced `draw` call.
-- `glyphon` text submissions clip independently, preventing overflow outside `ScrollView` or `Card` boundaries.
-
-## 6. Gradient & Image Atlas System
-
-Gradient fills bake onto a dedicated GPU ramp texture atlas:
-- New gradients are sampled into an atlas row on first use.
-- Gradients cache by content hash. Reusing the same definition across frames costs nothing.
-
-`Fill::Image` works the same way conceptually — `Ui::load_image(path)` decodes a PNG/JPEG/WebP file via the `image` crate and uploads it into a shared atlas texture, returning an `ImageHandle` to use as a `Fill` like a solid color or gradient. There's no packing/eviction yet, so only one image is resident at a time.
-
-## 7. Frame Lifecycle (`src/lib.rs`)
-
-Each `WindowEvent::RedrawRequested`:
-1. `ui.begin_frame()` -- clears clip stack, focus registers, accessibility node list, and computes `dt`.
-2. `App::update` callback runs (optional, for app-level state changes).
-3. `root_widget.ui(ui)` -- measures, lays out, animates, and queues all draw calls. Each widget also calls `Ui::register_accessible` for itself if accessibility is enabled.
-4. If accessibility is enabled, the frame's accessibility nodes are copied into the shared tree and pushed to the `accesskit` adapter (see [Accessibility](#9-accessibility-srcaccessibilityrs)).
-5. Tab navigation and floating tooltip compositing resolve.
-6. `ui.render()` -- flushes `Painter`, submits GPU command buffer, presents surface.
-7. `ui.end_frame()` -- clears per-frame input buffers and flags.
-8. `window.request_redraw()` -- schedules the next frame immediately (uncapped, vsync-limited by the OS compositor).
+`Fill` has three options:
+- `Solid(Color)`: Solid filling
+- `Gradient(Gradient)`: Gradient fillinf
+- `Image(ImageHandle)`: Image filling
 
 ## 8. Design Token System & Themes (`src/theme.rs`)
 
-Glacex ships 9 built-in theme presets, defaulting to a light, shadcn-inspired palette (`Theme::LIGHT`). Themes can be swapped at runtime with `ui.set_theme(theme)`.
-
-### Presets Available
-- `Theme::LIGHT` (default): white `#ffffff` canvas, zinc borders, charcoal accent.
-- `Theme::DARK`: `#09090b` canvas, `#4f46e5` indigo accent.
-- `Theme::CATPPUCCIN_MOCHA` / `Theme::CATPPUCCIN_LATTE`: the Catppuccin dark and light palettes.
-- `Theme::TOKYO_NIGHT`: dark blue-purple canvas, `#7aa2f7` accent.
-- `Theme::GRUVBOX_DARK` / `Theme::GRUVBOX_LIGHT`: the Gruvbox palette, dark and light.
-- `Theme::NORD`: the Nord palette (slate canvas, frost-blue accent).
-- `Theme::ROSE_PINE`: the Rosé Pine palette.
+Glacex ships 9 built-in theme presets, that can be swapped at runtime with `ui.set_theme(theme)`
 
 ### Surface Elevation Hierarchy
 - **Canvas (`theme.bg_canvas`)**: Root window backdrop.
@@ -152,7 +124,7 @@ Glacex ships 9 built-in theme presets, defaulting to a light, shadcn-inspired pa
 - **Subtle (`theme.surface_subtle`)**: Grouped sub-containers, inputs, and control tracks.
 - **Elevated (`theme.surface_elevated`)**: Tooltips, popovers, and floating overlays.
 
-### Two-Layer Shadow Architecture (`src/shadow.rs`)
+### Shadow Architecture (`src/shadow.rs`)
 Depth is expressed through multi-layered shadows combining an ambient layer (wide, soft) with a key light layer (tight, crisp):
 - `Shadow::sm()` -- resting controls (buttons, inputs)
 - `Shadow::md()` -- cards and panels
@@ -167,5 +139,12 @@ Accessibility is opt-in (`App::accessibility_enabled(true)`) and layered on top 
 - **`build_update`**: wraps the current node list in a synthetic `Role::Window` root, sets that root's `children` to every registered node id (accesskit requires every non-root node to be reachable from the root), and returns a `TreeUpdate`.
 - **`AccessibilityActivationHandler`** / **`AccessibilityDeactivationHandler`**: called by the platform backend when an assistive technology attaches or detaches. On Linux this only happens once the desktop's `ScreenReaderEnabled` AT-SPI flag is set (normally by a running screen reader), which is a common point of confusion when testing with an inspector like Accerciser instead of an actual screen reader.
 - **`AccessibilityActionHandler`**: receives action requests from the AT client (e.g. "invoke this button"). Currently just logged — wiring it back into widget state is app-specific and left to the caller.
+- 
+Each widget's `NodeId` is a hash of its own id string (`hash_id`, `src/widget.rs`), so two widgets sharing an id — including two anonymous `Card`/`Container`/`Divider`/`ProgressBar` instances that both fall back to the same default id — collide in the tree.
 
-Each widget's `NodeId` is a hash of its own id string (`hash_id`, `src/widget.rs`), so two widgets sharing an id — including two anonymous `Card`/`Container`/`Divider`/`ProgressBar` instances that both fall back to the same default id — collide in the tree. `Card`, `Container`, and `Divider` only call `register_accessible` when the caller has actually set an `.id(...)`, precisely to avoid that.
+## 10. ID-ing system
+
+Each widget has an ID, that defaults to a [`uuid`](https://github.com/uuid-rs/uuid). It can be set to a user-defined one via the `.id()` builder.
+
+[ATTENTION]: For non-user-defined IDs, `Widget::new()` generate a UUID every time it's called. So this means that the persistent state doesn't work anymore for widgets!
+To avoid this, set an explicit ID for stateful widgets.

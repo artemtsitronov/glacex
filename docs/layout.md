@@ -1,6 +1,4 @@
-# Glacex Layout Guide
-
-This guide describes layout, measurement, and positioning in `glacex`.
+# Glacex Layout
 
 ## 1. Layout Macros
 
@@ -11,21 +9,28 @@ Glacex provides two declarative macros for layout:
 ### Example
 
 ```rust
-use glacex::{Alignment, Label, column, row};
+use glacex::{Alignment, Label, Ui, Widget, column, row};
 
-let mut root = column![
-    &mut Label::new("header", "Header"),
-    &mut row![
-        &mut Label::new("left", "Left"),
-        &mut Label::new("right", "Right")
-    ]
-    .spacing(12.0)
-    .align(Alignment::Center),
-]
-.spacing(8.0)
-.align(Alignment::Start);
+struct LayoutExample;
 
-root.arrange_at([20.0, 20.0], ui);
+impl Widget for LayoutExample {
+    type Output = ()
+    fn ui(&mut self, ui: &mut Ui) {
+        let mut root = column![
+            &mut Label::new("header", "Header"),
+            &mut row![
+                &mut Label::new("left", "Left"),
+                &mut Label::new("right", "Right")
+            ]
+            .spacing(12.0)
+            .align(Alignment::Center),
+        ]
+        .spacing(8.0)
+        .align(Alignment::Start);
+        
+        root.arrange_at([20.0, 20.0], ui);
+    }
+}
 ```
 
 ## 2. Layout Modifiers

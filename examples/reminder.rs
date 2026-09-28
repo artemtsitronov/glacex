@@ -1,8 +1,6 @@
 use glacex::*;
 
-struct TodoResponse {
-    delete_button_clicked: bool,
-}
+struct TodoResponse;
 
 struct Todo {
     text: String,
@@ -35,9 +33,7 @@ impl Measurable for Todo {
         let clicked = button.clicked();
         self.deleted = clicked;
 
-        TodoResponse {
-            delete_button_clicked: clicked,
-        }
+        TodoResponse {}
     }
 }
 

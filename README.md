@@ -54,7 +54,7 @@ Built by **Artem Tsitronov** and **Soumalya Das**.
 - [Contributing](#contributing)
 - [License](#license)
 
-If you'd like an experimental version of glacex, try visiting programmersd21 fork: https://github.com/programmersd21/glacex [DISCLAIMER: Artem Tsitronov is not responsible for programmersd21 fork. That includes drastic changes, redesigns, and AI-generated content]
+If you'd like an experimental version of glacex, try visiting programmersd21 fork: https://github.com/programmersd21/glacex [DISCLAIMER]: Artem Tsitronov is not responsible for programmersd21 fork. That includes drastic changes, redesigns, and AI-generated content
 
 ## What is glacex?
 
@@ -65,12 +65,13 @@ If you'd like an experimental version of glacex, try visiting programmersd21 for
 - **`glyphon`** shapes and rasterizes text into glyph atlases with per-widget clipping.
 - **`taffy`** does the flexbox math for `row!`/`column!` layouts.
 - **`image`** decodes the images.
+- **`kurbo`** is responsible for paths.
 
 There's no retained widget tree and no markup — you describe the UI in plain Rust every frame, and glacex measures, lays out, hit-tests, animates, and renders it.
 
 ## Features
 
-- Custom renderer: instanced rounded rects (anti-aliased SDF), borders, and soft drop shadows, batched into one draw call per shared clip rect.
+- Custom renderer: instanced shapes (anti-aliased SDF), borders, and soft drop shadows, batched into one draw call per shared clip rect.
 - Arbitrary Bezier paths (`MeasurablePath::Free`) via a second tessellated-mesh pipeline, for shapes beyond rect/ellipse — see [Custom Shapes / Paths](#custom-shapes--paths).
 - Text rendering via `glyphon` with independent clip bounds per widget.
 - Fills: solid colors, gradients (linear, radial, conic), and images, cached into a GPU atlas.
@@ -103,7 +104,7 @@ or in `Cargo.toml`:
 
 ```toml
 [dependencies]
-glacex = "0.1.9"
+glacex = "0.1.95"
 ```
 
 ### From GitHub (main branch)
@@ -143,8 +144,8 @@ impl Widget for Counter {
     fn ui(&mut self, ui: &mut Ui) {
         ui.set_bgcolor(Color::rgb(18, 18, 22));
 
-        let mut label = Label::new("count_label", format!("Count: {}", self.count));
-        let mut button = Button::new("increment_btn", "Increment");
+        let mut label = Label::new(format!("Count: {}", self.count));
+        let mut button = Button::new("Increment").id("increment-button");
 
         column![&mut label, &mut button]
             .spacing(12.0)
@@ -215,38 +216,14 @@ pub trait Measurable: Widget {
 
 ### Layout
 
-```rust
-use glacex::{Alignment, Label, column, row};
-
-column![
-    &mut Label::new("header", "System Header"),
-    &mut row![
-        &mut Label::new("left_item", "Left Item"),
-        &mut Label::new("right_item", "Right Item"),
-    ]
-    .align(Alignment::Center)
-    .spacing(12.0),
-]
-.align(Alignment::Start)
-.spacing(8.0)
-.arrange_at([20.0, 20.0], ui);
-```
-
-- `.align(Alignment::Start | Alignment::Center | Alignment::End)` sets cross-axis alignment.
-- `.spacing(px)` sets the gap between children.
-- `.arrange_at([x, y], ui)` measures and arranges the tree in one call.
-- `.size([w, h])` / `.width(px)` / `.height(px)` override the row/column's own size instead of hugging its content — pairs with `.align()` to center/end-align children in the extra space.
-- `.padding([x, y])` insets children from the row/column's own bounds.
-
-## Widgets
-
-Most widgets take a stable string id as their first constructor argument (or a `.id(...)` builder for the ones that don't) — that's what ties per-frame widget state back to the same logical widget across frames. `Card`, `Container`, `Divider`, and `ProgressBar` only need an id if you're relying on animated/persistent state or want them addressable in the accessibility tree; leaving it off is fine for purely decorative instances.
+For layout please see `docs/layout.md`.
 
 ### Controls
 
 #### Button
 ```rust
-let mut btn = Button::new("deploy_btn", "Deploy")
+let mut btn = Button::new("Deploy")
+    .id("button")
     .tooltip("Triggers a deployment event")
     .primary();
 
@@ -258,15 +235,15 @@ Variants: `.primary()`, `.outline()`, `.ghost()`, `.danger()`.
 
 #### Checkbox
 ```rust
-let mut check = Checkbox::new("enable_feature").default_checked(true);
+let mut check = Checkbox::new().id("checkbox").default_checked(true);
 let is_checked = check.is_checked(ui);
 ```
 
 #### RadioButton
 ```rust
 row![
-    &mut RadioButton::new("theme_group", "dark"),
-    &mut Label::new("dark_label", "Dark Theme"),
+    &mut RadioButton::new("theme_group").id("dark"),
+    &mut Label::new("Dark Theme"),
 ];
 
 let selected = ui.selected_option("theme_group").unwrap_or("dark");
@@ -274,25 +251,25 @@ let selected = ui.selected_option("theme_group").unwrap_or("dark");
 
 #### Switch
 ```rust
-let mut sw = Switch::new("network_stream").default_enabled(true);
+let mut sw = Switch::new().id("switch").default_enabled(true);
 let enabled = sw.enabled(ui);
 ```
 
 #### Slider
 ```rust
-let mut slider = Slider::new("volume", 0.0, 100.0).width(240.0).default_value(50.0);
+let mut slider = Slider::new(0.0, 100.0).id("slider").width(240.0).default_value(50.0);
 let val = slider.value(ui);
 ```
 
 #### TextInput
 ```rust
-let mut input = TextInput::new("username").width(260.0).placeholder("Enter a username");
+let mut input = TextInput::new().id("username-input").width(260.0).placeholder("Enter a username");
 let text = input.text(ui);
 ```
 
 #### TextArea
 ```rust
-let mut notes = TextArea::new("notes").size([300.0, 120.0]);
+let mut notes = TextArea::new().id("notes").size([300.0, 120.0]);
 ```
 
 #### SelectBox
@@ -306,7 +283,8 @@ let options = vec![
     SelectOption::new("tokyo", "Tokyo Night"),
 ];
 
-let mut sel = SelectBox::new("theme_picker", options)
+let mut sel = SelectBox::new(options)
+    .id("select-box")
     .placeholder("Choose a theme…")
     .width(220.0)
     .tooltip("Switch the active colour theme");
@@ -319,7 +297,8 @@ let selected = sel.selected(ui);
 Enable live filtering with `.searchable()`:
 
 ```rust
-let mut sel = SelectBox::new("country", countries)
+let mut sel = SelectBox::new(countries)
+    .id("searchable")
     .placeholder("Select a country…")
     .width(260.0)
     .searchable();
@@ -332,13 +311,12 @@ The dropdown opens with a spring animation, closes on Escape or outside-click, s
 use glacex::{Tabs, TabItem};
 
 let mut tabs = Tabs::new(
-    "settings_tabs",
     vec![
-        TabItem::new("general", "General"),
-        TabItem::new("account", "Account"),
-        TabItem::new("billing", "Billing"),
+        TabItem::new("General").id("tab1"),
+        TabItem::new("Account").id("tab2"),
+        TabItem::new("Billing").id("tab3"),
     ],
-);
+).id("tabs");
 
 let selected = tabs.selected(ui);
 ```
@@ -349,13 +327,14 @@ The active pill slides and resizes to the selected tab with a spring animation; 
 
 #### Card
 ```rust
-let mut content = Label::new("card_label", "Inside Card");
+let mut content = Label::new("Inside Card");
 let mut card = Card::new(&mut content).padding([16.0, 16.0]);
 ```
 
 #### ScrollView
 ```rust
-ScrollView::new("log_view", &mut child_column)
+ScrollView::new(&mut child_column)
+    .id("scroll-view")
     .size([300.0, 150.0])
     .arrange_at([20.0, 20.0], ui);
 ```
@@ -366,9 +345,9 @@ ScrollView::new("log_view", &mut child_column)
 
 ### Displays
 
-- `Label::new(id, text)` — text, with `.secondary()`, `.muted()`, `.accent()`, size presets (`.caption()`, `.heading()`, `.metric()`, ...), and `.mono()`.
+- `Label::new(text)` — text, with `.secondary()`, `.muted()`, `.accent()`, size presets (`.caption()`, `.heading()`, `.metric()`, ...), and `.mono()`.
 - `Badge::new(text)` — status pill, `.secondary()` / `.outline()` / `.success()` / `.warning()` / `.error()`.
-- `ProgressBar::new(ratio)` — completion bar; give it a stable `.id(...)` if you want the fill to animate instead of snapping.
+- `ProgressBar::new(ratio)` — completion bar
 
 ## Styling
 
@@ -377,7 +356,7 @@ ScrollView::new("log_view", &mut child_column)
 ```rust
 use glacex::{Button, ButtonStyle, Color, Fill, ShadowStyle};
 
-let save_btn = Button::new("save_btn", "Save").style(ButtonStyle {
+let save_btn = Button::new("Save").id("btn").style(ButtonStyle {
     fill: Fill::Solid(Color::hex_str("#4f46e5")),
     hover_fill: Fill::Solid(Color::hex_str("#6366f1")),
     pressed_fill: Fill::Solid(Color::hex_str("#4338ca")),
@@ -485,7 +464,7 @@ Free paths are tessellated on the CPU (flatten + ear-clip) into a triangle mesh 
 
 ### Theme
 
-9 built-in palettes, switchable at runtime with `ui.set_theme(...)`. Defaults to a light, shadcn-inspired theme.
+9 built-in palettes, switchable at runtime with `ui.set_theme(...)`.
 
 ```rust
 ui.set_theme(Theme::LIGHT);
@@ -498,20 +477,6 @@ ui.set_theme(Theme::GRUVBOX_LIGHT);
 ui.set_theme(Theme::NORD);
 ui.set_theme(Theme::ROSE_PINE);
 ```
-
-#### Presets
-
-| Preset | Mode | Canvas | Accent |
-|---|---|---|---|
-| `Theme::LIGHT` *(default)* | Light | `#ffffff` | `#18181b` |
-| `Theme::DARK` | Dark | `#09090b` | `#4f46e5` |
-| `Theme::CATPPUCCIN_MOCHA` | Dark | `#1e1e2e` | `#cba6f7` |
-| `Theme::CATPPUCCIN_LATTE` | Light | `#eff1f5` | `#8839ef` |
-| `Theme::TOKYO_NIGHT` | Dark | `#1a1b26` | `#7aa2f7` |
-| `Theme::GRUVBOX_DARK` | Dark | `#282828` | `#fe8019` |
-| `Theme::GRUVBOX_LIGHT` | Light | `#fbf1c7` | `#af3a03` |
-| `Theme::NORD` | Dark | `#2e3440` | `#88c0d0` |
-| `Theme::ROSE_PINE` | Dark | `#191724` | `#eb6f92` |
 
 #### Design tokens
 
@@ -552,23 +517,7 @@ App::new(root_widget)
     .run();
 ```
 
-Widgets pick up a role and label automatically where it makes sense (`Button`, `Checkbox`, `TextInput`, ...). It's been checked against Orca and Accerciser on Linux.
-
-One thing worth knowing if you're testing on Linux: `accesskit`'s AT-SPI backend only activates once the desktop's `ScreenReaderEnabled` flag is on — which normally happens when Orca (or another screen reader) starts, *not* just because the accessibility bus is running. If a tool like Accerciser isn't picking up your app, that flag is the first thing to check:
-
-```bash
-busctl --user get-property org.a11y.Bus /org/a11y/bus org.a11y.Status ScreenReaderEnabled
-# if it prints "b false", flip it on for testing:
-busctl --user set-property org.a11y.Bus /org/a11y/bus org.a11y.Status ScreenReaderEnabled b true
-```
-
-## How Rendering Works
-
-1. Widgets call `Ui::draw_shape` / `Ui::draw_text` to queue primitives. Every widget draws its own shape (a rect by default) via `ShapeKind`, which callers can swap out.
-2. Shapes sharing a scissor rect batch into one instanced draw call.
-3. `shader.wgsl` evaluates corner rounding, borders, and soft drop shadows per-fragment as an SDF.
-4. Glyphs are cached into a texture atlas by `glyphon` and drawn with per-widget scissor bounds.
-5. Everything submits in a single GPU command buffer per frame.
+Widgets pick up a role and label automatically where it makes sense (`Button`, `Checkbox`, `TextInput`, ...). It's been checked against Orca and Accerciser on Arch Linux.
 
 ## Examples
 
@@ -581,41 +530,15 @@ cargo run --example example1
 
 # Style playground
 cargo run --example example2
-```
 
-## Project Layout
+# Simple demo application
+cargo run --example reminder
 
-```
-glacex/
-├── docs/                 # Extended documentation
-│   ├── architecture.md   # Rendering pipeline and SDF shaders
-│   ├── layout.md         # Flexbox and measurement system
-│   └── widgets.md        # Widget reference
-├── examples/             # Runnable examples
-├── src/
-│   ├── lib.rs            # App runner and window lifecycle
-│   ├── accessibility.rs  # accesskit tree, action/activation handlers
-│   ├── animation.rs      # Motion constants, springs, easing
-│   ├── ui.rs             # Per-frame state, focus, clipping, drawing
-│   ├── widget.rs         # Widget and Measurable traits
-│   ├── layout.rs         # row! and column! macros (taffy)
-│   ├── button.rs         # Button widget
-│   ├── checkbox.rs       # Checkbox widget
-│   ├── radio_button.rs   # RadioButton widget
-│   ├── switch.rs         # Switch widget
-│   ├── slider.rs         # Slider widget
-│   ├── text_input.rs     # Single-line text input
-│   ├── text_area.rs      # Multi-line text editor
-│   ├── scroll_view.rs    # ScrollView container
-│   ├── card.rs           # Card container
-│   ├── select_box.rs     # SelectBox / Combobox widget
-│   ├── tabs.rs           # Tabs widget
-│   ├── theme.rs          # Theme palettes and design tokens
-│   ├── painter.rs        # wgpu + glyphon rendering backend
-│   └── shader.wgsl       # Instanced SDF quad shader
-├── CHANGELOG.md
-├── CONTRIBUTING.md
-└── Cargo.toml
+# Demonstation of free shapes
+cargo run --example free_shape
+
+# Theming demonstration
+cargo run --example themes
 ```
 
 ## Known Limitations
@@ -639,4 +562,12 @@ Bug reports and PRs are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for c
 
 MIT. See [LICENSE](LICENSE).
 
-Copyright (c) 2026 Artem Tsitronov and Soumalya Das.
+Copyright (c) 2026 Artem Tsitronov and Glacex contibutors.
+
+## If you scrolled far enough to see this
+
+Thank you! Please, star this project, or download it in cargo.
+This is still in a development stage, and it takes up a lot of time to develop!
+If you plan on helping, testing, or just have questions, contact me on artemtsitronov@gmail.com
+
+Any support is appreciated :)
