@@ -1,4 +1,4 @@
-<div align="center">
+ <div align="center">
 
 ![demo](screenshots/demo.png)
 
@@ -13,123 +13,108 @@
   <a href="https://github.com/artemtsitronov/glacex/stargazers"><img src="https://img.shields.io/github/stars/artemtsitronov/glacex?style=for-the-badge&logo=github&logoColor=cdd6f4&label=stars&labelColor=181825&color=f9e2af" alt="GitHub Stars"></a>
 </p>
 
-GPU-accelerated, immediate-mode UI library built from scratch in Rust on top of `wgpu`, `winit`, and `taffy`.
+a gpu-rendered, immediate-mode ui library for rust.
 
-Built by **Artem Tsitronov** and **Soumalya Das**.
+built from scratch with `wgpu`, `winit`, `taffy`, and `glyphon`.
+
+**by artem tsitronov and soumalya das**
 
 </div>
 
-> **Status**: early and actively changing. Expect breaking API changes between 0.x releases.
+> [!warning]
+> glacex is experimental. the api can change between 0.x releases. pin your dependencies if you value a quiet afternoon.
 
-## Table of Contents
+## what is glacex?
 
-- [What is glacex?](#what-is-glacex)
-- [Features](#features)
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Core Concepts](#core-concepts)
-  - [App](#app)
-  - [Widget & Measurable](#widget-and-measurable)
-  - [Ui Context](#ui)
-  - [Layout](#layout)
-- [Widgets](#widgets)
-  - [Controls](#controls)
-  - [Containers](#containers)
-  - [Displays](#displays)
-- [Styling & Theming](#styling)
-  - [Style Structs](#style-structs)
-  - [ShadowStyle](#shadowstyle)
-  - [Color Type](#color)
-  - [Fills, Gradients & Images](#fills-gradients--images)
-  - [Custom Shapes / Paths](#custom-shapes--paths)
-  - [Theme Palette](#theme)
-  - [Window Control](#window-title-and-background)
-- [Accessibility](#accessibility)
-- [How Rendering Works](#how-rendering-works)
-- [Examples](#examples)
-- [Project Layout](#project-layout)
-- [Known Limitations](#known-limitations)
-- [Documentation](#documentation)
-- [Contributing](#contributing)
-- [License](#license)
+glacex lets you build desktop interfaces in rust without wrapping a browser or a native widget toolkit.
 
-If you'd like an experimental version of glacex, try visiting programmersd21 fork: https://github.com/programmersd21/glacex [DISCLAIMER]: Artem Tsitronov is not responsible for programmersd21 fork. That includes drastic changes, redesigns, and AI-generated content
+you describe your interface in rust each frame. glacex handles layout, input, persistent widget state, animation, and rendering.
 
-## What is glacex?
+* **`wgpu`** renders shapes on the gpu using instanced sdf geometry.
+* **`winit`** handles the window and event loop.
+* **`taffy`** handles flexbox layout.
+* **`glyphon`** handles text rendering.
+* **`kurbo`** provides bezier paths.
 
-`glacex` is an immediate-mode UI library for Rust that draws its own pixels instead of wrapping a native toolkit or a browser engine:
+no markup, no retained widget tree, and no electron-sized dependency on a browser. just rust and a gpu doing their jobs.
 
-- **`winit`** owns the window and the cross-platform event loop.
-- **`wgpu`** renders every shape as an instanced signed-distance-field (SDF) quad on the GPU.
-- **`glyphon`** shapes and rasterizes text into glyph atlases with per-widget clipping.
-- **`taffy`** does the flexbox math for `row!`/`column!` layouts.
-- **`image`** decodes the images.
-- **`kurbo`** is responsible for paths.
+## features
 
-There's no retained widget tree and no markup — you describe the UI in plain Rust every frame, and glacex measures, lays out, hit-tests, animates, and renders it.
+* gpu-rendered shapes with anti-aliasing, borders, and shadows
+* text rendering with per-widget clipping
+* solid colors, linear/radial/conic gradients, and image fills
+* custom bezier paths
+* buttons, checkboxes, switches, sliders, text inputs, text areas, and more
+* flexbox layouts with `row![]` and `column![]`
+* persistent widget state across frames
+* hover, click, keyboard focus, and clipboard support
+* spring-based animations and easing curves
+* tooltips and auto-hiding scrollbars
+* nine built-in themes
+* optional accessibility through `accesskit`
 
-## Features
+## requirements
 
-- Custom renderer: instanced shapes (anti-aliased SDF), borders, and soft drop shadows, batched into one draw call per shared clip rect.
-- Arbitrary Bezier paths (`MeasurablePath::Free`) via a second tessellated-mesh pipeline, for shapes beyond rect/ellipse — see [Custom Shapes / Paths](#custom-shapes--paths).
-- Text rendering via `glyphon` with independent clip bounds per widget.
-- Fills: solid colors, gradients (linear, radial, conic), and images, cached into a GPU atlas.
-- `Color` is `#[repr(C)]` + `Pod`/`Zeroable`, so it maps straight onto GPU vertex buffers. Hex, RGB, HSV, alpha blending, `lerp`, lighten/darken.
-- Cursor changes (pointer, text, resize, default) driven by hover state.
-- A floating tooltip layer that clamps to the viewport.
-- Widgets: `Button`, `Checkbox`, `RadioButton`, `Switch`, `Slider`, `ProgressBar`, `TextInput`, `TextArea`, `ScrollView`, `Card`, `Container`, `Badge`, `Divider`, `Label`, `SelectBox`, `Tabs`.
-- `row![]` / `column![]` macros backed by `taffy`, with alignment and spacing.
-- Interaction: hover/press/click, secondary/middle mouse buttons, Tab/Shift+Tab focus order, double/triple-click word/line selection, clipboard via `arboard`, blinking cursor.
-- Widget state persists across frames keyed by a stable string id, even though the widget itself is rebuilt every frame. Every stateful widget exposes this via `.state(ui)`/`.take_state(ui)`/`.put_state(ui, state)` (from the `StatefulWidget` trait), plus small typed accessors for the common case (`checkbox.is_checked(ui)`, `slider.value(ui)`, etc.) — see [Widgets](#widgets). `Ui::widget_state`/`take_widget_state`/`put_widget_state` are the lower-level primitives underneath, for state that isn't tied to a single widget's id.
-- Animation via exponential decay (`animate_towards`) plus a small set of easing curves and spring presets, unified under named half-life constants (`Motion::INSTANT`/`SNAPPY`/`FLUID`/`GENTLE`) so transitions feel consistent across widgets.
-- Draggable auto-hiding scrollbars shared by `ScrollView` and `TextArea`.
-- Optional accessibility tree (AT-SPI on Linux via `accesskit`) — see [Accessibility](#accessibility).
+* rust 1.85 or newer
+* a gpu backend supported by `wgpu`
+* linux users need a running wayland or x11 session
 
-## Requirements
+## installation
 
-- Rust 1.85+ (2024 edition).
-- A GPU/driver backend `wgpu` supports (Vulkan, Metal, DirectX 12, or OpenGL ES).
-- On Linux: a running Wayland or X11 session. Headless environments need a virtual display (e.g. `xvfb`) to create a window surface.
-
-## Installation
-
-### From crates.io
+from crates.io:
 
 ```bash
 cargo add glacex
 ```
 
-or in `Cargo.toml`:
+or add it to `Cargo.toml`:
 
 ```toml
 [dependencies]
 glacex = "0.1.95"
 ```
 
-### From GitHub (main branch)
+to use the latest development version:
 
 ```toml
 [dependencies]
 glacex = { git = "https://github.com/artemtsitronov/glacex.git", branch = "main" }
 ```
 
-### Linux build dependencies
+### linux dependencies
+
+install the relevant development packages for your distribution.
+
+<details>
+<summary>debian / ubuntu</summary>
 
 ```bash
-# Debian / Ubuntu
 sudo apt install libx11-dev libxcursor-dev libxrandr-dev libxi-dev libxkbcommon-dev libwayland-dev
+```
 
-# Fedora
+</details>
+
+<details>
+<summary>fedora</summary>
+
+```bash
 sudo dnf install libX11-devel libXcursor-devel libXrandr-devel libXi-devel libxkbcommon-devel wayland-devel
+```
 
-# Arch Linux
+</details>
+
+<details>
+<summary>arch linux</summary>
+
+```bash
 sudo pacman -S libx11 libxcursor libxrandr libxi libxkbcommon wayland
 ```
 
-## Quick Start
+</details>
 
-A minimal counter:
+## quick start
+
+a counter, because every ui library needs to prove it can count to two.
 
 ```rust
 use glacex::{App, Button, Color, Label, Ui, Widget, column};
@@ -144,8 +129,8 @@ impl Widget for Counter {
     fn ui(&mut self, ui: &mut Ui) {
         ui.set_bgcolor(Color::rgb(18, 18, 22));
 
-        let mut label = Label::new(format!("Count: {}", self.count));
-        let mut button = Button::new("Increment").id("increment-button");
+        let mut label = Label::new(format!("count: {}", self.count));
+        let mut button = Button::new("increment").id("increment-button");
 
         column![&mut label, &mut button]
             .spacing(12.0)
@@ -162,309 +147,119 @@ fn main() {
 }
 ```
 
-`App::new(root).run()` opens a window, sets up the GPU pipelines, and runs the event loop.
+`App::new(root).run()` creates the window, initializes the renderer, and starts the event loop.
 
-## Core Concepts
+## core concepts
 
-### App
+### app
 
-`App<W: Widget>` owns the `winit` window and event loop:
+`App<W: Widget>` owns the window and event loop.
 
 ```rust
 App::new(root_widget)
     .update(|root| {
-        // Runs once per frame before rendering. Good place for
-        // app-level state changes based on the previous frame's input.
+        let _ = root;
     })
     .run();
 ```
 
-### Widget and Measurable
+### widgets
 
-Every UI element implements `Widget`:
+every ui element implements `Widget`:
 
 ```rust
 pub trait Widget {
     type Output;
+
     fn ui(&mut self, ui: &mut Ui) -> Self::Output;
 }
 ```
 
-Widgets that can be placed inside `row!`/`column!` also implement `Measurable`:
+widgets used in `row![]` and `column![]` also implement `Measurable`, which provides `measure` and `arrange`.
+
+### ui context
+
+`Ui` provides access to the current frame's input, drawing, focus, clipping, window controls, and widget state.
+
+use it when building custom widgets or when the built-in widgets aren't enough.
+
+### layout
+
+use `row![]` and `column![]` for flexbox layouts powered by `taffy`.
+
+see the [layout guide](docs/layout.md) for sizing, spacing, and alignment.
+
+## widgets
+
+### controls
+
+| widget        | purpose                                 |
+| ------------- | --------------------------------------- |
+| `Button`      | clickable actions                       |
+| `Checkbox`    | boolean selection                       |
+| `RadioButton` | grouped selection                       |
+| `Switch`      | on/off control                          |
+| `Slider`      | numeric input                           |
+| `TextInput`   | single-line text                        |
+| `TextArea`    | multiline text                          |
+| `SelectBox`   | dropdown selection with optional search |
+| `Tabs`        | switch between sections                 |
+
+example:
 
 ```rust
-pub trait Measurable: Widget {
-    fn measure(&mut self, ui: &mut Ui) -> [f32; 2];
-    fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) -> Self::Output;
-}
-```
-
-- `measure` returns the widget's natural size.
-- `arrange` does hit-testing, input handling, and issues draw calls at the resolved rect.
-
-### Ui
-
-`Ui` is the per-frame context passed into every widget:
-- Input: `mouse_position()`, `mouse_pressed()`, `mouse_right_pressed()`, `click_count()`, `key_pressed()`, `ctrl_held()`, `shift_held()`.
-- Cursor: `set_cursor_icon(CursorIcon)`.
-- Tooltips: `show_tooltip(text)`, `show_tooltip_at(text, pos)`.
-- State: `widget_state::<T>(id)`, `take_widget_state::<T>(id)`, `put_widget_state(id, state)` — the primitives behind every widget's `.state(ui)`/`.take_state(ui)`/`.put_state(ui, state)`.
-- Focus: `request_focus(id)`, `is_focused(id)`, `advance_focus(backward)`.
-- Clipping: `push_clip(rect)`, `pop_clip()`, `push_input_block(rect)`.
-- Drawing: `draw_shape(...)`, `draw_text(...)`, `measure_text(...)`, `line_height()`.
-- Window: `set_title(&str)`, `set_bgcolor(Color)`.
-
-### Layout
-
-For layout please see `docs/layout.md`.
-
-### Controls
-
-#### Button
-```rust
-let mut btn = Button::new("Deploy")
-    .id("button")
-    .tooltip("Triggers a deployment event")
+let mut button = Button::new("deploy")
+    .id("deploy")
     .primary();
 
-if btn.clicked() {
-    println!("clicked");
-}
-```
-Variants: `.primary()`, `.outline()`, `.ghost()`, `.danger()`.
-
-#### Checkbox
-```rust
-let mut check = Checkbox::new().id("checkbox").default_checked(true);
-let is_checked = check.is_checked(ui);
-```
-
-#### RadioButton
-```rust
-row![
-    &mut RadioButton::new("theme_group").id("dark"),
-    &mut Label::new("Dark Theme"),
-];
-
-let selected = ui.selected_option("theme_group").unwrap_or("dark");
-```
-
-#### Switch
-```rust
-let mut sw = Switch::new().id("switch").default_enabled(true);
-let enabled = sw.enabled(ui);
-```
-
-#### Slider
-```rust
-let mut slider = Slider::new(0.0, 100.0).id("slider").width(240.0).default_value(50.0);
-let val = slider.value(ui);
-```
-
-#### TextInput
-```rust
-let mut input = TextInput::new().id("username-input").width(260.0).placeholder("Enter a username");
-let text = input.text(ui);
-```
-
-#### TextArea
-```rust
-let mut notes = TextArea::new().id("notes").size([300.0, 120.0]);
-```
-
-#### SelectBox
-```rust
-use glacex::{SelectBox, SelectOption};
-
-let options = vec![
-    SelectOption::new("light", "Light"),
-    SelectOption::new("dark", "Dark"),
-    SelectOption::new("mocha", "Catppuccin Mocha"),
-    SelectOption::new("tokyo", "Tokyo Night"),
-];
-
-let mut sel = SelectBox::new(options)
-    .id("select-box")
-    .placeholder("Choose a theme…")
-    .width(220.0)
-    .tooltip("Switch the active colour theme");
-
-sel.arrange_at([40.0, 40.0], ui);
-
-let selected = sel.selected(ui);
-```
-
-Enable live filtering with `.searchable()`:
-
-```rust
-let mut sel = SelectBox::new(countries)
-    .id("searchable")
-    .placeholder("Select a country…")
-    .width(260.0)
-    .searchable();
-```
-
-The dropdown opens with a spring animation, closes on Escape or outside-click, supports `↑`/`↓` keyboard navigation and `Enter` to confirm.
-
-#### Tabs
-```rust
-use glacex::{Tabs, TabItem};
-
-let mut tabs = Tabs::new(
-    vec![
-        TabItem::new("General").id("tab1"),
-        TabItem::new("Account").id("tab2"),
-        TabItem::new("Billing").id("tab3"),
-    ],
-).id("tabs");
-
-let selected = tabs.selected(ui);
-```
-
-The active pill slides and resizes to the selected tab with a spring animation; clicking a tab updates the selection immediately. Selection is stored the same way as `RadioButton` groups, so `ui.selected_option("settings_tabs")` also works.
-
-### Containers
-
-#### Card
-```rust
-let mut content = Label::new("Inside Card");
-let mut card = Card::new(&mut content).padding([16.0, 16.0]);
-```
-
-#### ScrollView
-```rust
-ScrollView::new(&mut child_column)
-    .id("scroll-view")
-    .size([300.0, 150.0])
-    .arrange_at([20.0, 20.0], ui);
-```
-
-#### Container & Divider
-- `Container::new(&mut child).size([w, h])` — fixed-size wrapper.
-- `Divider::horizontal(width)` / `Divider::vertical(height)` — separator rule, `.faint()` for a subtler hairline.
-
-### Displays
-
-- `Label::new(text)` — text, with `.secondary()`, `.muted()`, `.accent()`, size presets (`.caption()`, `.heading()`, `.metric()`, ...), and `.mono()`.
-- `Badge::new(text)` — status pill, `.secondary()` / `.outline()` / `.success()` / `.warning()` / `.error()`.
-- `ProgressBar::new(ratio)` — completion bar
-
-## Styling
-
-### Style Structs
-
-```rust
-use glacex::{Button, ButtonStyle, Color, Fill, ShadowStyle};
-
-let save_btn = Button::new("Save").id("btn").style(ButtonStyle {
-    fill: Fill::Solid(Color::hex_str("#4f46e5")),
-    hover_fill: Fill::Solid(Color::hex_str("#6366f1")),
-    pressed_fill: Fill::Solid(Color::hex_str("#4338ca")),
-    border_width: 1.0,
-    border_color: Color::WHITE.with_alpha(0.2),
-    corner_radius: 8.0,
-    shadow: Some(ShadowStyle {
-        color: Color::hex_str("#4f46e5").with_alpha(0.4),
-        blur_radius: 12.0,
-        offset: [0.0, 3.0],
-    }),
-    sharp: false,
-});
-```
-
-| Style Struct | Target Widget | Key Fields |
-|---|---|---|
-| `ButtonStyle` | `Button` | `fill`, `hover_fill`, `pressed_fill`, `border_width`, `border_color`, `corner_radius`, `shadow`, `sharp` |
-| `CheckboxStyle` | `Checkbox` | `fill`, `hover_fill`, `checked_fill`, `border_width`, `border_color`, `corner_radius`, `shadow` |
-| `TextInputStyle` | `TextInput` | `fill`, `border_width`, `border_color`, `focus_border_color`, `corner_radius`, `selection_color`, `cursor_color`, `shadow` |
-| `TextAreaStyle` | `TextArea` | `fill`, `border_color`, `focus_border_color`, `thumb_fill`, `thumb_dragging_fill` |
-| `ScrollViewStyle` | `ScrollView` | `thumb_fill`, `thumb_dragging_fill`, `thumb_corner_radius` |
-| `CardStyle` | `Card` | `fill`, `border_width`, `border_color`, `corner_radius`, `padding`, `shadow` |
-| `SelectBoxStyle` | `SelectBox` | `fill`, `hover_fill`, `focus_fill`, `border_color`, `focus_border_color`, `corner_radius`, `height`, `dropdown_fill`, `dropdown_shadow`, `item_height`, `item_hover_fill`, `item_active_fill`, `searchable` |
-| `TabsStyle` | `Tabs` | `height`, `tab_padding_x`, `gap`, `text_color`, `hover_text_color`, `active_fill`, `pill_corner_radius`, `pill_inset_y` |
-
-### ShadowStyle
-
-```rust
-pub struct ShadowStyle {
-    pub color: Color,
-    pub blur_radius: f32,
-    pub offset: [f32; 2],
+if button.clicked() {
+    println!("deployed");
 }
 ```
 
-### Color
+buttons support `.primary()`, `.outline()`, `.ghost()`, and `.danger()`.
 
-`Color` is `#[repr(C)]` and derives `bytemuck::Pod`/`Zeroable` so it can go straight into a GPU vertex buffer:
+stateful widgets use stable ids to preserve their state between frames. use `.state(ui)`, `.take_state(ui)`, and `.put_state(ui, state)` when you need explicit control.
 
-```rust
-Color::rgb(255, 128, 0);
-Color::rgba(255, 128, 0, 0.5);
-Color::hex_str("#4f46e5");
-Color::hex(0x4f46e5);
-Color::hsv(240.0, 0.8, 0.9);
+### containers
 
-let tinted = Color::WHITE.with_alpha(0.3);
-let blended = Color::RED.lerp(Color::BLUE, 0.5);
-let dark = Color::RED.darken(0.2);
-let light = Color::RED.lighten(0.2);
-```
+| widget       | purpose                          |
+| ------------ | -------------------------------- |
+| `Card`       | padded content with styling      |
+| `Container`  | fixed-size wrapper               |
+| `ScrollView` | scrollable content               |
+| `Divider`    | horizontal or vertical separator |
 
-### Fills, Gradients & Images
+### displays
 
-```rust
-use glacex::{Color, Fill, Gradient, GradientKind, GradientStop};
+| widget        | purpose                          |
+| ------------- | -------------------------------- |
+| `Label`       | text with size and color presets |
+| `Badge`       | status indicator                 |
+| `ProgressBar` | progress indicator               |
 
-let sunset = Fill::Gradient(Gradient {
-    kind: GradientKind::Linear { angle: 90.0 },
-    stops: vec![
-        GradientStop { position: 0.0, color: Color::hex_str("#ff7e5f") },
-        GradientStop { position: 1.0, color: Color::hex_str("#feb47b") },
-    ],
-});
-```
+## styling and themes
 
-Supported kinds: `GradientKind::Linear { angle }`, `Radial { center, radius }`, `Conic { center }`. Gradients are cached in a GPU ramp atlas by content hash, so reusing the same definition across frames is free.
-
-Images work the same way as a solid color or gradient — load once, then use anywhere a `Fill` is expected:
+widgets can use built-in styles or custom style structs.
 
 ```rust
-let logo = ui.load_image("assets/logo.png"); // PNG/JPEG/WebP via the `image` crate
-let fill = Fill::Image(logo);
+use glacex::{Button, ButtonStyle, Color, Fill};
+
+let button = Button::new("save")
+    .id("save")
+    .style(ButtonStyle {
+        fill: Fill::Solid(Color::hex_str("#4f46e5")),
+        hover_fill: Fill::Solid(Color::hex_str("#6366f1")),
+        pressed_fill: Fill::Solid(Color::hex_str("#4338ca")),
+        ..Default::default()
+    });
 ```
 
-`ImageHandle::width()` / `height()` / `size()` return the image's natural pixel dimensions, handy for sizing a widget to match it.
+`Color` supports rgb, rgba, hex, hsv, alpha, blending, and lightening/darkening operations.
 
-### Custom Shapes / Paths
+### themes
 
-Every built-in widget draws a rounded rect or an ellipse (`MeasurablePath::Rect` / `Ellipse`), but the renderer also supports arbitrary shapes via `MeasurablePath::Free(BezPath)`, using [`kurbo`](https://docs.rs/kurbo)'s `BezPath` for the outline:
-
-```rust
-use glacex::{Color, Fill, MeasurablePath};
-use kurbo::BezPath;
-
-let mut star = BezPath::new();
-star.move_to((160.0, 90.0));
-star.line_to((188.0, 152.0));
-// ...remaining points...
-star.close_path();
-
-ui.draw_shape(
-    MeasurablePath::free(star),
-    Fill::Solid(Color::hex_str("#f59e0b")),
-    4.0,                          // border_width
-    Color::hex_str("#1e293b"),    // border_color
-    0.0,                          // blur_radius — not supported for Free paths, ignored
-    false,                        // sharp
-    0.0,                          // rotation, radians
-);
-```
-
-Free paths are tessellated on the CPU (flatten + ear-clip) into a triangle mesh and rendered through a second, non-instanced pipeline, separate from the SDF pipeline that draws every rect/ellipse. Solid and gradient fills are supported (gradient color is evaluated per vertex, so it's exact for `Linear` and a close approximation for `Radial`/`Conic` — finer curves tessellate into more vertices and sharpen it further); `Fill::Image` isn't supported on a `Free` path yet and renders transparent, same as `GradientKind::Mesh`. Borders are drawn as a separately tessellated stroke outline (via `kurbo::stroke`), so they read as a classic SVG-style outline around the shape rather than the inset border used by rect/ellipse widgets. Free-path shapes are batched and clipped the same way as everything else, but currently always draw after all rect/ellipse shapes within the same frame — paint-order interleaving with them isn't implemented yet. Only the outer contour of a self-intersecting or multi-hole path is filled correctly; simple (non-self-intersecting) contours are the supported case.
-
-### Theme
-
-9 built-in palettes, switchable at runtime with `ui.set_theme(...)`.
+glacex ships with nine built-in palettes:
 
 ```rust
 ui.set_theme(Theme::LIGHT);
@@ -478,38 +273,67 @@ ui.set_theme(Theme::NORD);
 ui.set_theme(Theme::ROSE_PINE);
 ```
 
-#### Design tokens
+### gradients and images
 
-| Token | Default (`LIGHT`) | Used for |
-|---|---|---|
-| `bg_canvas` | `#ffffff` | Window background |
-| `surface` | `#ffffff` | Cards, panels |
-| `surface_subtle` | `#f4f4f5` | Inset panels, control tracks |
-| `surface_elevated`| `#ffffff` | Modals, tooltips, dropdowns |
-| `idle` | `#f4f4f5` | Resting button/control fill |
-| `hovered` | `#e4e4e7` | Hover state |
-| `pressed` | `#d4d4d8` | Pressed state |
-| `active` | `#18181b` | Primary action |
-| `border_faint` | `rgba(0,0,0,0.04)` | Hairline dividers |
-| `border` | `rgba(0,0,0,0.08)` | Standard borders |
-| `border_strong` | `rgba(0,0,0,0.16)` | Focused/emphasized borders |
-| `text_primary` | `#09090b` | Body text |
-| `text_secondary`| `#71717a` | Captions |
-| `text_muted` | `#a1a1aa` | Placeholders, metadata |
-| `success` | `#16a34a` | Success state |
-| `warning` | `#d97706` | Warning state |
-| `error` | `#e11d48` | Error state |
-
-### Window Title and Background
+gradients support linear, radial, and conic modes.
 
 ```rust
-ui.set_title("My App");
-ui.set_theme(Theme::LIGHT); // also updates the window background color
+use glacex::{Color, Fill, Gradient, GradientKind, GradientStop};
+
+let gradient = Fill::Gradient(Gradient {
+    kind: GradientKind::Linear { angle: 90.0 },
+    stops: vec![
+        GradientStop {
+            position: 0.0,
+            color: Color::hex_str("#ff7e5f"),
+        },
+        GradientStop {
+            position: 1.0,
+            color: Color::hex_str("#feb47b"),
+        },
+    ],
+});
 ```
 
-## Accessibility
+images can be loaded once and reused as fills:
 
-glacex can expose its widget tree to assistive technology through [`accesskit`](https://accesskit.dev/) — AT-SPI on Linux, UIA on Windows, NSAccessibility on macOS. It's disabled by default; turn it on when building the app:
+```rust
+let logo = ui.load_image("assets/logo.png");
+let fill = Fill::Image(logo);
+```
+
+supported image formats depend on the enabled formats in the `image` crate.
+
+### custom paths
+
+`MeasurablePath::Free` supports arbitrary bezier shapes through `kurbo`.
+
+```rust
+use glacex::{Color, Fill, MeasurablePath};
+use kurbo::BezPath;
+
+let mut path = BezPath::new();
+path.move_to((160.0, 90.0));
+path.line_to((188.0, 152.0));
+path.line_to((132.0, 152.0));
+path.close_path();
+
+ui.draw_shape(
+    MeasurablePath::free(path),
+    Fill::Solid(Color::hex_str("#f59e0b")),
+    0.0,
+    Color::WHITE,
+    0.0,
+    false,
+    0.0,
+);
+```
+
+free paths use a separate tessellated-mesh pipeline. they support solid and gradient fills, but not image fills, blur, or shadows. see the [architecture guide](docs/architecture.md) for the rendering details.
+
+## accessibility
+
+glacex can expose widgets to assistive technologies through `accesskit`.
 
 ```rust
 App::new(root_widget)
@@ -517,57 +341,66 @@ App::new(root_widget)
     .run();
 ```
 
-Widgets pick up a role and label automatically where it makes sense (`Button`, `Checkbox`, `TextInput`, ...). It's been checked against Orca and Accerciser on Arch Linux.
+on linux, this uses at-spi. windows and macos use their respective accessibility APIs.
 
-## Examples
+## examples
+
+run the examples with cargo:
 
 ```bash
-# Dashboard-style demo (buttons, inputs, switches, sliders, logs)
 cargo run --example demo
-
-# Color/theme preview
 cargo run --example example1
-
-# Style playground
 cargo run --example example2
-
-# Simple demo application
 cargo run --example reminder
-
-# Demonstation of free shapes
 cargo run --example free_shape
-
-# Theming demonstration
 cargo run --example themes
 ```
 
-## Known Limitations
+* `demo`: interactive controls and dashboard
+* `example1`: color and theme preview
+* `example2`: style playground
+* `reminder`: simple application
+* `free_shape`: custom paths
+* `themes`: theme showcase
 
-- `GradientKind::Mesh` is reserved but not implemented yet — it currently falls back to transparent. Use Linear, Radial, or Conic.
-- `Fill::Image` shares one atlas slot with no packing/eviction yet, so only one image is supported at a time. A real atlas packer is planned for 0.2.0.
-- `MeasurablePath::Free` (see [Custom Shapes / Paths](#custom-shapes--paths)) doesn't support `Fill::Image`, blur/shadow, or holes/self-intersection, and doesn't interleave paint order with rect/ellipse shapes sharing the same clip rect — it always draws after them.
-- Pre-1.0, so the API still moves around between releases.
+## known limitations
 
-## Documentation
+glacex is still under development. some corners are, in fact, still corners.
 
-- [Architecture & Rendering](docs/architecture.md) — `wgpu`, SDF shaders, the frame lifecycle.
-- [Widget Reference](docs/widgets.md) — every widget, its constructor, and its builder methods.
-- [Layout Guide](docs/layout.md) — flexbox mechanics with `taffy`.
+* mesh gradients are not implemented and currently render transparent.
+* image fills currently support only one image at a time.
+* free paths do not support image fills, shadows, holes, or self-intersections reliably.
+* free paths render after regular shapes, so their paint order cannot yet be interleaved with rectangles and ellipses.
+* the api may change between releases.
 
-## Contributing
+## documentation
 
-Bug reports and PRs are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for coding standards and the PR checklist.
+* [architecture and rendering](docs/architecture.md)
+* [widget reference](docs/widgets.md)
+* [layout guide](docs/layout.md)
+* [contributing](CONTRIBUTING.md)
+* [api documentation](https://docs.rs/glacex)
 
-## License
+## contributing
 
-MIT. See [LICENSE](LICENSE).
+bug reports, testing, and pull requests are welcome.
 
-Copyright (c) 2026 Artem Tsitronov and Glacex contibutors.
+please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. small, focused changes are easier to review and less likely to summon the debugger.
 
-## If you scrolled far enough to see this
+## forks
 
-Thank you! Please, star this project, or download it in cargo.
-This is still in a development stage, and it takes up a lot of time to develop!
-If you plan on helping, testing, or just have questions, contact me on artemtsitronov@gmail.com
+experimental fork by [soumalya das](https://github.com/programmersd21/glacex).
 
-Any support is appreciated :)
+the fork may contain independent changes, redesigns, and ai-assisted contributions. these are not maintained or endorsed by artem tsitronov. check the fork's own history and documentation for its current state.
+
+## license
+
+mit. see [LICENSE](LICENSE).
+
+copyright (c) 2026 artem tsitronov and glacex contributors.
+
+---
+
+if glacex is useful to you, consider starring the repository, trying it in a project, or reporting a bug. testing an experimental ui library is a great way to discover how many ways a button can misbehave.
+
+thanks for giving it a look.
