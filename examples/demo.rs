@@ -1,6 +1,20 @@
+//! demo -- the kitchen sink. every widget, one scrollable dashboard.
+//!
+//! this is the "see everything at once" example. it demonstrates:
+//!   - theme switching two ways (button cycles, SelectBox jumps)
+//!   - loading an image in `on_start` and using it as a card fill
+//!   - raw `Ui` state (`take_widget_state`) for cross-widget logic
+//!     (the good/fast/cheap pick-two-of-three switches)
+//!   - radio groups, sliders driving progress bars, tabs, tooltips,
+//!     gradient button styles, nested scroll views
+//!
+//! new here? start with `example1` instead. this file is a buffet, not a meal.
+//!
+//! run it: `cargo run --example demo`
+
 use glacex::*;
 
-// First of all, we create out application state struct
+// our data: which theme is active, plus an image loaded once at startup.
 struct DemoApp {
     current_theme_idx: usize,
     kitty_image: Option<ImageHandle>,
@@ -15,32 +29,30 @@ impl DemoApp {
     }
 }
 
+// plain struct showing how to keep YOUR OWN state in Ui's map.
+// it tracks the order switches were flipped, so we can un-flip the oldest.
 #[derive(Default)]
 struct TripleToggleOrder {
     order: Vec<&'static str>,
 }
 
-// Now, we implement the Widget trait for our state, creating this way a UI
 impl Widget for DemoApp {
-    // This widget will be the root, so it will not output anything
     type Output = ();
 
+    // runs ONCE before the first frame. load images (or do other setup) here --
+    // doing it in ui() would reload every frame, which is how you melt a gpu.
     fn on_start(&mut self, ui: &mut Ui) {
-        // We load an image in our state using ui.load_image().
         self.kitty_image = Some(ui.load_image("assets/test/1.webp"));
     }
 
     fn ui(&mut self, ui: &mut Ui) {
-        // This way we get all the avaiable themes
+        // -- theme first: everything below follows it -------------------------
         let themes = Theme::all();
         let current_theme = themes[self.current_theme_idx % themes.len()];
         ui.set_theme(current_theme);
 
-        // We get the window size
         let window_size = ui.window_size();
 
-        // When you do "Widget::new()", it defaults the id to a uuid::Uuid::new_v4().to_string().
-        // If you want to provide a custom id, you can use the id() method on the widget.
         let mut window_size_label = Label::new(format!(
             "Window size: {:.2} x {:.2}",
             window_size[0], window_size[1]
@@ -48,29 +60,36 @@ impl Widget for DemoApp {
         let mut theme_label = Label::new(format!("Current theme: {}", current_theme.name));
         let mut theme_btn = Button::new("Change Theme").id("theme_btn");
 
+        // -- the pick-two-of-three switches ------------------------------------
+        // three switches, but at most two may be on. the rule needs memory
+        // spanning all three widgets, so it lives in Ui under our own key --
+        // not in any one widget's state.
         let mut good_switch = Switch::new().id("good_switch");
         let mut fast_switch = Switch::new().id("fast_switch");
         let mut cheap_switch = Switch::new().id("cheap_switch");
 
-        // Glacex uses a persistent state system to store widget state across frames.
-        // Here, we take the widget state for the triple toggle order.
+        // take our custom state OUT of Ui (owned now, Ui forgot it for a bit)...
         let mut order_state = ui.take_widget_state::<TripleToggleOrder>("triple_toggle_order");
 
+        // ...record which switches are currently on, in flip order...
+        // (reading .enabled() BEFORE layout sees last frame's value -- fine,
+        // the switches below were already arranged... last frame. memory!)
         let states = [
-            ("good_switch", &mut good_switch.enabled(ui)), // We check if the Switch widget is enabled
-            ("fast_switch", &mut fast_switch.enabled(ui)),
-            ("cheap_switch", &mut cheap_switch.enabled(ui)),
+            ("good_switch", good_switch.enabled(ui)),
+            ("fast_switch", fast_switch.enabled(ui)),
+            ("cheap_switch", cheap_switch.enabled(ui)),
         ];
 
         for (id, enabled) in states {
-            if *enabled && !order_state.order.contains(&id) {
+            if enabled && !order_state.order.contains(&id) {
                 order_state.order.push(id);
             }
-            if !*enabled {
+            if !enabled {
                 order_state.order.retain(|&x| x != id);
             }
         }
 
+        // ...evict the oldest if all three ended up on...
         while order_state.order.len() > 2 {
             let evicted = order_state.order.remove(0);
             match evicted {
@@ -81,14 +100,14 @@ impl Widget for DemoApp {
             }
         }
 
-        // Here, we put the updated order state back into the Ui.
+        // ...and hand the updated state BACK to Ui. take → modify → put.
         ui.put_widget_state("triple_toggle_order", order_state);
 
-        // RadioButton widget takes a group_id and an option_id. The group id links all the radio buttons together,
-        // and it's used to retrieve the selected one
+        // -- radio group: one group id, one option id each ---------------------
+        // read the winner anywhere with ui.selected_option("radio_group").
         let mut radio_yes_option = RadioButton::new("radio_group").id("yes");
         let mut radio_yes_label = Label::new("Yes");
-        let mut radio_button_yes = row![&mut radio_yes_option, &mut radio_yes_label]; // We create a layout using row! and column! macros
+        let mut radio_button_yes = row![&mut radio_yes_option, &mut radio_yes_label];
 
         let mut radio_no_option = RadioButton::new("radio_group").id("no");
         let mut radio_no_label = Label::new("No");
@@ -97,42 +116,48 @@ impl Widget for DemoApp {
         let mut radio_button_group =
             glacex::column![&mut radio_button_yes, &mut radio_button_no].align(Alignment::End);
 
-        let mut joke_label = Label::new({
-            // I know, I know, I'm hilarious.
-            format!(
-                "{}, I'm gay",
-                match ui.selected_option("radio_group") {
-                    Some("yes") => "Yes",
-                    Some("no") => "No",
-                    _ => "...",
-                }
-            )
+        // rebuilt every frame from the group's state -- always correct, never stale.
+        let mut verdict_label = Label::new({
+            match ui.selected_option("radio_group") {
+                Some("yes") => "Yes. Excellent taste.",
+                Some("no") => "No. Bold. Wrong, but bold.",
+                _ => "Pick one. No pressure.",
+            }
         });
 
-        let mut slider = Slider::new(0.0, 1.0); // The Slider widget takes as arguments the id, and the min/max values.
-        let mut progress_bar = ProgressBar::new(slider.value(ui)).id("slider_progress_bar"); // In this widget, id is optional, so we define it using .id()
+        // -- slider → progress bar pipeline --------------------------------------
+        // the slider remembers its position (in Ui); the bar just displays
+        // whatever value it's constructed with each frame.
+        let mut slider = Slider::new(0.0, 1.0).id("demo_slider");
+        let mut progress_bar = ProgressBar::new(slider.value(ui)).id("slider_progress_bar");
 
+        // -- theme picker dropdown: one SelectOption per theme -------------------
         let theme_options: Vec<SelectOption> = themes
             .iter()
             .enumerate()
-            .map(|(i, t)| SelectOption::new(i.to_string(), t.name)) // We map each theme to a SelectOption
+            .map(|(i, t)| SelectOption::new(i.to_string(), t.name))
             .collect();
         let mut theme_select = SelectBox::new(theme_options)
             .id("theme_select")
             .placeholder("Select theme...")
             .width(200.0);
 
+        // the image was loaded in on_start; unwrap is safe -- startup ran first.
         let kitty_image = self.kitty_image.unwrap();
 
+        // -- the big layout: rows in columns in cards in a scroll view -----------
         {
             row![
                 &mut ScrollView::new(
                     &mut glacex::column![
+                        // tabs with an animated sliding pill
                         &mut Tabs::new(vec![
-                            TabItem::new("Tab 1"),
-                            TabItem::new("Tab 2"),
-                            TabItem::new("Tab 3"),
-                        ]),
+                            TabItem::new("Tab 1").id("tab1"),
+                            TabItem::new("Tab 2").id("tab2"),
+                            TabItem::new("Tab 3").id("tab3"),
+                        ])
+                        .id("demo_tabs"),
+                        // header row: labels, a vertical divider, theme button
                         &mut row![
                             &mut window_size_label,
                             &mut Divider::vertical(24.0).thickness(2.0),
@@ -143,57 +168,64 @@ impl Widget for DemoApp {
                             &mut Card::new(
                                 &mut ScrollView::new(
                                     &mut glacex::column![
+                                        // a card FILLED WITH AN IMAGE. fancy.
                                         &mut Card::new(&mut Label::new("Kitty!"))
                                             .style(CardStyle {
                                                 fill: Fill::Image(kitty_image),
                                                 ..CardStyle::subtle()
                                             })
                                             .size(kitty_image.scale(0.2)),
+                                        // badges in all flavors
                                         &mut row![
                                             &mut Badge::new("Badge").variant(BadgeVariant::Outline),
                                             &mut Badge::new("Success").success(),
                                             &mut Badge::new("Warning").warning(),
                                             &mut Badge::new("Dangerous stuff").error(),
                                         ],
+                                        // buttons: plain, gradient + pill-shaped, fat + tooltip
                                         &mut row![
-                                            &mut Button::new("Button"),
-                                            &mut Button::new("Fashion button").style(ButtonStyle {
-                                                fill: Fill::Gradient(Gradient {
-                                                    kind: GradientKind::Linear { angle: 45.0 },
-                                                    stops: vec![
-                                                        GradientStop {
-                                                            position: 0.0,
-                                                            color: Color::rgb(230, 230, 230)
-                                                        },
-                                                        GradientStop {
-                                                            position: 1.0,
-                                                            color: Color::rgb(120, 200, 180)
-                                                        }
-                                                    ],
+                                            &mut Button::new("Button").id("plain_btn"),
+                                            &mut Button::new("Fashion button")
+                                                .id("fashion_btn")
+                                                .style(ButtonStyle {
+                                                    fill: Fill::Gradient(Gradient {
+                                                        kind: GradientKind::Linear { angle: 45.0 },
+                                                        stops: vec![
+                                                            GradientStop {
+                                                                position: 0.0,
+                                                                color: Color::rgb(230, 230, 230)
+                                                            },
+                                                            GradientStop {
+                                                                position: 1.0,
+                                                                color: Color::rgb(120, 200, 180)
+                                                            }
+                                                        ],
+                                                    }),
+                                                    path: Path::ellipse(0.0),
+                                                    ..Default::default()
                                                 }),
-                                                path: Path::ellipse(0.0),
-                                                ..Default::default()
-                                            }),
                                             &mut Button::new("Fat button")
+                                                .id("fat_btn")
                                                 .size([100.0, 50.0])
                                                 .tooltip(
                                                     "In case you missed it, this is a fat button."
                                                 )
                                         ]
                                         .align(Alignment::Center),
+                                        // two columns side by side: plain checkboxes vs the triple switches
                                         &mut row![
                                             &mut glacex::column![
                                                 &mut row![
                                                     &mut Label::new("Checkboxy"),
-                                                    &mut Checkbox::new(),
+                                                    &mut Checkbox::new().id("demo_check_1"),
                                                 ],
                                                 &mut row![
                                                     &mut Label::new("Another one"),
-                                                    &mut Checkbox::new(),
+                                                    &mut Checkbox::new().id("demo_check_2"),
                                                 ],
                                                 &mut row![
                                                     &mut Label::new("Hehe"),
-                                                    &mut Checkbox::new(),
+                                                    &mut Checkbox::new().id("demo_check_3"),
                                                 ]
                                             ]
                                             .align(Alignment::End),
@@ -215,30 +247,37 @@ impl Widget for DemoApp {
                                         ]
                                         .align(Alignment::Center)
                                         .spacing(100.0),
+                                        // theme dropdown + text widgets to play with
                                         &mut theme_select,
-                                        &mut TextInput::new().placeholder("Here goes text."),
-                                        &mut TextArea::new(),
+                                        &mut TextInput::new()
+                                            .id("demo_input")
+                                            .placeholder("Here goes text."),
+                                        &mut TextArea::new().id("demo_area"),
                                     ]
                                     .spacing(24.0)
                                 )
                                 .padding([12.0; 2])
                             )
                             .size([400.0, 600.0])
+                            .id("gallery_scroll")
                             .padding([0.0; 2]),
+                            // -- right card: radios, type scale, slider, kitty 2 ------
                             &mut Card::new(
                                 &mut glacex::column![
-                                    &mut row![&mut radio_button_group, &mut joke_label,]
+                                    &mut row![&mut radio_button_group, &mut verdict_label,]
                                         .spacing(24.0)
                                         .align(Alignment::Center),
+                                    // the label size scale, small to large
                                     &mut glacex::column![
                                         &mut Label::new("Heading").heading(),
                                         &mut Label::new("Subheading").subheading(),
-                                        &mut Label::new("Captionist").caption(),
+                                        &mut Label::new("Caption").caption(),
                                     ]
                                     .spacing(12.0)
                                     .align(Alignment::Start),
                                     &mut slider,
                                     &mut progress_bar,
+                                    // same image, second card. reuse is free.
                                     &mut Card::new(&mut Label::new("Another kitty!"))
                                         .style(CardStyle {
                                             fill: Fill::Image(kitty_image),
@@ -251,12 +290,11 @@ impl Widget for DemoApp {
                             )
                             .height(600.0)
                         ],
+                        // farewell footer
                         &mut glacex::column![
-                            &mut Label::new(
-                                "And here ladies and gentleman, I'm afraid our demo ended."
-                            )
-                            .size_preset(18.0),
-                            &mut Label::new("Be free to check out Glacex's github. <3")
+                            &mut Label::new("And here, our demo ends. Thanks for scrolling.")
+                                .size_preset(18.0),
+                            &mut Label::new("Be free to check out glacex on github. <3")
                                 .size_preset(14.0),
                         ],
                     ]
@@ -266,11 +304,14 @@ impl Widget for DemoApp {
                     .align(Alignment::Center)
                 )
                 .size([window_size[0], window_size[1]])
+                .id("page_scroll")
             ]
             .align(Alignment::Center)
-            .arrange_at([0.0; 2], ui); // In the end, we need to arrange the layout to a position and a Ui.
+            .arrange_at([0.0; 2], ui); // measure everything, draw at the origin.
         }
 
+        // -- react: AFTER layout ------------------------------------------------
+        // the button knows it was clicked; the dropdown knows its selection.
         if theme_btn.clicked() {
             self.current_theme_idx = (self.current_theme_idx + 1) % themes.len();
         }

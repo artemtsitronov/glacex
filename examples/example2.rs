@@ -1,3 +1,23 @@
+//! example2 -- the live style playground. type styling commands, watch pixels obey.
+//!
+//! this is a tiny REPL for widget styles. type a command like:
+//!
+//!     button|color:#4f46e5,corner_radius:12.0,shadow:true
+//!     checkbox|checked_color:#22c55e,corner_radius:6.0
+//!     textinput|border_color:#f59e0b,focus_border_color:#ef4444
+//!     textarea|color:#1e293b,thumb_color:#64748b
+//!     scroll|thumb_color:#6366f1,thumb_corner_radius:8.0
+//!
+//! format: `widget|key:value,key:value`. keys map onto `*Style` struct fields
+//! (see the `*_style()` builders below). unknown widgets/keys are ignored
+//! with zero drama -- the preview just keeps showing defaults.
+//!
+//! what you will learn: struct-update style overrides (`..Default::default()`),
+//! `Path::rect([r; 4])` corner radii, `ShadowStyle` tweaks, and `ui.set_title`
+//! for live window-title feedback.
+//!
+//! run it: `cargo run --example example2`
+
 use glacex::{
     Alignment, App, Badge, BadgeVariant, Button, ButtonStyle, Card, CardStyle, Checkbox,
     CheckboxStyle, Color, Divider, Fill, Label, Path, ScrollView, ScrollViewStyle, ShadowStyle,
@@ -5,6 +25,11 @@ use glacex::{
 };
 use std::collections::HashMap;
 
+// ---------------------------------------------------------------------------
+// the command language: `widget|key:value,key:value,...`
+// returns (widget_name, {key: value}) or None if there is no `|`.
+// everything is lowercased except values (hex colors are case-insensitive).
+// ---------------------------------------------------------------------------
 fn parse_command(input: &str) -> Option<(String, HashMap<String, String>)> {
     let (widget, rest) = input.split_once('|')?;
     let widget = widget.trim().to_ascii_lowercase();
@@ -25,6 +50,7 @@ fn parse_command(input: &str) -> Option<(String, HashMap<String, String>)> {
     Some((widget, attrs))
 }
 
+// -- tiny typed getters over the string map. parse failures → None → default.
 fn attr_color(attrs: &HashMap<String, String>, key: &str) -> Option<Color> {
     attrs.get(key).map(|v| Color::hex_str(v))
 }
@@ -43,6 +69,8 @@ fn attr_bool(attrs: &HashMap<String, String>, key: &str) -> Option<bool> {
         })
 }
 
+// shared shadow keys for every style: `shadow:false` kills it,
+// `shadow:true` (or any shadow_* key) brings it back with tweaks.
 fn apply_shadow_attrs(attrs: &HashMap<String, String>, shadow: &mut Option<ShadowStyle>) {
     let has_shadow = attr_bool(attrs, "shadow");
     let shadow_color = attr_color(attrs, "shadow_color");
@@ -64,6 +92,12 @@ fn apply_shadow_attrs(attrs: &HashMap<String, String>, shadow: &mut Option<Shado
         *shadow = Some(s);
     }
 }
+
+// ---------------------------------------------------------------------------
+// one builder per stylable widget: start from `*Style::default()`, override
+// whatever keys the user passed. the pattern is identical every time --
+// read a key, set a field -- so adding a new widget is pure copy-paste.
+// ---------------------------------------------------------------------------
 
 fn button_style(attrs: &HashMap<String, String>) -> ButtonStyle {
     let mut style = ButtonStyle::default();
@@ -199,6 +233,10 @@ fn scroll_view_style(attrs: &HashMap<String, String>) -> ScrollViewStyle {
     style
 }
 
+// ---------------------------------------------------------------------------
+// the app. remembers the last window title so it only calls set_title when
+// the title actually changes (polite to the window manager).
+// ---------------------------------------------------------------------------
 struct AppState {
     last_title: String,
 }
@@ -217,10 +255,13 @@ impl Widget for AppState {
     fn ui(&mut self, ui: &mut Ui) {
         ui.set_bgcolor(Theme::BG_CANVAS);
 
-        let mut command_input = TextInput::new().width(580.0);
+        // -- the command input. read its text, parse it. ----------------------
+        let mut command_input = TextInput::new().width(580.0).id("style_command");
         let command = command_input.text(ui);
         let parsed = parse_command(&command);
 
+        // live window title showing what we're editing. cached: only updates
+        // the OS window title when the string actually changed.
         let title = match &parsed {
             Some((widget, _)) => format!("Style Playground - editing: {widget}"),
             None => "Style Playground - type a command below".to_string(),
@@ -230,6 +271,7 @@ impl Widget for AppState {
             self.last_title = title;
         }
 
+        // -- build all five styles (defaults + whatever the command says) -----
         let mut button_style_value = ButtonStyle::default();
         let mut checkbox_style_value = CheckboxStyle::default();
         let mut input_style_value = TextInputStyle::default();
@@ -243,11 +285,12 @@ impl Widget for AppState {
                 "textinput" | "input" => input_style_value = text_input_style(attrs),
                 "textarea" | "area" => area_style_value = text_area_style(attrs),
                 "scrollview" | "scroll" => scroll_style_value = scroll_view_style(attrs),
-                _ => {}
+                _ => {} // unknown widget? the preview keeps calm and carries on.
             }
         }
 
-        let mut title_label = Label::new("Style Playground");
+        // -- header --------------------------------------------------------------
+        let mut title_label = Label::new("Style Playground").title();
         let mut mode_badge = Badge::new("LIVE REPL").variant(BadgeVariant::Success);
         let mut hint_label = Label::new(
             "Format: widget|key:value,key:value   e.g. checkbox|corner_radius:12.0,color:#f5656f",
@@ -255,20 +298,32 @@ impl Widget for AppState {
         let mut divider_top = Divider::horizontal(620.0);
         let mut divider_mid = Divider::horizontal(620.0);
 
-        let mut command_caption = Label::new("Command Input");
+        let mut command_caption = Label::new("Command Input").secondary();
+        let mut preview_caption = Label::new("Live Render Preview").secondary();
 
-        let mut preview_caption = Label::new("Live Render Preview");
+        // -- the preview widgets, wearing the computed styles --------------------
+        // every stateful one gets a stable id so its state (ticks, text,
+        // scroll offset) survives the rebuild-every-frame cycle.
+        let mut button_caption = Label::new("Button").secondary();
+        let mut checkbox_caption = Label::new("Checkbox").secondary();
+        let mut input_caption = Label::new("TextInput").secondary();
+        let mut area_caption = Label::new("TextArea").secondary();
+        let mut scroll_caption = Label::new("ScrollView").secondary();
 
-        let mut button_caption = Label::new("Button");
-        let mut checkbox_caption = Label::new("Checkbox");
-        let mut input_caption = Label::new("TextInput");
-        let mut area_caption = Label::new("TextArea");
-        let mut scroll_caption = Label::new("ScrollView");
-
-        let mut demo_button = Button::new("Button").style(button_style_value);
-        let mut demo_checkbox = Checkbox::new().style(checkbox_style_value);
-        let mut demo_text_input = TextInput::new().width(170.0).style(input_style_value);
-        let mut demo_text_area = TextArea::new().size([270.0, 80.0]).style(area_style_value);
+        let mut demo_button = Button::new("Button")
+            .id("demo_button")
+            .style(button_style_value);
+        let mut demo_checkbox = Checkbox::new()
+            .id("demo_checkbox")
+            .style(checkbox_style_value);
+        let mut demo_text_input = TextInput::new()
+            .id("demo_text_input")
+            .width(170.0)
+            .style(input_style_value);
+        let mut demo_text_area = TextArea::new()
+            .id("demo_text_area")
+            .size([270.0, 80.0])
+            .style(area_style_value);
 
         let mut scroll_item_1 = Label::new("Line one");
         let mut scroll_item_2 = Label::new("Line two");
@@ -276,6 +331,7 @@ impl Widget for AppState {
         let mut scroll_item_4 = Label::new("Line four");
         let mut scroll_item_5 = Label::new("Line five");
 
+        // two preview rows: controls, then inputs -- then everything in a card.
         let mut btn_col = column![&mut button_caption, &mut demo_button]
             .spacing(6.0)
             .align(Alignment::Start);
@@ -298,6 +354,7 @@ impl Widget for AppState {
         ];
 
         let mut demo_scroll = ScrollView::new(&mut scroll_content)
+            .id("demo_scroll")
             .size([270.0, 80.0])
             .style(scroll_style_value);
 
@@ -324,6 +381,7 @@ impl Widget for AppState {
             .spacing(10.0)
             .align(Alignment::Center);
 
+        // the whole page, placed at [40, 30]. one arrange_at to rule them all.
         column![
             &mut header_row,
             &mut hint_label,
@@ -340,6 +398,5 @@ impl Widget for AppState {
 }
 
 fn main() {
-    let state = AppState::new();
-    App::new(state).run();
+    App::new(AppState::new()).run();
 }

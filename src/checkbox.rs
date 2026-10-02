@@ -142,6 +142,12 @@ impl Checkbox {
     }
 }
 
+impl Default for Checkbox {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Widget for Checkbox {
     type Output = CheckboxResponse;
 

@@ -1,4 +1,4 @@
- <div align="center">
+<div align="center">
 
 ![demo](screenshots/demo.png)
 
@@ -24,40 +24,19 @@ built from scratch with `wgpu`, `winit`, `taffy`, and `glyphon`.
 > [!warning]
 > glacex is experimental. the api can change between 0.x releases. pin your dependencies if you value a quiet afternoon.
 
-## what is glacex?
+## what is this?
 
-glacex lets you build desktop interfaces in rust without wrapping a browser or a native widget toolkit.
+glacex lets you build desktop apps in rust. no browser. no electron. no 200mb "hello world". no xml layout files from 2009.
 
-you describe your interface in rust each frame. glacex handles layout, input, persistent widget state, animation, and rendering.
+you describe your interface in plain rust, once per frame. glacex handles the layout, the input, the animations, and the part where pixels appear on screen:
 
-* **`wgpu`** renders shapes on the gpu using instanced sdf geometry.
-* **`winit`** handles the window and event loop.
-* **`taffy`** handles flexbox layout.
-* **`glyphon`** handles text rendering.
-* **`kurbo`** provides bezier paths.
+* **`wgpu`** draws everything on the gpu (shapes are evaluated from signed-distance functions in a shader, so corners stay crisp at any size).
+* **`winit`** owns the window and the event loop.
+* **`taffy`** does flexbox layout, so you don't have to do math before coffee.
+* **`glyphon`** draws the text.
+* **`kurbo`** draws the curvy bits (bezier paths).
 
-no markup, no retained widget tree, and no electron-sized dependency on a browser. just rust and a gpu doing their jobs.
-
-## features
-
-* gpu-rendered shapes with anti-aliasing, borders, and shadows
-* text rendering with per-widget clipping
-* solid colors, linear/radial/conic gradients, and image fills
-* custom bezier paths
-* buttons, checkboxes, switches, sliders, text inputs, text areas, and more
-* flexbox layouts with `row![]` and `column![]`
-* persistent widget state across frames
-* hover, click, keyboard focus, and clipboard support
-* spring-based animations and easing curves
-* tooltips and auto-hiding scrollbars
-* nine built-in themes
-* optional accessibility through `accesskit`
-
-## requirements
-
-* rust 1.85 or newer
-* a gpu backend supported by `wgpu`
-* linux users need a running wayland or x11 session
+there is no retained widget tree to keep in sync and no markup language to learn. if you can write a function, you can write a ui. that is the whole pitch.
 
 ## installation
 
@@ -67,23 +46,25 @@ from crates.io:
 cargo add glacex
 ```
 
-or add it to `Cargo.toml`:
+or in `Cargo.toml`:
 
 ```toml
 [dependencies]
 glacex = "0.1.95"
 ```
 
-to use the latest development version:
+latest development version:
 
 ```toml
 [dependencies]
 glacex = { git = "https://github.com/artemtsitronov/glacex.git", branch = "main" }
 ```
 
+requirements: rust 1.85+, a gpu backend `wgpu` supports, and (on linux) a running wayland or x11 session.
+
 ### linux dependencies
 
-install the relevant development packages for your distribution.
+install the development packages for your distribution:
 
 <details>
 <summary>debian / ubuntu</summary>
@@ -112,12 +93,12 @@ sudo pacman -S libx11 libxcursor libxrandr libxi libxkbcommon wayland
 
 </details>
 
-## quick start
+## your first app in 60 seconds
 
-a counter, because every ui library needs to prove it can count to two.
+a counter. every ui library must prove it can count to two, it's the law.
 
 ```rust
-use glacex::{App, Button, Color, Label, Ui, Widget, column};
+use glacex::{App, Button, Label, Theme, Ui, Widget, column};
 
 struct Counter {
     count: u32,
@@ -127,15 +108,19 @@ impl Widget for Counter {
     type Output = ();
 
     fn ui(&mut self, ui: &mut Ui) {
-        ui.set_bgcolor(Color::rgb(18, 18, 22));
+        // background color. pick your fighter.
+        ui.set_bgcolor(Theme::BG_CANVAS);
 
+        // 1. build widgets (plain structs, nothing scary)
         let mut label = Label::new(format!("count: {}", self.count));
         let mut button = Button::new("increment").id("increment-button");
 
+        // 2. lay them out (a vertical stack, placed at x=40, y=40)
         column![&mut label, &mut button]
             .spacing(12.0)
             .arrange_at([40.0, 40.0], ui);
 
+        // 3. react (AFTER layout -- the button knows if it was clicked now)
         if button.clicked() {
             self.count += 1;
         }
@@ -147,193 +132,96 @@ fn main() {
 }
 ```
 
-`App::new(root).run()` creates the window, initializes the renderer, and starts the event loop.
+that is the entire framework, conceptually:
 
-## core concepts
+1. **build** widgets every frame (they're cheap structs, not precious objects).
+2. **lay out** with `column!` / `row!`, then `arrange_at(position, ui)`.
+3. **react** to what happened (`clicked()`, `text(ui)`, `value(ui)`...).
 
-### app
+state (checkbox on/off, text field contents, slider position) lives inside `Ui`, keyed by each widget's id -- not in your structs. your structs just describe; `Ui` remembers. [how ids and state work →](docs/getting-started.md#the-only-rule-that-matters-give-stateful-widgets-stable-ids)
 
-`App<W: Widget>` owns the window and event loop.
+new here? read the **[getting started guide](docs/getting-started.md)** next. it explains the frame loop, ids, and layout without assuming you know what "immediate mode" means (spoiler: it just means "redraw everything every frame and stop worrying").
+
+## the widgets
+
+### controls (things you poke)
+
+| widget        | what it is                                    |
+| ------------- | --------------------------------------------- |
+| `Button`      | clickable. `.primary()`, `.outline()`, `.ghost()`, `.danger()` |
+| `Checkbox`    | boolean tick box with an animated checkmark   |
+| `RadioButton` | pick-one-of-many, grouped by a shared id     |
+| `Switch`      | on/off toggle with a sliding knob             |
+| `Slider`      | drag a number between min and max             |
+| `TextInput`   | single-line text field (selection, clipboard, the works) |
+| `TextArea`    | multi-line editor with its own scrollbar      |
+| `SelectBox`   | dropdown with optional type-to-filter search  |
+| `Tabs`        | tab strip with a sliding selection pill       |
 
 ```rust
-App::new(root_widget)
-    .update(|root| {
-        let _ = root;
-    })
-    .run();
-```
+let mut deploy = Button::new("deploy").id("deploy").primary();
 
-### widgets
-
-every ui element implements `Widget`:
-
-```rust
-pub trait Widget {
-    type Output;
-
-    fn ui(&mut self, ui: &mut Ui) -> Self::Output;
+if deploy.clicked() {
+    println!("deployed. probably fine.");
 }
 ```
 
-widgets used in `row![]` and `column![]` also implement `Measurable`, which provides `measure` and `arrange`.
+every widget follows the same recipe: `Thing::new(...)` → chain builders (`.id()`, `.size()`, `.style()`, ...) → put it in a layout → ask it what happened. full menu with every builder method: **[widget reference](docs/widgets.md)**.
 
-### ui context
+### containers (things that hold other things)
 
-`Ui` provides access to the current frame's input, drawing, focus, clipping, window controls, and widget state.
+| widget       | what it is                              |
+| ------------ | --------------------------------------- |
+| `Card`       | padded panel. `.subtle()`, `.elevated()` |
+| `ScrollView` | scrollable box with auto-hiding scrollbar |
+| `Container`  | fixed-size wrapper with padding          |
+| `Divider`    | a line. `horizontal(len)` / `vertical(len)`, `.faint()` |
 
-use it when building custom widgets or when the built-in widgets aren't enough.
+### displays (things you look at)
 
-### layout
-
-use `row![]` and `column![]` for flexbox layouts powered by `taffy`.
-
-see the [layout guide](docs/layout.md) for sizing, spacing, and alignment.
-
-## widgets
-
-### controls
-
-| widget        | purpose                                 |
+| widget        | what it is                              |
 | ------------- | --------------------------------------- |
-| `Button`      | clickable actions                       |
-| `Checkbox`    | boolean selection                       |
-| `RadioButton` | grouped selection                       |
-| `Switch`      | on/off control                          |
-| `Slider`      | numeric input                           |
-| `TextInput`   | single-line text                        |
-| `TextArea`    | multiline text                          |
-| `SelectBox`   | dropdown selection with optional search |
-| `Tabs`        | switch between sections                 |
+| `Label`       | text. `.heading()`, `.caption()`, `.mono()`, colors... |
+| `Badge`       | little status pill. `.success()`, `.warning()`, `.error()` |
+| `ProgressBar` | bar that fills up. takes `0.0..=1.0`    |
 
-example:
+## themes (nine of them, zero effort)
 
 ```rust
-let mut button = Button::new("deploy")
-    .id("deploy")
-    .primary();
-
-if button.clicked() {
-    println!("deployed");
-}
+ui.set_theme(Theme::DARK);             // one line. whole app repaints.
 ```
 
-buttons support `.primary()`, `.outline()`, `.ghost()`, and `.danger()`.
+| name | vibe |
+| ---- | ---- |
+| `Theme::LIGHT` / `Theme::DARK` | the classics |
+| `Theme::CATPPUCCIN_MOCHA` / `Theme::CATPPUCCIN_LATTE` | pastel, beloved by dotfile enthusiasts |
+| `Theme::TOKYO_NIGHT` | neon city at 2am |
+| `Theme::GRUVBOX_DARK` / `Theme::GRUVBOX_LIGHT` | retro groove, warm like toast |
+| `Theme::NORD` | arctic, calm, slightly cold |
+| `Theme::ROSE_PINE` | soft and rosy, as advertised |
 
-stateful widgets use stable ids to preserve their state between frames. use `.state(ui)`, `.take_state(ui)`, and `.put_state(ui, state)` when you need explicit control.
+`Theme::all()` returns all nine, so a theme switcher is about five lines. see [`examples/themes.rs`](examples/themes.rs). custom styles, gradients, and image fills: **[styling guide](docs/themes-and-styling.md)**.
 
-### containers
+## examples
 
-| widget       | purpose                          |
-| ------------ | -------------------------------- |
-| `Card`       | padded content with styling      |
-| `Container`  | fixed-size wrapper               |
-| `ScrollView` | scrollable content               |
-| `Divider`    | horizontal or vertical separator |
-
-### displays
-
-| widget        | purpose                          |
-| ------------- | -------------------------------- |
-| `Label`       | text with size and color presets |
-| `Badge`       | status indicator                 |
-| `ProgressBar` | progress indicator               |
-
-## styling and themes
-
-widgets can use built-in styles or custom style structs.
-
-```rust
-use glacex::{Button, ButtonStyle, Color, Fill};
-
-let button = Button::new("save")
-    .id("save")
-    .style(ButtonStyle {
-        fill: Fill::Solid(Color::hex_str("#4f46e5")),
-        hover_fill: Fill::Solid(Color::hex_str("#6366f1")),
-        pressed_fill: Fill::Solid(Color::hex_str("#4338ca")),
-        ..Default::default()
-    });
+```bash
+cargo run --example example1    # start here: tiny, commented, one card
+cargo run --example reminder    # a real todo app + how to write your own widget
+cargo run --example free_shape  # custom bezier shapes, zero layout
+cargo run --example themes      # all 9 themes, every widget, one window
+cargo run --example example2    # live style playground (type CSS-ish, see pixels)
+cargo run --example demo        # the kitchen sink
 ```
 
-`Color` supports rgb, rgba, hex, hsv, alpha, blending, and lightening/darkening operations.
+every example is heavily commented and reads top-to-bottom. `example1` is the smallest; start there.
 
-### themes
+## layout in one paragraph
 
-glacex ships with nine built-in palettes:
-
-```rust
-ui.set_theme(Theme::LIGHT);
-ui.set_theme(Theme::DARK);
-ui.set_theme(Theme::CATPPUCCIN_MOCHA);
-ui.set_theme(Theme::CATPPUCCIN_LATTE);
-ui.set_theme(Theme::TOKYO_NIGHT);
-ui.set_theme(Theme::GRUVBOX_DARK);
-ui.set_theme(Theme::GRUVBOX_LIGHT);
-ui.set_theme(Theme::NORD);
-ui.set_theme(Theme::ROSE_PINE);
-```
-
-### gradients and images
-
-gradients support linear, radial, and conic modes.
-
-```rust
-use glacex::{Color, Fill, Gradient, GradientKind, GradientStop};
-
-let gradient = Fill::Gradient(Gradient {
-    kind: GradientKind::Linear { angle: 90.0 },
-    stops: vec![
-        GradientStop {
-            position: 0.0,
-            color: Color::hex_str("#ff7e5f"),
-        },
-        GradientStop {
-            position: 1.0,
-            color: Color::hex_str("#feb47b"),
-        },
-    ],
-});
-```
-
-images can be loaded once and reused as fills:
-
-```rust
-let logo = ui.load_image("assets/logo.png");
-let fill = Fill::Image(logo);
-```
-
-supported image formats depend on the enabled formats in the `image` crate.
-
-### custom paths
-
-`MeasurablePath::Free` supports arbitrary bezier shapes through `kurbo`.
-
-```rust
-use glacex::{Color, Fill, MeasurablePath};
-use kurbo::BezPath;
-
-let mut path = BezPath::new();
-path.move_to((160.0, 90.0));
-path.line_to((188.0, 152.0));
-path.line_to((132.0, 152.0));
-path.close_path();
-
-ui.draw_shape(
-    MeasurablePath::free(path),
-    Fill::Solid(Color::hex_str("#f59e0b")),
-    0.0,
-    Color::WHITE,
-    0.0,
-    false,
-    0.0,
-);
-```
-
-free paths use a separate tessellated-mesh pipeline. they support solid and gradient fills, but not image fills, blur, or shadows. see the [architecture guide](docs/architecture.md) for the rendering details.
+`column![a, b, c]` stacks vertically, `row![a, b]` lines up horizontally. chain `.spacing()`, `.align()`, `.padding()`, `.size()` -- then finish with `.arrange_at([x, y], ui)` to actually place it. layouts nest: rows in columns in cards in scroll views. that's it, that's flexbox. details: **[layout guide](docs/layout.md)**.
 
 ## accessibility
 
-glacex can expose widgets to assistive technologies through `accesskit`.
+opt-in, one line:
 
 ```rust
 App::new(root_widget)
@@ -341,51 +229,34 @@ App::new(root_widget)
     .run();
 ```
 
-on linux, this uses at-spi. windows and macos use their respective accessibility APIs.
-
-## examples
-
-run the examples with cargo:
-
-```bash
-cargo run --example demo
-cargo run --example example1
-cargo run --example example2
-cargo run --example reminder
-cargo run --example free_shape
-cargo run --example themes
-```
-
-* `demo`: interactive controls and dashboard
-* `example1`: color and theme preview
-* `example2`: style playground
-* `reminder`: simple application
-* `free_shape`: custom paths
-* `themes`: theme showcase
+exposes widgets to screen readers via `accesskit` (at-spi on linux, native apis elsewhere).
 
 ## known limitations
 
 glacex is still under development. some corners are, in fact, still corners.
 
 * mesh gradients are not implemented and currently render transparent.
-* image fills currently support only one image at a time.
-* free paths do not support image fills, shadows, holes, or self-intersections reliably.
-* free paths render after regular shapes, so their paint order cannot yet be interleaved with rectangles and ellipses.
-* the api may change between releases.
+* image fills support only one image at a time (single shared atlas, no eviction yet).
+* free (bezier) paths don't support image fills, shadows, holes, or reliable self-intersections.
+* free paths render after regular shapes, so paint order can't interleave with rects/ellipses yet.
+* the api may change between releases. it's 0.x. you knew what this was.
 
 ## documentation
 
-* [architecture and rendering](docs/architecture.md)
-* [widget reference](docs/widgets.md)
-* [layout guide](docs/layout.md)
+* [getting started](docs/getting-started.md) -- your first app, the frame loop, ids
+* [widget reference](docs/widgets.md) -- every widget, every builder
+* [layout guide](docs/layout.md) -- rows, columns, sizing
+* [themes & styling](docs/themes-and-styling.md) -- themes, styles, color, gradients
+* [custom widgets](docs/custom-widgets.md) -- build your own from scratch
+* [architecture](docs/architecture.md) -- how the gpu sausage is made
+* [api docs on docs.rs](https://docs.rs/glacex)
 * [contributing](CONTRIBUTING.md)
-* [api documentation](https://docs.rs/glacex)
 
 ## contributing
 
 bug reports, testing, and pull requests are welcome.
 
-please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. small, focused changes are easier to review and less likely to summon the debugger.
+please read [CONTRIBUTING.md](CONTRIBUTING.md) first. small, focused changes are easier to review and less likely to summon the debugger.
 
 ## forks
 
