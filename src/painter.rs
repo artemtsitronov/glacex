@@ -3,11 +3,11 @@ use crate::fill::{Fill, Gradient, GradientHandle, GradientKind, GradientStop};
 use crate::path_sdf_atlas::PathSdfAtlas;
 use crate::shapes::{QUAD_VERTICES, QuadVertex, ShapeInstance};
 use crate::tessellate::{FLATTEN_TOLERANCE, flatten_polyline};
-use crate::theme::Theme;
-use crate::{ImageHandle, MeasurablePath, Shape};
+use crate::text::{FontError, FontFamily, FontWeight};
+use crate::{ImageHandle, MeasurablePath, Shape, TextStyle};
 use glyphon::{
-    Attrs, Cache, Family, FontSystem, Metrics, Resolution, Shaping, SwashCache, TextArea,
-    TextAtlas, TextBounds, TextRenderer, Viewport, Weight,
+    Attrs, Cache, FontSystem, Metrics, Resolution, Shaping, SwashCache, TextArea, TextAtlas,
+    TextBounds, TextRenderer, Viewport,
 };
 use image::{ImageError, ImageReader};
 use kurbo::{BezPath, PathEl, Shape as KurboShape};
@@ -79,14 +79,14 @@ fn hash_text_key(
     font_size: f32,
     line_height: f32,
     weight: FontWeight,
-    is_mono: bool,
+    font_family: FontFamily,
 ) -> u64 {
     let mut hasher = DefaultHasher::new();
     text.hash(&mut hasher);
     font_size.to_bits().hash(&mut hasher);
     line_height.to_bits().hash(&mut hasher);
     weight.hash(&mut hasher);
-    is_mono.hash(&mut hasher);
+    font_family.hash(&mut hasher);
     hasher.finish()
 }
 
@@ -216,26 +216,6 @@ impl GradientAtlas {
 struct WindowSize {
     width: f32,
     height: f32,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash)]
-pub enum FontWeight {
-    #[default]
-    Regular,
-    Medium,
-    SemiBold,
-    Bold,
-}
-
-impl FontWeight {
-    pub fn to_glyphon(self) -> Weight {
-        match self {
-            FontWeight::Regular => Weight::NORMAL,
-            FontWeight::Medium => Weight::MEDIUM,
-            FontWeight::SemiBold => Weight::SEMIBOLD,
-            FontWeight::Bold => Weight::BOLD,
-        }
-    }
 }
 
 macro_rules! load_font {
@@ -642,30 +622,37 @@ impl Painter {
         }
     }
 
-    fn get_or_shape_text(
-        &mut self,
-        text: &str,
-        font_size: f32,
-        line_height: f32,
-        weight: FontWeight,
-        is_mono: bool,
-    ) -> u64 {
-        let key = hash_text_key(text, font_size, line_height, weight, is_mono);
+    pub fn load_font_bytes(&mut self, data: Vec<u8>) -> Result<(), FontError> {
+        let before = self.font_system.db().len();
+        self.font_system.db_mut().load_font_data(data);
+        if self.font_system.db().len() == before {
+            return Err(FontError::Invalid); // fontdb ignores bad data silently
+        }
+        Ok(())
+    }
+
+    fn get_or_shape_text(&mut self, text: &str, style: &TextStyle) -> u64 {
+        let key = hash_text_key(
+            text,
+            style.font_size,
+            style.line_height,
+            style.weight,
+            style.font_family,
+        );
         if let Some(cached) = self.text_shape_cache.get_mut(&key) {
             cached.last_used_frame = self.frame_count;
             return key;
         }
 
-        let mut buffer =
-            glyphon::Buffer::new(&mut self.font_system, Metrics::new(font_size, line_height));
+        let mut buffer = glyphon::Buffer::new(
+            &mut self.font_system,
+            Metrics::new(style.font_size, style.line_height),
+        );
         buffer.set_size(Some(1000.0), Some(1000.0));
 
-        let family = if is_mono {
-            Family::Name("Geist Mono")
-        } else {
-            Family::Name("Geist")
-        };
-        let attrs = Attrs::new().weight(weight.to_glyphon()).family(family);
+        let attrs = Attrs::new()
+            .weight(style.weight.to_glyphon())
+            .family(style.font_family.to_glyphon());
         buffer.set_text(text, &attrs, Shaping::Basic, None);
         buffer.shape_until_scroll(&mut self.font_system, false);
 
@@ -682,7 +669,6 @@ impl Painter {
                 last_used_frame: self.frame_count,
             },
         );
-
         key
     }
 
@@ -709,25 +695,8 @@ impl Painter {
         self.font_metrics.line_height
     }
 
-    pub fn measure_text(&mut self, text: &str) -> f32 {
-        self.measure_text_styled(
-            text,
-            self.font_metrics.font_size,
-            self.font_metrics.line_height,
-            FontWeight::Regular,
-            false,
-        )
-    }
-
-    pub fn measure_text_styled(
-        &mut self,
-        text: &str,
-        font_size: f32,
-        line_height: f32,
-        weight: FontWeight,
-        is_mono: bool,
-    ) -> f32 {
-        let key = self.get_or_shape_text(text, font_size, line_height, weight, is_mono);
+    pub fn measure_text(&mut self, text: &str, text_style: &TextStyle) -> f32 {
+        let key = self.get_or_shape_text(text, text_style);
         self.text_shape_cache[&key].width
     }
 
@@ -762,7 +731,6 @@ impl Painter {
         })
     }
 
-    #[allow(clippy::too_many_arguments)]
     #[allow(clippy::too_many_arguments)]
     fn lower_shape(
         &mut self,
@@ -947,60 +915,38 @@ impl Painter {
         self.pending_shapes.push((clip, instance));
     }
 
-    pub fn draw_text(&mut self, text: &str, position: [f32; 2], bounds: [f32; 4]) {
-        self.draw_text_colored(text, position, bounds, Theme::TEXT_PRIMARY);
-    }
-
-    pub fn draw_text_colored(
+    #[allow(clippy::too_many_arguments)]
+    pub fn draw_text(
         &mut self,
         text: &str,
+        text_style: &TextStyle,
         position: [f32; 2],
         bounds: [f32; 4],
-        color: Color,
     ) {
-        self.draw_text_styled(
-            text,
+        let key = self.get_or_shape_text(text, text_style);
+        self.pending_labels.push((
+            key,
             position,
             bounds,
-            color,
-            self.font_metrics.font_size,
-            self.font_metrics.line_height,
-            FontWeight::Regular,
-            false,
-        );
+            text_style.color.unwrap_or(Color::WHITE),
+        ));
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn draw_text_styled(
+    pub fn draw_overlay_text(
         &mut self,
         text: &str,
+        text_style: &TextStyle,
         position: [f32; 2],
         bounds: [f32; 4],
-        color: Color,
-        font_size: f32,
-        line_height: f32,
-        weight: FontWeight,
-        is_mono: bool,
     ) {
-        let key = self.get_or_shape_text(text, font_size, line_height, weight, is_mono);
-        self.pending_labels.push((key, position, bounds, color));
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    pub fn draw_overlay_text_styled(
-        &mut self,
-        text: &str,
-        position: [f32; 2],
-        bounds: [f32; 4],
-        color: Color,
-        font_size: f32,
-        line_height: f32,
-        weight: FontWeight,
-        is_mono: bool,
-    ) {
-        let key = self.get_or_shape_text(text, font_size, line_height, weight, is_mono);
-        self.pending_overlay_labels
-            .push((key, position, bounds, color));
+        let key = self.get_or_shape_text(text, text_style);
+        self.pending_overlay_labels.push((
+            key,
+            position,
+            bounds,
+            text_style.color.unwrap_or(Color::WHITE),
+        ));
     }
 
     pub fn present(&mut self) {

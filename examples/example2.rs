@@ -217,13 +217,13 @@ impl Widget for AppState {
     fn ui(&mut self, ui: &mut Ui) {
         ui.set_bgcolor(Theme::BG_CANVAS);
 
-        let mut command_input = TextInput::new().width(580.0);
+        let mut command_input = TextInput::new().width(580.0).id("textinput");
         let command = command_input.text(ui);
         let parsed = parse_command(&command);
 
         let title = match &parsed {
-            Some((widget, _)) => format!("Style Playground - editing: {widget}"),
-            None => "Style Playground - type a command below".to_string(),
+            Some((widget, _)) => format!("Aio, editing: {widget}"),
+            None => "Style Playground: type a command below".to_string(),
         };
         if title != self.last_title {
             ui.set_title(&title);
@@ -265,10 +265,16 @@ impl Widget for AppState {
         let mut area_caption = Label::new("TextArea");
         let mut scroll_caption = Label::new("ScrollView");
 
-        let mut demo_button = Button::new("Button").style(button_style_value);
-        let mut demo_checkbox = Checkbox::new().style(checkbox_style_value);
-        let mut demo_text_input = TextInput::new().width(170.0).style(input_style_value);
-        let mut demo_text_area = TextArea::new().size([270.0, 80.0]).style(area_style_value);
+        let mut demo_button = Button::new("Button").style(button_style_value).id("button");
+        let mut demo_checkbox = Checkbox::new().style(checkbox_style_value).id("checkbox");
+        let mut demo_text_input = TextInput::new()
+            .width(170.0)
+            .style(input_style_value)
+            .id("text-input-2");
+        let mut demo_text_area = TextArea::new()
+            .size([270.0, 80.0])
+            .style(area_style_value)
+            .id("text-area");
 
         let mut scroll_item_1 = Label::new("Line one");
         let mut scroll_item_2 = Label::new("Line two");
@@ -298,6 +304,7 @@ impl Widget for AppState {
         ];
 
         let mut demo_scroll = ScrollView::new(&mut scroll_content)
+            .id("scroll-view")
             .size([270.0, 80.0])
             .style(scroll_style_value);
 

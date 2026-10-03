@@ -34,6 +34,7 @@ pub struct ImageHandle {
 }
 
 impl ImageHandle {
+    // yeah, I'm sorry, but how do you expect me to come up with a joke, for the `ImageHandle` name!?
     pub fn width(&self) -> f32 {
         self.width as f32
     }

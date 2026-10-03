@@ -7,6 +7,7 @@ use taffy::prelude::*;
 fn arrange_children(
     children: &mut [Box<dyn AnyWidget + '_>],
     cached_sizes: &[[f32; 2]],
+    flex_factors: &[f32],
     position: [f32; 2],
     size: [f32; 2],
     padding: [f32; 2],
@@ -23,17 +24,43 @@ fn arrange_children(
 
     let mut tree: TaffyTree<()> = TaffyTree::new();
 
+    let is_column = matches!(direction, FlexDirection::Column);
+    let stretch = align == Alignment::Stretch;
+
     let child_node_ids: Vec<NodeId> = cached_sizes
         .iter()
-        .map(|s| {
-            tree.new_leaf(Style {
+        .zip(flex_factors.iter())
+        .map(|(s, &flex)| {
+            let mut style = Style {
                 size: Size {
                     width: length(s[0]),
                     height: length(s[1]),
                 },
                 ..Default::default()
-            })
-            .unwrap()
+            };
+
+            if stretch {
+                if is_column {
+                    style.size.width = auto();
+                } else {
+                    style.size.height = auto();
+                }
+            }
+
+            if flex > 0.0 {
+                style.flex_grow = flex;
+                style.flex_shrink = 1.0;
+                style.flex_basis = length(0.0);
+                if is_column {
+                    style.size.height = auto();
+                    style.min_size.height = length(0.0);
+                } else {
+                    style.size.width = auto();
+                    style.min_size.width = length(0.0);
+                }
+            }
+
+            tree.new_leaf(style).unwrap()
         })
         .collect();
 
@@ -105,11 +132,13 @@ pub struct Column<'a> {
     padding: [f32; 2],
     children: Vec<Box<dyn AnyWidget + 'a>>,
     cached_child_sizes: Vec<[f32; 2]>,
+    cached_flex: Vec<f32>,
 }
 
 impl<'a> Column<'a> {
     pub fn new(children: Vec<Box<dyn AnyWidget + 'a>>) -> Self {
         let cached_child_sizes = vec![[0.0; 2]; children.len()];
+        let cached_flex = vec![0.0; children.len()];
         Column {
             spacing: 8.0,
             align: Alignment::Center,
@@ -118,6 +147,7 @@ impl<'a> Column<'a> {
             padding: [0.0, 0.0],
             children,
             cached_child_sizes,
+            cached_flex,
         }
     }
 
@@ -176,12 +206,14 @@ impl<'a> Widget for Column<'a> {
 impl<'a> Measurable for Column<'a> {
     fn measure(&mut self, ui: &mut Ui) -> [f32; 2] {
         self.cached_child_sizes.clear();
+        self.cached_flex.clear();
         let mut width: f32 = 0.0;
         let mut height: f32 = 0.0;
         let count = self.children.len();
         for (i, child) in self.children.iter_mut().enumerate() {
             let child_size = child.measure(ui);
             self.cached_child_sizes.push(child_size);
+            self.cached_flex.push(child.flex());
             width = width.max(child_size[0]);
             height += child_size[1];
             if i + 1 < count {
@@ -198,6 +230,7 @@ impl<'a> Measurable for Column<'a> {
         arrange_children(
             &mut self.children,
             &self.cached_child_sizes,
+            &self.cached_flex,
             position,
             size,
             self.padding,
@@ -218,11 +251,13 @@ pub struct Row<'a> {
     padding: [f32; 2],
     children: Vec<Box<dyn AnyWidget + 'a>>,
     cached_child_sizes: Vec<[f32; 2]>,
+    cached_flex: Vec<f32>,
 }
 
 impl<'a> Row<'a> {
     pub fn new(children: Vec<Box<dyn AnyWidget + 'a>>) -> Self {
         let cached_child_sizes = vec![[0.0; 2]; children.len()];
+        let cached_flex = vec![0.0; children.len()];
         Row {
             spacing: 8.0,
             align: Alignment::Center,
@@ -231,6 +266,7 @@ impl<'a> Row<'a> {
             padding: [0.0, 0.0],
             children,
             cached_child_sizes,
+            cached_flex,
         }
     }
 
@@ -289,12 +325,14 @@ impl<'a> Widget for Row<'a> {
 impl<'a> Measurable for Row<'a> {
     fn measure(&mut self, ui: &mut Ui) -> [f32; 2] {
         self.cached_child_sizes.clear();
+        self.cached_flex.clear();
         let mut width: f32 = 0.0;
         let mut height: f32 = 0.0;
         let count = self.children.len();
         for (i, child) in self.children.iter_mut().enumerate() {
             let child_size = child.measure(ui);
             self.cached_child_sizes.push(child_size);
+            self.cached_flex.push(child.flex());
             width += child_size[0];
             height = height.max(child_size[1]);
             if i + 1 < count {
@@ -311,6 +349,7 @@ impl<'a> Measurable for Row<'a> {
         arrange_children(
             &mut self.children,
             &self.cached_child_sizes,
+            &self.cached_flex,
             position,
             size,
             self.padding,

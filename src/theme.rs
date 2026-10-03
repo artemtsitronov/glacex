@@ -1,3 +1,4 @@
+use crate::Token;
 use crate::button::ButtonStyle;
 use crate::card::CardStyle;
 use crate::checkbox::CheckboxStyle;
@@ -677,6 +678,19 @@ impl Theme {
             shadow: Some(self.shadow_sm()[0]),
             sharp: false,
             path: Path::rect([6.0; 4]),
+        }
+    }
+
+    pub fn token_color(&self, token: Token) -> Color {
+        match token {
+            Token::Keyword => self.active,
+            Token::Function => self.active_hover,
+            Token::String => self.success,
+            Token::Number => self.warning,
+            Token::Comment => self.text_muted,
+            Token::Operator => self.text_secondary,
+            Token::Type => self.warning,
+            Token::Plain => self.text_primary,
         }
     }
 }

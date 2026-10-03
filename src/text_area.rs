@@ -2,8 +2,10 @@ use crate::animation::{Motion, animate_towards};
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::geometry::{MeasurablePath, Path};
+use crate::highlight::{Highlighter, Language, line_runs};
 use crate::scrolling::{ScrollAxisState, ScrollConfig, compute_geometry, handle_drag};
 use crate::shadow::{ShadowStyle, draw_shadow};
+use crate::text::TextStyle;
 use crate::text_edit::TextEditState;
 use crate::theme::Theme;
 use crate::ui::Ui;
@@ -18,6 +20,8 @@ struct TextAreaExtra {
     scroll: ScrollAxisState,
     scroll_x: f32,
     text_dragging: bool,
+    highlighter: Option<Highlighter>,
+    line_starts: Vec<usize>,
 }
 
 #[derive(Clone)]
@@ -68,7 +72,9 @@ pub struct TextArea {
     width: f32,
     height: f32,
     style: Option<TextAreaStyle>,
+    text_style: TextStyle,
     default_text: String,
+    language: Option<Language>,
     custom_padding: Option<[f32; 2]>,
 }
 
@@ -86,7 +92,9 @@ impl TextArea {
             width: Self::DEFAULT_WIDTH,
             height: Self::DEFAULT_HEIGHT,
             style: None,
+            text_style: TextStyle::new().mono(),
             default_text: String::new(),
+            language: None,
             custom_padding: None,
         }
     }
@@ -125,6 +133,15 @@ impl TextArea {
         self
     }
 
+    pub fn text_style(mut self, text_style: TextStyle) -> Self {
+        self.text_style = text_style;
+        self
+    }
+
+    pub fn set_text_style(&mut self, text_style: TextStyle) {
+        self.text_style = text_style;
+    }
+
     pub fn set_style(&mut self, style: Option<TextAreaStyle>) {
         self.style = style;
     }
@@ -132,6 +149,15 @@ impl TextArea {
     pub fn default_text(mut self, text: impl Into<String>) -> Self {
         self.default_text = text.into();
         self
+    }
+
+    pub fn language(mut self, language: Language) -> Self {
+        self.language = Some(language);
+        self
+    }
+
+    pub fn set_language(mut self, language: Option<Language>) {
+        self.language = language;
     }
 
     pub fn focused(&self, ui: &Ui) -> bool {
@@ -180,12 +206,24 @@ fn line_start_char_index(text: &str, line_index: usize) -> usize {
         .unwrap_or(text.chars().count())
 }
 
+fn compute_line_starts(text: &str) -> Vec<usize> {
+    let mut v = vec![0];
+    v.extend(
+        text.bytes()
+            .enumerate()
+            .filter(|(_, b)| *b == b'\n')
+            .map(|(i, _)| i + 1),
+    );
+    v
+}
+
 fn char_index_at_point(
     state: &TextEditState,
     ui: &mut Ui,
-    line_height: f32,
+    text_style: TextStyle,
     relative_pos: [f32; 2],
 ) -> usize {
+    let line_height = text_style.line_height;
     let text = state.text();
     let line_count = state.line_count();
 
@@ -207,7 +245,7 @@ fn char_index_at_point(
     for (char_offset, (byte_offset, _)) in line_text.char_indices().enumerate().chain(
         std::iter::once((line_text.chars().count(), (line_text.len(), ' '))),
     ) {
-        let prefix_width = ui.measure_text(&line_text[..byte_offset]);
+        let prefix_width = ui.measure_text(&line_text[..byte_offset], text_style);
         let distance = (prefix_width - relative_pos[0]).abs();
         if distance < best_distance {
             best_distance = distance;
@@ -322,7 +360,19 @@ impl Measurable for TextArea {
             }
         }
 
-        let line_height = ui.line_height();
+        if let Some(lang) = self.language {
+            let h = extra
+                .highlighter
+                .get_or_insert_with(|| Highlighter::new(lang));
+            if h.update(state.text()) {
+                extra.line_starts = compute_line_starts(state.text());
+            }
+        } else {
+            extra.highlighter = None;
+        }
+
+        let text_style = self.text_style.or_color(style.text_color);
+        let line_height = text_style.line_height;
         let content_height = state.line_count() as f32 * line_height;
         let visible_height = size[1] - padding_y * 2.0;
         let track_length = size[1] - config.padding * 2.0;
@@ -351,7 +401,7 @@ impl Measurable for TextArea {
         if text_click {
             ui.request_focus(self.focus_id);
             state.mark_activity();
-            let index = char_index_at_point(&state, ui, line_height, relative_click);
+            let index = char_index_at_point(&state, ui, text_style, relative_click);
 
             match ui.click_count() {
                 1 => {
@@ -380,7 +430,7 @@ impl Measurable for TextArea {
 
         if ui.mouse_pressed() && extra.text_dragging && ui.click_count() == 1 {
             state.mark_activity();
-            let index = char_index_at_point(&state, ui, line_height, relative_click);
+            let index = char_index_at_point(&state, ui, text_style, relative_click);
             state.set_cursor(index);
         }
 
@@ -476,7 +526,7 @@ impl Measurable for TextArea {
         let line_start_byte = state.byte_index_for(line_start);
         let cursor_byte = state.byte_index_for(state.cursor());
         let prefix = &state.text()[line_start_byte..cursor_byte];
-        let cursor_x = ui.measure_text(prefix);
+        let cursor_x = ui.measure_text(prefix, text_style);
 
         let visible_width = size[0] - padding_x * 2.0;
         if focused && cursor_moved {
@@ -550,8 +600,8 @@ impl Measurable for TextArea {
                         state.byte_index_for(overlap_start) - state.byte_index_for(this_line_start);
                     let prefix_end_byte =
                         state.byte_index_for(overlap_end) - state.byte_index_for(this_line_start);
-                    let x_start = ui.measure_text(&line[..prefix_start_byte]);
-                    let x_end = ui.measure_text(&line[..prefix_end_byte]);
+                    let x_start = ui.measure_text(&line[..prefix_start_byte], text_style);
+                    let x_end = ui.measure_text(&line[..prefix_end_byte], text_style);
 
                     let highlight_position = [
                         (text_origin[0] + x_start).round(),
@@ -574,10 +624,42 @@ impl Measurable for TextArea {
             }
         }
 
-        for (i, line) in state.text().split('\n').enumerate() {
-            if !line.is_empty() {
-                let line_position = [text_origin[0], text_origin[1] + i as f32 * line_height];
-                ui.draw_text_colored(line, line_position, clip_rect, style.text_color);
+        let text = state.text();
+
+        if let Some(h) = extra.highlighter.as_mut() {
+            let ls = &extra.line_starts;
+            let n = ls.len();
+            let first = ((extra.scroll.offset / line_height) as usize).min(n - 1);
+            let last = (first + (visible_height / line_height).ceil() as usize + 2).min(n);
+            let line_end = |i: usize| if i + 1 < n { ls[i + 1] - 1 } else { text.len() };
+
+            let base = ls[first];
+            let tokens = h.paint(base..line_end(last - 1));
+
+            for i in first..last {
+                let (s, e) = (ls[i], line_end(i));
+                if s == e {
+                    continue;
+                }
+                let line = &text[s..e];
+                let y = text_origin[1] + i as f32 * line_height;
+
+                for (r, tok) in line_runs(&tokens, base, s..e) {
+                    let x = ui.measure_text(&line[..r.start], text_style);
+                    ui.draw_text(
+                        &line[r.clone()],
+                        text_style.color(theme.token_color(tok)),
+                        [text_origin[0] + x, y],
+                        clip_rect,
+                    );
+                }
+            }
+        } else {
+            for (i, line) in text.split('\n').enumerate() {
+                if !line.is_empty() {
+                    let line_position = [text_origin[0], text_origin[1] + i as f32 * line_height];
+                    ui.draw_text(line, text_style, line_position, clip_rect);
+                }
             }
         }
 

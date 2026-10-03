@@ -2,7 +2,7 @@ use crate::color::Color;
 use crate::fill::Fill;
 use crate::geometry::Path;
 use crate::misc::center_text_in;
-use crate::painter::FontWeight;
+use crate::text::{FontWeight, TextStyle};
 use crate::theme::Theme;
 use crate::ui::Ui;
 use crate::widget::{Accessible, Measurable, Widget, hash_id};
@@ -47,6 +47,7 @@ pub struct Badge {
     text: String,
     variant: BadgeVariant,
     style: Option<BadgeStyle>,
+    text_style: TextStyle,
     width: Option<f32>,
     height: Option<f32>,
     custom_padding: Option<[f32; 2]>,
@@ -59,6 +60,7 @@ impl Badge {
             text: text.into(),
             variant: BadgeVariant::Default,
             style: None,
+            text_style: TextStyle::new().size(12.0, 16.0).weight(FontWeight::Medium),
             width: None,
             height: None,
             custom_padding: None,
@@ -128,6 +130,15 @@ impl Badge {
 
     pub fn set_style(&mut self, style: Option<BadgeStyle>) {
         self.style = style;
+    }
+
+    pub fn text_style(mut self, text_style: TextStyle) -> Self {
+        self.text_style = text_style;
+        self
+    }
+
+    pub fn set_text_style(&mut self, text_style: TextStyle) {
+        self.text_style = text_style;
     }
 
     fn resolved_style(&self, theme: &Theme) -> BadgeStyle {
@@ -211,7 +222,7 @@ impl Widget for Badge {
 impl Measurable for Badge {
     fn measure(&mut self, ui: &mut Ui) -> [f32; 2] {
         let style = self.resolved_style(ui.theme());
-        let text_width = ui.measure_text_styled(&self.text, 12.0, 16.0, FontWeight::Medium, false);
+        let text_width = ui.measure_text(&self.text, self.text_style);
         [
             self.width.unwrap_or(text_width + style.padding[0] * 2.0),
             self.height.unwrap_or(20.0),
@@ -241,24 +252,16 @@ impl Measurable for Badge {
             0.0,
         );
 
-        let text_width = ui.measure_text_styled(&self.text, 12.0, 16.0, FontWeight::Medium, false);
-        let text_pos = center_text_in(position, size, text_width, 16.0);
+        let text_style = self.text_style.or_color(style.text_color);
+        let text_width = ui.measure_text(&self.text, text_style);
+        let text_pos = center_text_in(position, size, text_width, text_style.line_height);
         let clip_rect = [
             position[0],
             position[1],
             position[0] + size[0],
             position[1] + size[1],
         ];
-        ui.draw_text_styled(
-            &self.text,
-            text_pos,
-            clip_rect,
-            style.text_color,
-            12.0,
-            16.0,
-            FontWeight::Medium,
-            false,
-        );
+        ui.draw_text(&self.text, text_style, text_pos, clip_rect);
     }
 }
 

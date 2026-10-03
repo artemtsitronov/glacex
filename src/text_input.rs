@@ -3,6 +3,7 @@ use crate::color::Color;
 use crate::fill::Fill;
 use crate::geometry::{MeasurablePath, Path};
 use crate::shadow::{ShadowStyle, draw_shadow};
+use crate::text::TextStyle;
 use crate::text_edit::TextEditState;
 use crate::theme::Theme;
 use crate::ui::Ui;
@@ -55,6 +56,7 @@ pub struct TextInput {
     width: f32,
     height: Option<f32>,
     style: Option<TextInputStyle>,
+    text_style: TextStyle,
     default_text: String,
     placeholder: Option<String>,
     custom_padding: Option<[f32; 2]>,
@@ -71,6 +73,7 @@ impl TextInput {
             width: Self::DEFAULT_WIDTH,
             height: None,
             style: None,
+            text_style: TextStyle::new(),
             default_text: String::new(),
             placeholder: None,
             custom_padding: None,
@@ -113,6 +116,15 @@ impl TextInput {
     pub fn style(mut self, style: TextInputStyle) -> Self {
         self.style = Some(style);
         self
+    }
+
+    pub fn text_style(mut self, text_style: TextStyle) -> Self {
+        self.text_style = text_style;
+        self
+    }
+
+    pub fn set_text_style(&mut self, text_style: TextStyle) {
+        self.text_style = text_style;
     }
 
     pub fn set_style(&mut self, style: Option<TextInputStyle>) {
@@ -163,7 +175,8 @@ impl Widget for TextInput {
 impl Measurable for TextInput {
     fn measure(&mut self, ui: &mut Ui) -> [f32; 2] {
         let style = self.resolved_style(ui.theme());
-        let natural_height = ui.line_height() + style.padding[1] * 2.0;
+        let line_height = self.text_style.line_height;
+        let natural_height = line_height + style.padding[1] * 2.0;
         [self.width, self.height.unwrap_or(natural_height)]
     }
 
@@ -174,6 +187,8 @@ impl Measurable for TextInput {
         let style = self.resolved_style(&theme);
         let dt = ui.dt();
         let padding = style.padding[0];
+        let text_style = self.text_style.or_color(style.text_color);
+        let line_height = text_style.line_height;
 
         ui.register_accessible(
             self,
@@ -192,7 +207,7 @@ impl Measurable for TextInput {
 
         let text_position = [
             position[0] + padding,
-            position[1] + (size[1] - ui.line_height()) / 2.0,
+            position[1] + (size[1] - line_height) / 2.0,
         ];
 
         let mut state = ui.take_widget_state_or(&self.id, self.initial_state());
@@ -207,7 +222,7 @@ impl Measurable for TextInput {
             state.dragging = true;
             state.mark_activity();
             let click_x = ui.mouse_position()[0] - text_position[0] + state.scroll_offset();
-            let index = state.cursor_index_for_x(ui, click_x);
+            let index = state.cursor_index_for_x(ui, text_style, click_x);
             match ui.click_count() {
                 1 => {
                     state.set_cursor(index);
@@ -234,7 +249,7 @@ impl Measurable for TextInput {
         if ui.mouse_pressed() && state.dragging && ui.click_count() == 1 {
             state.mark_activity();
             let drag_x = ui.mouse_position()[0] - text_position[0] + state.scroll_offset();
-            let index = state.cursor_index_for_x(ui, drag_x);
+            let index = state.cursor_index_for_x(ui, text_style, drag_x);
             state.set_cursor(index);
         }
 
@@ -243,7 +258,7 @@ impl Measurable for TextInput {
         }
 
         let text_width = size[0] - padding * 2.0;
-        let cursor_x = ui.measure_text(state.prefix());
+        let cursor_x = ui.measure_text(state.prefix(), text_style);
         state.scroll_into_view(cursor_x, text_width);
 
         let focus_target = if focused { 1.0f32 } else { 0.0 };
@@ -288,14 +303,15 @@ impl Measurable for TextInput {
         ui.push_clip(clip_rect);
 
         if let Some((start, end)) = state.selection_range() {
-            let prefix_start = ui.measure_text(&state.text()[..state.byte_index_for(start)]);
-            let prefix_end = ui.measure_text(&state.text()[..state.byte_index_for(end)]);
+            let text = state.text();
+            let prefix_start = ui.measure_text(&text[..state.byte_index_for(start)], text_style);
+            let prefix_end = ui.measure_text(&text[..state.byte_index_for(end)], text_style);
 
             let highlight_position = [
                 (text_position[0] + prefix_start - state.scroll_offset()).round(),
                 text_position[1],
             ];
-            let highlight_size = [prefix_end - prefix_start, ui.line_height()];
+            let highlight_size = [prefix_end - prefix_start, line_height];
 
             ui.draw_shape(
                 MeasurablePath::rect(highlight_position, highlight_size, [0.0; 4]),
@@ -310,19 +326,19 @@ impl Measurable for TextInput {
 
         if state.text().is_empty() {
             if let Some(placeholder) = &self.placeholder {
-                ui.draw_text_colored(
+                ui.draw_text(
                     placeholder,
-                    [text_position[0], text_position[1]],
+                    text_style.color(style.placeholder_color),
+                    text_position,
                     clip_rect,
-                    style.placeholder_color,
                 );
             }
         } else {
-            ui.draw_text_colored(
+            ui.draw_text(
                 state.text(),
+                text_style,
                 [text_position[0] - state.scroll_offset(), text_position[1]],
                 clip_rect,
-                style.text_color,
             );
         }
 
@@ -335,7 +351,7 @@ impl Measurable for TextInput {
                     text_position[1],
                 ];
                 ui.draw_shape(
-                    MeasurablePath::rect(cursor_position, [2.0, ui.line_height()], [0.0; 4]),
+                    MeasurablePath::rect(cursor_position, [2.0, line_height], [0.0; 4]),
                     Fill::Solid(style.cursor_color),
                     0.0,
                     Color::TRANSPARENT,

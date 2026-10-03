@@ -2,7 +2,7 @@ use crate::animation::{Motion, animate_towards};
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::geometry::{MeasurablePath, Path};
-use crate::painter::FontWeight;
+use crate::text::{FontWeight, TextStyle};
 use crate::theme::Theme;
 use crate::ui::Ui;
 use crate::widget::{Accessible, Measurable, Widget, hash_id};
@@ -115,6 +115,7 @@ pub struct Tabs {
     id: String,
     items: Vec<TabItem>,
     style: Option<TabsStyle>,
+    text_style: TextStyle,
 }
 
 impl Tabs {
@@ -123,6 +124,7 @@ impl Tabs {
             id: uuid::Uuid::new_v4().to_string(),
             items,
             style: None,
+            text_style: TextStyle::new().size(14.0, 20.0).weight(FontWeight::Medium),
         }
     }
 
@@ -134,6 +136,15 @@ impl Tabs {
     pub fn style(mut self, style: TabsStyle) -> Self {
         self.style = Some(style);
         self
+    }
+
+    pub fn text_style(mut self, text_style: TextStyle) -> Self {
+        self.text_style = text_style;
+        self
+    }
+
+    pub fn set_text_style(&mut self, text_style: TextStyle) {
+        self.text_style = text_style;
     }
 
     pub fn selected(&self, ui: &Ui) -> Option<String> {
@@ -154,7 +165,7 @@ impl Tabs {
         let mut x = 0.0;
         let mut out = Vec::with_capacity(self.items.len());
         for item in &self.items {
-            let text_w = ui.measure_text_styled(&item.label, 14.0, 20.0, FontWeight::Medium, false);
+            let text_w = ui.measure_text(&item.label, self.text_style);
             let w = text_w + style.tab_padding_x * 2.0;
             out.push((x, w));
             x += w + style.gap;
@@ -284,13 +295,21 @@ impl Measurable for Tabs {
             let color = if is_active {
                 active_text_color
             } else {
-                style.text_color.lerp(style.hover_text_color, hover_t)
+                self.text_style
+                    .color
+                    .unwrap_or(style.text_color)
+                    .lerp(style.hover_text_color, hover_t)
             };
 
-            let text_width =
-                ui.measure_text_styled(&self.items[i].label, 14.0, 20.0, FontWeight::Medium, false);
+            let text_style = if is_active {
+                self.text_style.weight(FontWeight::SemiBold)
+            } else {
+                self.text_style
+            }
+            .color(color);
+            let text_width = ui.measure_text(&self.items[i].label, text_style);
             let text_x = tab_pos[0] + (tab_w - text_width) / 2.0;
-            let text_y = tab_pos[1] + (size[1] - 20.0) / 2.0;
+            let text_y = tab_pos[1] + (size[1] - text_style.line_height) / 2.0;
             let clip = [
                 tab_pos[0],
                 tab_pos[1],
@@ -298,20 +317,7 @@ impl Measurable for Tabs {
                 tab_pos[1] + size[1],
             ];
 
-            ui.draw_text_styled(
-                &self.items[i].label,
-                [text_x, text_y],
-                clip,
-                color,
-                14.0,
-                20.0,
-                if is_active {
-                    FontWeight::SemiBold
-                } else {
-                    FontWeight::Medium
-                },
-                false,
-            );
+            ui.draw_text(&self.items[i].label, text_style, [text_x, text_y], clip);
         }
 
         if hovered_index.is_some() {

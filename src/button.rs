@@ -5,6 +5,7 @@ use crate::geometry::Path;
 use crate::interaction::Interaction;
 use crate::misc::center_text_in;
 use crate::shadow::{ShadowStyle, draw_shadow};
+use crate::text::{FontWeight, TextStyle};
 use crate::theme::Theme;
 use crate::ui::Ui;
 use crate::widget::{Accessible, Measurable, StatefulWidget, Widget, hash_id};
@@ -144,6 +145,7 @@ pub struct Button {
     interaction: Interaction,
     variant: ButtonVariant,
     style: Option<ButtonStyle>,
+    text_style: TextStyle,
     tooltip: Option<String>,
     width: Option<f32>,
     height: Option<f32>,
@@ -158,6 +160,7 @@ impl Button {
             interaction: Interaction::default(),
             variant: ButtonVariant::Default,
             style: None,
+            text_style: TextStyle::new().size(14.0, 20.0).weight(FontWeight::Medium),
             tooltip: None,
             width: None,
             height: None,
@@ -198,6 +201,15 @@ impl Button {
 
     pub fn set_style(&mut self, style: Option<ButtonStyle>) {
         self.style = style;
+    }
+
+    pub fn text_style(mut self, text_style: TextStyle) -> Self {
+        self.text_style = text_style;
+        self
+    }
+
+    pub fn set_text_style(&mut self, text_style: TextStyle) {
+        self.text_style = text_style;
     }
 
     pub fn primary(mut self) -> Self {
@@ -265,16 +277,11 @@ impl Measurable for Button {
     fn measure(&mut self, ui: &mut Ui) -> [f32; 2] {
         let theme = *ui.theme();
         let style = self.resolved_style(&theme);
-        let text_width = ui.measure_text_styled(
-            &self.label,
-            14.0,
-            20.0,
-            crate::painter::FontWeight::Medium,
-            false,
-        );
+        let text_width = ui.measure_text(&self.label, self.text_style);
         [
             self.width.unwrap_or(text_width + style.padding[0] * 2.0),
-            self.height.unwrap_or(style.padding[1] * 2.0 + 20.0),
+            self.height
+                .unwrap_or(style.padding[1] * 2.0 + self.text_style.line_height),
         ]
     }
 
@@ -346,30 +353,16 @@ impl Measurable for Button {
             0.0,
         );
 
-        let text_width = ui.measure_text_styled(
-            &self.label,
-            14.0,
-            20.0,
-            crate::painter::FontWeight::Medium,
-            false,
-        );
-        let text_position = center_text_in(draw_position, size, text_width, 20.0);
+        let text_style = self.text_style.or_color(style.text_color);
+        let text_width = ui.measure_text(&self.label, text_style);
+        let text_position = center_text_in(draw_position, size, text_width, text_style.line_height);
         let clip_rect = [
             draw_position[0],
             draw_position[1],
             draw_position[0] + size[0],
             draw_position[1] + size[1],
         ];
-        ui.draw_text_styled(
-            &self.label,
-            text_position,
-            clip_rect,
-            style.text_color,
-            14.0,
-            20.0,
-            crate::painter::FontWeight::Medium,
-            false,
-        );
+        ui.draw_text(&self.label, text_style, text_position, clip_rect);
 
         if interaction.hovered {
             ui.set_cursor_icon(CursorIcon::Pointer);

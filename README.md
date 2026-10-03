@@ -56,6 +56,9 @@ Built by **Artem Tsitronov** and **Soumalya Das**.
 
 If you'd like an experimental version of glacex, try visiting programmersd21 fork: https://github.com/programmersd21/glacex [DISCLAIMER]: Artem Tsitronov is not responsible for programmersd21 fork. That includes drastic changes, redesigns, and AI-generated content
 
+[ADVICE]: If you want to laugh, look at the code, you will find some funny comments :)
+I hope you laugh from them and not from the code itself.
+
 ## What is glacex?
 
 `glacex` is an immediate-mode UI library for Rust that draws its own pixels instead of wrapping a native toolkit or a browser engine:

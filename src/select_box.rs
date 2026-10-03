@@ -2,8 +2,8 @@ use crate::animation::{Motion, Spring, animate_towards};
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::geometry::{MeasurablePath, Path};
-use crate::painter::FontWeight;
 use crate::shadow::ShadowStyle;
+use crate::text::{FontWeight, TextStyle};
 use crate::theme::Theme;
 use crate::ui::Ui;
 use crate::widget::{Accessible, FocusId, Measurable, StatefulWidget, Widget, hash_id};
@@ -200,6 +200,7 @@ pub struct SelectBox {
     options: Vec<SelectOption>,
     placeholder: String,
     style: Option<SelectBoxStyle>,
+    text_style: TextStyle,
     width: f32,
     tooltip: Option<String>,
     searchable: bool,
@@ -212,6 +213,7 @@ impl SelectBox {
             options,
             placeholder: "Select an option…".into(),
             style: None,
+            text_style: TextStyle::new(),
             width: 220.0,
             tooltip: None,
             searchable: false,
@@ -241,6 +243,15 @@ impl SelectBox {
     pub fn style(mut self, style: SelectBoxStyle) -> Self {
         self.style = Some(style);
         self
+    }
+
+    pub fn text_style(mut self, text_style: TextStyle) -> Self {
+        self.text_style = text_style;
+        self
+    }
+
+    pub fn set_text_style(&mut self, text_style: TextStyle) {
+        self.text_style = text_style;
     }
 
     pub fn tooltip(mut self, tooltip: impl Into<String>) -> Self {
@@ -497,7 +508,7 @@ impl Measurable for SelectBox {
             .unwrap_or(self.placeholder.as_str());
 
         let text_color = if state.selected.is_some() {
-            style.text_color
+            self.text_style.color.unwrap_or(style.text_color)
         } else {
             style.placeholder_color
         };
@@ -508,7 +519,8 @@ impl Measurable for SelectBox {
             position[0] + size[0] - style.padding_x - 24.0,
             position[1] + size[1],
         ];
-        let text_y = position[1] + (size[1] - 20.0) / 2.0;
+        let label_style = self.text_style.color(text_color);
+        let text_y = position[1] + (size[1] - label_style.line_height) / 2.0;
 
         // closed trigger draws standalone, open trigger is part of the merged surface below
         if open_ease <= 0.001 {
@@ -522,15 +534,11 @@ impl Measurable for SelectBox {
                 0.0,
             );
 
-            ui.draw_text_styled(
+            ui.draw_text(
                 label_text,
+                label_style,
                 [position[0] + style.padding_x, text_y],
                 text_clip,
-                text_color,
-                14.0,
-                20.0,
-                FontWeight::Regular,
-                false,
             );
 
             draw_chevron(
@@ -635,15 +643,11 @@ impl Measurable for SelectBox {
             );
 
             // overlay layer so label and chevron sit above the merged background
-            ui.draw_overlay_text_styled(
+            ui.draw_overlay_text(
                 label_text,
+                label_style,
                 [position[0] + style.padding_x, text_y],
                 text_clip,
-                text_color,
-                14.0,
-                20.0,
-                FontWeight::Regular,
-                false,
             );
             draw_chevron_overlay(
                 ui,
@@ -682,9 +686,12 @@ impl Measurable for SelectBox {
                 } else {
                     style.text_color.with_alpha(open_ease)
                 };
-                let search_text_y = search_pos[1] + (style.search_height - 20.0) / 2.0;
-                ui.draw_overlay_text_styled(
+                let search_style = self.text_style.size(13.0, 20.0).color(search_color);
+                let search_text_y =
+                    search_pos[1] + (style.search_height - search_style.line_height) / 2.0;
+                ui.draw_overlay_text(
                     &search_display,
+                    search_style,
                     [search_pos[0] + 10.0, search_text_y],
                     [
                         search_pos[0] + 10.0,
@@ -692,11 +699,6 @@ impl Measurable for SelectBox {
                         search_pos[0] + search_size[0] - 10.0,
                         search_pos[1] + search_size[1],
                     ],
-                    search_color,
-                    13.0,
-                    20.0,
-                    FontWeight::Regular,
-                    false,
                 );
 
                 content_y += style.search_height + 4.0;
@@ -795,12 +797,22 @@ impl Measurable for SelectBox {
                 let item_text_color = if is_selected {
                     style.item_active_text_color.with_alpha(open_ease)
                 } else {
-                    style.item_text_color.with_alpha(open_ease)
+                    self.text_style
+                        .color
+                        .unwrap_or(style.item_text_color)
+                        .with_alpha(open_ease)
                 };
 
-                let text_y = item_pos[1] + (style.item_height - 20.0) / 2.0;
-                ui.draw_overlay_text_styled(
+                let item_style = if is_selected {
+                    self.text_style.weight(FontWeight::Medium)
+                } else {
+                    self.text_style
+                }
+                .color(item_text_color);
+                let text_y = item_pos[1] + (style.item_height - item_style.line_height) / 2.0;
+                ui.draw_overlay_text(
                     &self.options[opt_idx].label,
+                    item_style,
                     [item_pos[0] + style.item_padding_x, text_y],
                     [
                         item_pos[0] + style.item_padding_x,
@@ -808,15 +820,6 @@ impl Measurable for SelectBox {
                         item_pos[0] + item_size[0] - style.item_padding_x,
                         items_clip[3],
                     ],
-                    item_text_color,
-                    14.0,
-                    20.0,
-                    if is_selected {
-                        FontWeight::Medium
-                    } else {
-                        FontWeight::Regular
-                    },
-                    false,
                 );
 
                 if is_selected {
