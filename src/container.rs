@@ -1,5 +1,6 @@
+use crate::generate_uuid;
 use crate::ui::Ui;
-use crate::widget::{Accessible, AnyWidget, Measurable, Widget, hash_id};
+use crate::widget::{Accessible, AnyWidget, Measurable, Widget, hash_id, is_anonymous};
 use accesskit::{NodeId, Role};
 
 pub struct Container<'a> {
@@ -16,7 +17,7 @@ impl<'a> Container<'a> {
 
     pub fn new(child: &'a mut impl Measurable) -> Self {
         Container {
-            id: uuid::Uuid::new_v4().to_string(),
+            id: generate_uuid(),
             width: Self::DEFAULT_WIDTH,
             height: Self::DEFAULT_HEIGHT,
             padding: [0.0, 0.0],
@@ -70,15 +71,17 @@ impl<'a> Measurable for Container<'a> {
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
         // anonymous containers share a fallback id, only register named ones
-        ui.register_accessible(
-            self,
-            [
-                position[0],
-                position[1],
-                position[0] + size[0],
-                position[1] + size[1],
-            ],
-        );
+        if !is_anonymous(&self.id) {
+            ui.register_accessible(
+                self,
+                [
+                    position[0],
+                    position[1],
+                    position[0] + size[0],
+                    position[1] + size[1],
+                ],
+            );
+        }
 
         let child_position = [position[0] + self.padding[0], position[1] + self.padding[1]];
         let child_size = [

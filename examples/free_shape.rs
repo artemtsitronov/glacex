@@ -1,6 +1,4 @@
-use glacex::{
-    App, Color, Fill, Gradient, GradientKind, GradientStop, MeasurablePath, Theme, Ui, Widget,
-};
+use glacex::{App, Color, Fill, Gradient, GradientKind, GradientStop, MeasurablePath, Ui, Widget};
 use kurbo::BezPath;
 use std::f64::consts::PI;
 
@@ -27,7 +25,7 @@ impl Widget for FreeShapeDemo {
     type Output = ();
 
     fn ui(&mut self, ui: &mut Ui) {
-        ui.set_bgcolor(Theme::BG_CANVAS);
+        ui.set_bgcolor(ui.theme().bg_canvas);
 
         ui.draw_shape(
             MeasurablePath::free(star_path([160.0, 180.0], 90.0, 38.0, 5)),

@@ -1,12 +1,16 @@
 use crate::animation::{Motion, animate_towards};
 use crate::color::Color;
 use crate::fill::Fill;
+use crate::generate_uuid;
 use crate::geometry::{MeasurablePath, Path};
-use crate::highlight::{Highlighter, Language, line_runs};
+use crate::highlight::{Highlighter, Language, SyntaxColors, line_runs};
+use crate::scroll_view::pill_path;
 use crate::scrolling::{ScrollAxisState, ScrollConfig, compute_geometry, handle_drag};
 use crate::shadow::{ShadowStyle, draw_shadow};
+use crate::stateful::{StateWeights, Stateful, StyleOverrides, style_overrides};
 use crate::text::TextStyle;
 use crate::text_edit::TextEditState;
+use crate::text_input::{caret_visible, focus_ring};
 use crate::theme::Theme;
 use crate::ui::Ui;
 use crate::widget::{Accessible, FocusId, Measurable, StatefulWidget, Widget, hash_id};
@@ -26,42 +30,81 @@ struct TextAreaExtra {
 
 #[derive(Clone)]
 pub struct TextAreaStyle {
-    pub fill: Fill,
-    pub text_color: Color,
-    pub border_width: f32,
-    pub border_color: Color,
-    pub focus_border_color: Color,
-    pub padding: [f32; 2],
-    pub selection_color: Color,
-    pub cursor_color: Color,
-    pub thumb_fill: Fill,
-    pub thumb_dragging_fill: Fill,
-    pub shadow: Option<ShadowStyle>,
+    pub fill: Stateful<Fill>,
+    pub text_style: Stateful<TextStyle>,
+    pub syntax: SyntaxColors,
+    pub border_width: Stateful<f32>,
+    pub border_color: Stateful<Color>,
+    pub padding: Stateful<[f32; 2]>,
+    pub selection_color: Stateful<Color>,
+    pub selection_radius: Stateful<f32>,
+    pub current_line_fill: Stateful<Option<Fill>>,
+    pub cursor_color: Stateful<Color>,
+    pub cursor_width: Stateful<f32>,
+    pub cursor_blink_period: f32,
+    pub thumb_fill: Stateful<Fill>,
+    pub thumb_path: Stateful<Path>,
+    pub scrollbar: Stateful<ScrollConfig>,
+    pub scroll_speed: f32,
+    pub shadow: Stateful<Option<ShadowStyle>>,
     pub sharp: bool,
-    pub path: Path,
+    pub path: Stateful<Path>,
+    pub hover_motion: f32,
+    pub focus_motion: f32,
+    pub cursor: Stateful<CursorIcon>,
+}
+
+impl TextAreaStyle {
+    pub fn from_theme(theme: &Theme) -> Self {
+        let shadow = Some(ShadowStyle::new(theme.shadow_ambient, 8.0, [0.0, 1.0]));
+        TextAreaStyle {
+            fill: Stateful::new(Fill::Solid(theme.surface)),
+            text_style: Stateful::new(TextStyle::new().color(theme.text_primary)),
+            syntax: SyntaxColors::from_theme(theme),
+            border_width: Stateful::new(1.0).focused(1.5),
+            border_color: Stateful::new(theme.border)
+                .hovered(theme.border_strong)
+                .focused(theme.focus_border),
+            padding: Stateful::new([10.0, 10.0]),
+            selection_color: Stateful::new(theme.selection),
+            selection_radius: Stateful::new(0.0),
+            current_line_fill: Stateful::new(None),
+            cursor_color: Stateful::new(theme.active),
+            cursor_width: Stateful::new(2.0),
+            cursor_blink_period: 1.0,
+            thumb_fill: Stateful::new(Fill::Solid(Color::rgb(113, 113, 122).with_alpha(0.45)))
+                .pressed(Fill::Solid(Color::rgb(82, 82, 91).with_alpha(0.75))),
+            thumb_path: Stateful::new(pill_path()),
+            scrollbar: Stateful::new(ScrollConfig::default()),
+            scroll_speed: 1.0,
+            shadow: Stateful::new(shadow).focused(focus_ring(shadow, theme.focus_border)),
+            sharp: false,
+            path: Stateful::new(Path::rect([theme.metrics.radius_md; 4])),
+            hover_motion: Motion::SNAPPY,
+            focus_motion: Motion::GENTLE,
+            cursor: Stateful::new(CursorIcon::Text),
+        }
+    }
+
+    pub fn code(theme: &Theme) -> Self {
+        TextAreaStyle {
+            fill: Stateful::new(Fill::Solid(theme.surface_subtle)),
+            text_style: Stateful::new(
+                TextStyle::new()
+                    .mono()
+                    .size(13.0, 20.0)
+                    .color(theme.text_primary),
+            ),
+            current_line_fill: Fill::Solid(theme.text_primary.with_alpha(0.04)).into(),
+            cursor_blink_period: 1.2,
+            ..Self::from_theme(theme)
+        }
+    }
 }
 
 impl Default for TextAreaStyle {
-    fn default() -> Self {
-        TextAreaStyle {
-            fill: Fill::Solid(Theme::SURFACE),
-            text_color: Theme::TEXT_PRIMARY,
-            border_width: 1.0,
-            border_color: Theme::BORDER,
-            focus_border_color: Theme::FOCUS_BORDER,
-            padding: [10.0, 10.0],
-            selection_color: Theme::SELECTION,
-            cursor_color: Theme::ACTIVE,
-            thumb_fill: Fill::Solid(Color::rgb(113, 113, 122).with_alpha(0.45)),
-            thumb_dragging_fill: Fill::Solid(Color::rgb(82, 82, 91).with_alpha(0.75)),
-            shadow: Some(ShadowStyle {
-                color: Theme::SURFACE_SHADOW,
-                blur_radius: 8.0,
-                offset: [0.0, 1.0],
-            }),
-            sharp: false,
-            path: Path::rect([Theme::RADIUS_MD; 4]),
-        }
+    fn default() -> TextAreaStyle {
+        TextAreaStyle::from_theme(&Theme::default())
     }
 }
 
@@ -72,10 +115,11 @@ pub struct TextArea {
     width: f32,
     height: f32,
     style: Option<TextAreaStyle>,
-    text_style: TextStyle,
+    text_style: Option<TextStyle>,
     default_text: String,
     language: Option<Language>,
-    custom_padding: Option<[f32; 2]>,
+    custom_padding: Option<Stateful<[f32; 2]>>,
+    overrides: StyleOverrides,
 }
 
 impl TextArea {
@@ -83,7 +127,7 @@ impl TextArea {
     pub const DEFAULT_HEIGHT: f32 = 120.0;
 
     pub fn new() -> Self {
-        let id = uuid::Uuid::new_v4().to_string();
+        let id = generate_uuid();
         let extra_id = format!("{id}__extra");
         TextArea {
             focus_id: FocusId::new(&id),
@@ -92,10 +136,11 @@ impl TextArea {
             width: Self::DEFAULT_WIDTH,
             height: Self::DEFAULT_HEIGHT,
             style: None,
-            text_style: TextStyle::new().mono(),
+            text_style: None,
             default_text: String::new(),
             language: None,
             custom_padding: None,
+            overrides: StyleOverrides::default(),
         }
     }
 
@@ -107,8 +152,8 @@ impl TextArea {
         self
     }
 
-    pub fn padding(mut self, padding: [f32; 2]) -> Self {
-        self.custom_padding = Some(padding);
+    pub fn padding(mut self, padding: impl Into<Stateful<[f32; 2]>>) -> Self {
+        self.custom_padding = Some(padding.into());
         self
     }
 
@@ -134,11 +179,11 @@ impl TextArea {
     }
 
     pub fn text_style(mut self, text_style: TextStyle) -> Self {
-        self.text_style = text_style;
+        self.text_style = Some(text_style);
         self
     }
 
-    pub fn set_text_style(&mut self, text_style: TextStyle) {
+    pub fn set_text_style(&mut self, text_style: Option<TextStyle>) {
         self.text_style = text_style;
     }
 
@@ -156,7 +201,7 @@ impl TextArea {
         self
     }
 
-    pub fn set_language(mut self, language: Option<Language>) {
+    pub fn set_language(&mut self, language: Option<Language>) {
         self.language = language;
     }
 
@@ -168,10 +213,19 @@ impl TextArea {
         let mut style = self
             .style
             .clone()
-            .unwrap_or_else(|| theme.text_area_style());
-        if let Some(p) = self.custom_padding {
-            style.padding = p;
+            .unwrap_or_else(|| TextAreaStyle::from_theme(theme));
+        if let Some(p) = &self.custom_padding {
+            style.padding = p.clone();
         }
+        if let Some(custom) = self.text_style {
+            style.text_style = style.text_style.map(|t| custom.inherit(*t));
+        }
+        self.overrides.apply(
+            &mut style.fill,
+            &mut style.border_color,
+            &mut style.border_width,
+            &mut style.shadow,
+        );
         style
     }
 
@@ -184,6 +238,8 @@ impl TextArea {
         self.put_state(ui, state);
     }
 }
+
+style_overrides!(TextArea);
 
 impl Widget for TextArea {
     type Output = ();
@@ -261,14 +317,20 @@ impl Measurable for TextArea {
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) {
+        self.check_id();
         ui.register_focusable(self.focus_id);
 
         let theme = *ui.theme();
         let style = self.resolved_style(&theme);
+        let previous = {
+            let state = ui.widget_state_or(&self.id, self.initial_state());
+            StateWeights::IDLE
+                .hovered(state.hover_t)
+                .focused(state.focus_t)
+        };
 
-        let padding_x = style.padding[0];
-        let padding_y = style.padding[1];
-        let config = ScrollConfig::default();
+        let [padding_x, padding_y] = style.padding.resolve(previous);
+        let config = style.scrollbar.resolve(previous);
 
         ui.register_accessible(
             self,
@@ -283,12 +345,18 @@ impl Measurable for TextArea {
         let mouse_pos = ui.mouse_position();
         let hovered = !ui.is_input_blocked(mouse_pos)
             && ui.point_in_current_clip(mouse_pos)
-            && (style.path)(position, size).contains(mouse_pos);
+            && (style.path.resolve(previous))(position, size).contains(mouse_pos);
 
         let focused = self.focused(ui);
 
         if hovered {
-            ui.set_cursor_icon(CursorIcon::Text);
+            ui.set_cursor_icon(
+                style.cursor.resolve(
+                    StateWeights::IDLE
+                        .hovered(1.0)
+                        .focused(StateWeights::when(focused)),
+                ),
+            );
         }
 
         if ui.mouse_pressed_this_frame() && hovered {
@@ -371,7 +439,7 @@ impl Measurable for TextArea {
             extra.highlighter = None;
         }
 
-        let text_style = self.text_style.or_color(style.text_color);
+        let text_style = style.text_style.resolve(previous);
         let line_height = text_style.line_height;
         let content_height = state.line_count() as f32 * line_height;
         let visible_height = size[1] - padding_y * 2.0;
@@ -461,7 +529,7 @@ impl Measurable for TextArea {
         }
 
         if !ui.scroll_consumed() && hovered && ui.scroll_delta_y() != 0.0 {
-            extra.scroll.offset -= ui.scroll_delta_y();
+            extra.scroll.offset -= ui.scroll_delta_y() * style.scroll_speed;
             extra.scroll.mark_activity();
             ui.consume_scroll();
         }
@@ -542,31 +610,23 @@ impl Measurable for TextArea {
         let dt = ui.dt();
         let focus_target = if focused { 1.0f32 } else { 0.0 };
         let hover_target = if hovered { 1.0f32 } else { 0.0 };
-        state.focus_t = animate_towards(state.focus_t, focus_target, dt, Motion::GENTLE);
-        state.hover_t = animate_towards(state.hover_t, hover_target, dt, Motion::SNAPPY);
+        state.focus_t = animate_towards(state.focus_t, focus_target, dt, style.focus_motion);
+        state.hover_t = animate_towards(state.hover_t, hover_target, dt, style.hover_motion);
         let focus_t = state.focus_t;
         let hover_t = state.hover_t;
 
-        let base_or_hover = style.border_color.lerp(theme.border_strong, hover_t);
-        let border_color = base_or_hover.lerp(style.focus_border_color, focus_t);
-        let border_width = style.border_width + focus_t * 0.5;
+        let weights = StateWeights::IDLE.hovered(hover_t).focused(focus_t);
+        let path = style.path.resolve(weights);
 
-        if let Some(shadow) = &style.shadow {
-            let mut s = *shadow;
-            if focus_t > 0.01 {
-                s.color = s
-                    .color
-                    .lerp(style.focus_border_color.with_alpha(0.25), focus_t);
-                s.blur_radius += focus_t * 6.0;
-            }
-            draw_shadow(&s, position, size, &style.path, ui);
+        if let Some(shadow) = &style.shadow.resolve(weights) {
+            draw_shadow(shadow, position, size, &path, ui);
         }
 
         ui.draw_shape(
-            (style.path)(position, size),
-            style.fill,
-            border_width,
-            border_color,
+            path(position, size),
+            style.fill.resolve(weights),
+            style.border_width.resolve(weights),
+            style.border_color.resolve(weights),
             0.0,
             style.sharp,
             0.0,
@@ -584,6 +644,26 @@ impl Measurable for TextArea {
             position[0] + padding_x - extra.scroll_x,
             position[1] + padding_y - extra.scroll.offset,
         ];
+        let cursor_line_index = state.text()[..line_start_byte].matches('\n').count();
+
+        if let (true, Some(line_fill)) = (focused, &style.current_line_fill.resolve(weights)) {
+            ui.draw_shape(
+                MeasurablePath::rect(
+                    [
+                        position[0] + padding_x,
+                        text_origin[1] + cursor_line_index as f32 * line_height,
+                    ],
+                    [size[0] - padding_x * 2.0, line_height],
+                    [0.0; 4],
+                ),
+                line_fill.clone(),
+                0.0,
+                Color::TRANSPARENT,
+                0.0,
+                true,
+                0.0,
+            );
+        }
 
         if let Some((sel_start, sel_end)) = state.selection_range() {
             let mut char_offset = 0usize;
@@ -610,8 +690,12 @@ impl Measurable for TextArea {
                     let highlight_size = [(x_end - x_start).max(2.0), line_height];
 
                     ui.draw_shape(
-                        MeasurablePath::rect(highlight_position, highlight_size, [0.0; 4]),
-                        Fill::Solid(style.selection_color),
+                        MeasurablePath::rect(
+                            highlight_position,
+                            highlight_size,
+                            [style.selection_radius.resolve(weights); 4],
+                        ),
+                        Fill::Solid(style.selection_color.resolve(weights)),
                         0.0,
                         Color::TRANSPARENT,
                         0.0,
@@ -648,7 +732,7 @@ impl Measurable for TextArea {
                     let x = ui.measure_text(&line[..r.start], text_style);
                     ui.draw_text(
                         &line[r.clone()],
-                        text_style.color(theme.token_color(tok)),
+                        text_style.color(style.syntax.color(tok)),
                         [text_origin[0] + x, y],
                         clip_rect,
                     );
@@ -665,16 +749,18 @@ impl Measurable for TextArea {
 
         if focused {
             let idle_seconds = state.last_activity().elapsed().as_secs_f32();
-            let cursor_visible = idle_seconds < 0.3 || (idle_seconds % 1.0) < 0.5;
-            if cursor_visible {
-                let line_index = state.text()[..line_start_byte].matches('\n').count();
+            if caret_visible(idle_seconds, style.cursor_blink_period) {
                 let cursor_position = [
                     (text_origin[0] + cursor_x).round(),
-                    text_origin[1] + line_index as f32 * line_height,
+                    text_origin[1] + cursor_line_index as f32 * line_height,
                 ];
                 ui.draw_shape(
-                    MeasurablePath::rect(cursor_position, [2.0, line_height], [0.0; 4]),
-                    Fill::Solid(style.cursor_color),
+                    MeasurablePath::rect(
+                        cursor_position,
+                        [style.cursor_width.resolve(weights), line_height],
+                        [0.0; 4],
+                    ),
+                    Fill::Solid(style.cursor_color.resolve(weights)),
                     0.0,
                     Color::TRANSPARENT,
                     0.0,
@@ -690,22 +776,20 @@ impl Measurable for TextArea {
         }
 
         if show_scrollbar {
-            let thumb_fill = if extra.scroll.dragging {
-                style.thumb_dragging_fill
-            } else {
-                style.thumb_fill
-            };
+            let thumb_weights = StateWeights::IDLE
+                .hovered(StateWeights::when(thumb_hovered))
+                .pressed(StateWeights::when(extra.scroll.dragging));
+            let thumb_fill = style.thumb_fill.resolve(thumb_weights);
             ui.draw_shape(
-                MeasurablePath::rect(
+                (style.thumb_path.resolve(thumb_weights))(
                     thumb_position,
                     [config.thickness, geometry_final.thumb_size],
-                    [config.thickness / 2.0; 4],
                 ),
                 thumb_fill,
                 0.0,
                 Color::TRANSPARENT,
                 0.0,
-                false,
+                style.sharp,
                 0.0,
             );
         }

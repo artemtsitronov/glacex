@@ -15,12 +15,12 @@ Every stateful widget implements `StatefulWidget`, which gives it three methods 
 keyed by its own id:
 
 ```rust
-widget.state(ui)             // &mut State — get-or-init in place
-widget.take_state(ui)        // State — get-or-init, owned (removed from Ui until put back)
+widget.state(ui)             // &mut State, get-or-init in place
+widget.take_state(ui)        // State, get-or-init, owned (removed from Ui until put back)
 widget.put_state(ui, state)  // hand a State back
 ```
 
-Reach for these when you need the whole state struct at once — e.g. mutating several fields
+Reach for these when you need the whole state struct at once, e.g. mutating several fields
 together, like the three-way mutual-exclusion logic in `examples/demo.rs`. For the common
 case of reading or writing a single value, most widgets also expose small typed convenience
 methods built on top of these three:
@@ -36,7 +36,7 @@ methods built on top of these three:
 
 `Ui::widget_state` / `take_widget_state` / `put_widget_state` are still there underneath, and
 are what the widget methods above call into. Reach for them directly for state that isn't
-tied to a single widget's id — `examples/demo.rs` uses a plain `TripleToggleOrder` struct
+tied to a single widget's id, `examples/demo.rs` uses a plain `TripleToggleOrder` struct
 this way, to remember which of three switches was flipped on most recently.
 
 ## 1. Controls
@@ -47,19 +47,20 @@ Push button with hover/press animation.
 - **Variants**: `.primary()`, `.outline()`, `.ghost()`, `.danger()`
 - **Builder methods**:
   - `.id("...")` 
-  - `.style(ButtonStyle)` — fill, hover fill, pressed fill, text color, border, shadow
-  - `.tooltip("text")` — floating tooltip on hover
+  - `.style(ButtonStyle)`: fill, text style, border, shadow, scale, offset; each can differ per state via `Stateful<T>`
+  - `.fill(..)` / `.border_color(..)` / `.border_width(..)` / `.shadow(..)`: a plain value or a `Stateful` with per-state values
+  - `.tooltip("text")`: floating tooltip on hover
   - `.size([w, h])` / `.width(px)` / `.height(px)`
-  - `.padding([x, y])`
+  - `.padding([x, y])`: also accepts a `Stateful<[f32; 2]>`
 - **Queries**: `.clicked() -> bool`, `.hovered() -> bool`, `.pressed() -> bool`
-- **Animation**: `ButtonState` tracks `hover_t` and `press_t` (`Motion::SNAPPY` / `Motion::INSTANT`). On press the button shifts 1px down and the shadow compresses. Border brightens to `Theme::BORDER_STRONG` on hover.
+- **Animation**: `ButtonState` tracks `hover_t` and `press_t` (`Motion::SNAPPY` / `Motion::INSTANT`). On press the button shifts 1px down and the shadow compresses. Border brightens to `theme.border_strong` on hover. Hover and press drive the `hovered` and `pressed` layers of every `Stateful` field.
 
 ### Checkbox
 Boolean toggle with an animated tick.
 - **Constructor**: `Checkbox::new()`
 - **Builder methods**: `.id("...")` / `.style(CheckboxStyle)`, `.default_checked(bool)`, `.size([w, h])`
 - **Reading/writing state**: `checkbox.is_checked(ui) -> bool`, `checkbox.check(ui, bool)`
-- **Animation**: `CheckboxState` tracks `anim_progress` and `hover_t` via `Motion::SNAPPY`. The tick draws in two overlapping strokes (left leg 0–35%, right leg 30–100%). Border moves toward `Theme::ACTIVE` when checked.
+- **Animation**: `CheckboxState` tracks `anim_progress` and `hover_t` via `Motion::SNAPPY`. The tick draws in two overlapping strokes (left leg 0–35%, right leg 30–100%). Border moves toward `theme.active` when checked. Checked drives the `selected` layer of every `Stateful` field.
 
 ### RadioButton
 Mutually exclusive selection within a named group.
@@ -83,7 +84,7 @@ Continuous numeric range control.
 - **Constructor**: `Slider::new(min, max)`
 - **Builder methods**: `.id("...")` / `.width(px)` / `.height(px)` / `.size([w, h])`, `.style(SliderStyle)`, `.default_value(f32)`
 - **Reading/writing state**: `slider.value(ui) -> f32`, `slider.set_value(ui, f32)`
-- **Animation**: `SliderState` tracks `hover_t` (`Motion::SNAPPY`) and `drag_t` (`Motion::INSTANT`). Thumb grows 2px while dragging.
+- **Animation**: `SliderState` tracks `hover_t` (`Motion::SNAPPY`) and `drag_t` (`Motion::INSTANT`). Thumb grows 2.5px while dragging (`thumb_size` is `Stateful`, dragging is the `pressed` layer).
 
 ### TextInput
 Single-line text field.
@@ -94,11 +95,11 @@ Single-line text field.
 - **Builder methods**:
   - `.id("...")` 
   - `.width(px)` / `.height(px)` / `.size([w, h])`
-  - `.placeholder("...")` — shown in `Theme::TEXT_MUTED` when empty
-  - `.default_text("...")` — initial value
+  - `.placeholder("...")`: shown in `theme.text_muted` when empty
+  - `.default_text("...")`: initial value
   - `.style(TextInputStyle)`
 - **Reading/writing state**: `input.text(ui) -> String`, `input.set_text(ui, String)`
-- **Animation**: focus ring via `Motion::GENTLE` — border grows 0.5px, glow shadow expands 6px. Hover border via `Motion::SNAPPY`.
+- **Animation**: focus ring via `Motion::GENTLE`: border grows 0.5px, glow shadow expands 6px. Hover border via `Motion::SNAPPY`.
 
 ### TextArea
 Multi-line editor with scrolling.
@@ -121,18 +122,18 @@ Combobox: a trigger button that opens a spring-animated floating dropdown.
 ### Tabs
 Horizontal tab strip with an animated selection pill.
 - **Constructor**: `Tabs::new(vec![TabItem::new("Tab 1"), TabItem::new("Tab 2"), ...])`
-- **Builder methods**: `.style(TabsStyle)`
+- **Builder methods**: `.style(TabsStyle)` (presets: `TabsStyle::segmented`, `TabsStyle::underline`)
 - **Reading/writing state**: `tabs.selected(ui) -> Option<String>`, `tabs.set_selected(ui, "tab_id")`
-- **Response**: `.ui(ui)` returns `TabsResponse { selected, changed, hovered_index }` — `changed` is `true` on the frame the selection moved, useful for driving a `match` over the selected id without re-reading state separately.
+- **Response**: `.ui(ui)` returns `TabsResponse { selected, changed, hovered_index }`: `changed` is `true` on the frame the selection moved, useful for driving a `match` over the selected id without re-reading state separately.
 - **Behavior**: first `TabItem` is auto-selected the first frame if nothing is selected yet.
-- **Animation**: the active-tab pill slides and resizes via `Motion::FLUID` (`indicator_x` / `indicator_w`); per-tab label color fades between `text_color` and `hover_text_color` via `Motion::SNAPPY` on hover. Active label text color is chosen automatically for contrast against `active_fill`.
+- **Animation**: the active-tab pill slides and resizes via `indicator_motion` (default `Motion::FLUID`); per-tab `text_style` and `tab_fill` blend from `idle` to `hovered` via `hover_motion` (default `Motion::SNAPPY`); the active tab uses the `selected` values. If the selected text style has no color, one is chosen automatically for contrast against `indicator_fill`.
 
 ```rust
 let tabs_response = Tabs::new(
     vec![
         TabItem::new("Tab 1").id("tab1"),
-        TabItem::new("Tab 2").id("tab1"),
-        TabItem::new("Tab 3").id("tab1"),
+        TabItem::new("Tab 2").id("tab2"),
+        TabItem::new("Tab 3").id("tab3"),
     ],
 )
 .id("tabs")
@@ -152,7 +153,7 @@ match tabs_response.selected.as_str() {
 ### Card
 Surface with rounded corners, padding, border, and an optional drop shadow.
 - **Constructor**: `Card::new(&mut child_widget)`
-- **Variants**: `.subtle()` (inset, `Theme::SURFACE_SUBTLE`), `.elevated()` (floating, deeper shadow)
+- **Variants**: `.subtle()` (inset, `theme.surface_subtle`), `.elevated()` (floating, deeper shadow)
 - **Builder methods**: `.id("...")`, `.padding([x, y])`, `.size([w, h])`, `.style(CardStyle)`
 
 ### ScrollView
@@ -171,8 +172,9 @@ Separator line.
 - **Constructor**: `Divider::horizontal(length)` / `Divider::vertical(length)`
 - **Builder methods**:
   - `.id("...")` 
-  - `.faint()` — sets the border to `Theme::BORDER_FAINT`
+  - `.faint()`: sets the border to `theme.border_faint`
   - `.thickness(px)`, `.color(Color)`
+  - `.style(DividerStyle)`: fill, thickness, margin, end insets, shape (`DividerStyle::faint`, `strong`, `rounded`)
 
 ---
 
@@ -185,6 +187,7 @@ Text, using the bundled Geist / Geist Mono fonts.
 - **Size presets**: `.caption()` (12px), `.subheading()` (16px), `.heading()` (18px), `.title()` (22px), `.metric()` (28px, bold)
 - **Weight**: `.medium()`, `.semibold()`, `.bold()`
 - **Font**: `.mono()` switches to Geist Mono
+- **Layout & background**: `.style(LabelStyle)`: padding, `align_x` / `align_y` inside its box, optional background fill, border and shape; `.align(Alignment)` shortcut
 
 ### Badge
 Status pill.

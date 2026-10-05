@@ -56,7 +56,35 @@ pub enum Fill {
     Image(ImageHandle),
 }
 
+impl From<Color> for Fill {
+    fn from(color: Color) -> Self {
+        Fill::Solid(color)
+    }
+}
+
 impl Fill {
+    pub fn lerp(&self, other: &Fill, t: f32) -> Fill {
+        match (self, other) {
+            (Fill::Solid(a), Fill::Solid(b)) => Fill::Solid(a.lerp(*b, t)),
+            _ if t >= 0.5 => other.clone(),
+            _ => self.clone(),
+        }
+    }
+
+    pub fn fade(&self, alpha: f32) -> Fill {
+        match self {
+            Fill::Solid(color) => Fill::Solid(color.with_alpha(color.a * alpha)),
+            Fill::Gradient(gradient) => {
+                let mut g = gradient.clone();
+                for stop in &mut g.stops {
+                    stop.color = stop.color.with_alpha(stop.color.a * alpha);
+                }
+                Fill::Gradient(g)
+            }
+            Fill::Image(image) => Fill::Image(*image),
+        }
+    }
+
     pub fn darken(&self, amount: f32) -> Fill {
         match self {
             Fill::Solid(color) => Fill::Solid(color.darken(amount)),

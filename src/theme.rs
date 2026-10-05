@@ -1,15 +1,6 @@
 use crate::Token;
-use crate::button::ButtonStyle;
-use crate::card::CardStyle;
-use crate::checkbox::CheckboxStyle;
 use crate::color::Color;
-use crate::fill::Fill;
-use crate::geometry::{MeasurablePath, Path};
 use crate::shadow::ShadowStyle;
-use crate::slider::SliderStyle;
-use crate::switch::SwitchStyle;
-use crate::text_area::TextAreaStyle;
-use crate::text_input::TextInputStyle;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Theme {
@@ -43,6 +34,59 @@ pub struct Theme {
     pub shadow_ambient: Color,
     pub shadow_key: Color,
     pub selection: Color,
+
+    pub metrics: Metrics,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Metrics {
+    pub control_height_sm: f32,
+    pub control_height_md: f32,
+    pub control_height_lg: f32,
+
+    pub control_pad_x: f32,
+    pub control_pad_y: f32,
+
+    pub radius_xs: f32,
+    pub radius_sm: f32,
+    pub radius_md: f32,
+    pub radius_lg: f32,
+    pub radius_full: f32,
+
+    pub space_1: f32,
+    pub space_2: f32,
+    pub space_3: f32,
+    pub space_4: f32,
+    pub space_6: f32,
+    pub space_8: f32,
+}
+
+impl Metrics {
+    pub const DEFAULT: Metrics = Metrics {
+        control_height_sm: 28.0,
+        control_height_md: 36.0,
+        control_height_lg: 44.0,
+        control_pad_x: 14.0,
+        control_pad_y: 9.0,
+        radius_xs: 3.0,
+        radius_sm: 5.0,
+        radius_md: 7.0,
+        radius_lg: 12.0,
+        radius_full: 9999.0,
+        space_1: 4.0,
+        space_2: 8.0,
+        space_3: 12.0,
+        space_4: 16.0,
+        space_6: 24.0,
+        space_8: 32.0,
+    };
+}
+
+impl Default for Metrics {
+    #[inline]
+    fn default() -> Self {
+        Self::DEFAULT
+    }
 }
 
 impl Default for Theme {
@@ -78,6 +122,7 @@ impl Theme {
         shadow_ambient: Color::rgba(30, 33, 54, 0.04),
         shadow_key: Color::rgba(30, 33, 54, 0.08),
         selection: Color::rgba(65, 68, 196, 0.16),
+        metrics: Metrics::DEFAULT,
     };
 
     pub const DARK: Theme = Theme {
@@ -105,6 +150,7 @@ impl Theme {
         shadow_ambient: Color::rgba(0, 0, 0, 0.35),
         shadow_key: Color::rgba(0, 0, 0, 0.55),
         selection: Color::rgba(45, 212, 191, 0.22),
+        metrics: Metrics::DEFAULT,
     };
 
     pub const CATPPUCCIN_MOCHA: Theme = Theme {
@@ -132,6 +178,7 @@ impl Theme {
         shadow_ambient: Color::rgba(17, 17, 27, 0.35),
         shadow_key: Color::rgba(17, 17, 27, 0.55),
         selection: Color::rgba(203, 166, 247, 0.25),
+        metrics: Metrics::DEFAULT,
     };
 
     pub const CATPPUCCIN_LATTE: Theme = Theme {
@@ -159,6 +206,7 @@ impl Theme {
         shadow_ambient: Color::rgba(76, 79, 105, 0.04),
         shadow_key: Color::rgba(76, 79, 105, 0.08),
         selection: Color::rgba(136, 57, 239, 0.15),
+        metrics: Metrics::DEFAULT,
     };
 
     pub const TOKYO_NIGHT: Theme = Theme {
@@ -186,6 +234,7 @@ impl Theme {
         shadow_ambient: Color::rgba(15, 15, 23, 0.35),
         shadow_key: Color::rgba(15, 15, 23, 0.55),
         selection: Color::rgba(122, 162, 247, 0.25),
+        metrics: Metrics::DEFAULT,
     };
 
     pub const GRUVBOX_DARK: Theme = Theme {
@@ -213,6 +262,7 @@ impl Theme {
         shadow_ambient: Color::rgba(29, 32, 33, 0.35),
         shadow_key: Color::rgba(29, 32, 33, 0.55),
         selection: Color::rgba(254, 128, 25, 0.25),
+        metrics: Metrics::DEFAULT,
     };
 
     pub const GRUVBOX_LIGHT: Theme = Theme {
@@ -240,6 +290,7 @@ impl Theme {
         shadow_ambient: Color::rgba(40, 40, 40, 0.04),
         shadow_key: Color::rgba(40, 40, 40, 0.08),
         selection: Color::rgba(175, 58, 3, 0.15),
+        metrics: Metrics::DEFAULT,
     };
 
     pub const NORD: Theme = Theme {
@@ -267,6 +318,7 @@ impl Theme {
         shadow_ambient: Color::rgba(36, 41, 51, 0.35),
         shadow_key: Color::rgba(36, 41, 51, 0.55),
         selection: Color::rgba(136, 192, 208, 0.25),
+        metrics: Metrics::DEFAULT,
     };
 
     pub const ROSE_PINE: Theme = Theme {
@@ -294,6 +346,7 @@ impl Theme {
         shadow_ambient: Color::rgba(20, 18, 30, 0.35),
         shadow_key: Color::rgba(20, 18, 30, 0.55),
         selection: Color::rgba(235, 111, 146, 0.25),
+        metrics: Metrics::DEFAULT,
     };
 
     pub fn light() -> Self {
@@ -362,233 +415,30 @@ impl Theme {
         }
     }
 
-    pub const BG_CANVAS: Color = Self::LIGHT.bg_canvas;
-    pub const SURFACE: Color = Self::LIGHT.surface;
-    pub const SURFACE_SUBTLE: Color = Self::LIGHT.surface_subtle;
-    pub const SURFACE_ELEVATED: Color = Self::LIGHT.surface_elevated;
-
-    pub const IDLE: Color = Self::LIGHT.idle;
-    pub const HOVERED: Color = Self::LIGHT.hovered;
-    pub const PRESSED: Color = Self::LIGHT.pressed;
-    pub const ACTIVE: Color = Self::LIGHT.active;
-    pub const ACTIVE_HOVER: Color = Self::LIGHT.active_hover;
-
-    pub const BORDER_FAINT: Color = Self::LIGHT.border_faint;
-    pub const BORDER: Color = Self::LIGHT.border;
-    pub const BORDER_STRONG: Color = Self::LIGHT.border_strong;
-    pub const FOCUS_BORDER: Color = Self::LIGHT.focus_border;
-
-    pub const TEXT_PRIMARY: Color = Self::LIGHT.text_primary;
-    pub const TEXT_SECONDARY: Color = Self::LIGHT.text_secondary;
-    pub const TEXT_MUTED: Color = Self::LIGHT.text_muted;
-    pub const TEXT_DIM: Color = Self::LIGHT.text_muted;
-
-    pub const SUCCESS: Color = Self::LIGHT.success;
-    pub const WARNING: Color = Self::LIGHT.warning;
-    pub const ERROR: Color = Self::LIGHT.error;
-
-    pub const SHADOW_AMBIENT: Color = Self::LIGHT.shadow_ambient;
-    pub const SHADOW_KEY: Color = Self::LIGHT.shadow_key;
-    pub const SURFACE_SHADOW: Color = Self::LIGHT.shadow_ambient;
-    pub const SHADOW: Color = Self::LIGHT.shadow_key;
-
-    pub const SELECTION: Color = Self::LIGHT.selection;
-
-    pub const CONTROL_HEIGHT_SM: f32 = 28.0;
-    pub const CONTROL_HEIGHT_MD: f32 = 36.0;
-    pub const CONTROL_HEIGHT_LG: f32 = 44.0;
-
-    pub const CONTROL_PAD_X: f32 = 14.0;
-    pub const CONTROL_PAD_Y: f32 = 9.0;
-
-    pub const RADIUS_XS: f32 = 3.0;
-    pub const RADIUS_SM: f32 = 5.0;
-    pub const RADIUS_MD: f32 = 7.0;
-    pub const RADIUS_LG: f32 = 12.0;
-    pub const RADIUS_FULL: f32 = 9999.0;
-
-    pub const SPACE_1: f32 = 4.0;
-    pub const SPACE_2: f32 = 8.0;
-    pub const SPACE_3: f32 = 12.0;
-    pub const SPACE_4: f32 = 16.0;
-    pub const SPACE_6: f32 = 24.0;
-    pub const SPACE_8: f32 = 32.0;
-
-    pub fn state_color(&self, active: bool, pressed: bool, hovered: bool) -> Color {
-        if active {
-            self.active
-        } else if pressed {
-            self.pressed
-        } else if hovered {
-            self.hovered
-        } else {
-            self.idle
-        }
+    pub fn with_metrics(mut self, metrics: Metrics) -> Self {
+        self.metrics = metrics;
+        self
     }
 
     pub fn shadow_sm(&self) -> [ShadowStyle; 2] {
         [
-            ShadowStyle {
-                color: self.shadow_ambient,
-                blur_radius: 3.0,
-                offset: [0.0, 1.0],
-            },
-            ShadowStyle {
-                color: self.shadow_key,
-                blur_radius: 6.0,
-                offset: [0.0, 2.0],
-            },
+            ShadowStyle::new(self.shadow_ambient, 3.0, [0.0, 1.0]),
+            ShadowStyle::new(self.shadow_key, 6.0, [0.0, 2.0]),
         ]
     }
 
     pub fn shadow_md(&self) -> [ShadowStyle; 2] {
         [
-            ShadowStyle {
-                color: self.shadow_ambient,
-                blur_radius: 12.0,
-                offset: [0.0, 3.0],
-            },
-            ShadowStyle {
-                color: self.shadow_key,
-                blur_radius: 4.0,
-                offset: [0.0, 2.0],
-            },
+            ShadowStyle::new(self.shadow_ambient, 12.0, [0.0, 3.0]),
+            ShadowStyle::new(self.shadow_key, 4.0, [0.0, 2.0]),
         ]
     }
 
     pub fn shadow_lg(&self) -> [ShadowStyle; 2] {
         [
-            ShadowStyle {
-                color: self.shadow_ambient,
-                blur_radius: 24.0,
-                offset: [0.0, 6.0],
-            },
-            ShadowStyle {
-                color: self.shadow_key,
-                blur_radius: 8.0,
-                offset: [0.0, 3.0],
-            },
+            ShadowStyle::new(self.shadow_ambient, 24.0, [0.0, 6.0]),
+            ShadowStyle::new(self.shadow_key, 8.0, [0.0, 3.0]),
         ]
-    }
-
-    pub fn button_style(&self) -> ButtonStyle {
-        ButtonStyle {
-            fill: Fill::Solid(self.surface_subtle),
-            hover_fill: Fill::Solid(self.hovered),
-            pressed_fill: Fill::Solid(self.pressed),
-            text_color: self.text_primary,
-            border_width: 1.0,
-            border_color: self.border,
-            padding: [14.0, 8.0],
-            shadow: Some(self.shadow_sm()[0]),
-            sharp: false,
-            path: Path::rect([6.0; 4]),
-        }
-    }
-
-    pub fn primary_button_style(&self) -> ButtonStyle {
-        ButtonStyle {
-            fill: Fill::Solid(self.active),
-            hover_fill: Fill::Solid(self.active_hover),
-            pressed_fill: Fill::Solid(self.active.darken(0.12)),
-            text_color: if self.is_dark && self.active.r > 0.7 && self.active.g > 0.7 {
-                Color::BLACK
-            } else {
-                Color::WHITE
-            },
-            border_width: 1.0,
-            border_color: Color::WHITE.with_alpha(0.15),
-            padding: [14.0, 8.0],
-            shadow: Some(ShadowStyle {
-                color: self.active.with_alpha(0.20),
-                blur_radius: 4.0,
-                offset: [0.0, 1.5],
-            }),
-            sharp: false,
-            path: Path::rect([6.0; 4]),
-        }
-    }
-
-    pub fn outline_button_style(&self) -> ButtonStyle {
-        ButtonStyle {
-            fill: Fill::Solid(Color::TRANSPARENT),
-            hover_fill: Fill::Solid(self.surface_subtle),
-            pressed_fill: Fill::Solid(self.hovered),
-            text_color: self.text_primary,
-            border_width: 1.0,
-            border_color: self.border_strong,
-            padding: [14.0, 8.0],
-            shadow: Some(self.shadow_sm()[0]),
-            sharp: false,
-            path: Path::rect([6.0; 4]),
-        }
-    }
-
-    pub fn ghost_button_style(&self) -> ButtonStyle {
-        ButtonStyle {
-            fill: Fill::Solid(Color::TRANSPARENT),
-            hover_fill: Fill::Solid(self.surface_subtle),
-            pressed_fill: Fill::Solid(self.hovered),
-            text_color: self.text_secondary,
-            border_width: 0.0,
-            border_color: Color::TRANSPARENT,
-            padding: [14.0, 8.0],
-            shadow: None,
-            sharp: false,
-            path: Path::rect([6.0; 4]),
-        }
-    }
-
-    pub fn danger_button_style(&self) -> ButtonStyle {
-        ButtonStyle {
-            fill: Fill::Solid(self.error),
-            hover_fill: Fill::Solid(self.error.lighten(0.08)),
-            pressed_fill: Fill::Solid(self.error.darken(0.12)),
-            text_color: Color::WHITE,
-            border_width: 1.0,
-            border_color: self.error.darken(0.15),
-            padding: [14.0, 8.0],
-            shadow: Some(ShadowStyle {
-                color: self.error.with_alpha(0.25),
-                blur_radius: 4.0,
-                offset: [0.0, 1.5],
-            }),
-            sharp: false,
-            path: Path::rect([6.0; 4]),
-        }
-    }
-
-    pub fn card_style(&self) -> CardStyle {
-        CardStyle {
-            fill: Fill::Solid(self.surface),
-            border_width: 1.0,
-            border_color: self.border,
-            padding: [20.0, 20.0],
-            shadow: Some(self.shadow_sm()[0]),
-            path: Path::rect([10.0; 4]),
-        }
-    }
-
-    pub fn card_subtle_style(&self) -> CardStyle {
-        CardStyle {
-            fill: Fill::Solid(self.surface_subtle),
-            border_width: 1.0,
-            border_color: self.border_faint,
-            padding: [16.0, 16.0],
-            shadow: None,
-            path: Path::rect([8.0; 4]),
-        }
-    }
-
-    pub fn card_elevated_style(&self) -> CardStyle {
-        CardStyle {
-            fill: Fill::Solid(self.surface_elevated),
-            border_width: 1.0,
-            border_color: self.border_strong,
-            padding: [20.0, 20.0],
-            shadow: Some(self.shadow_md()[0]),
-            path: Path::rect([12.0; 4]),
-        }
     }
 
     // some dark themes have a near white active, white text would vanish on it
@@ -597,87 +447,6 @@ impl Theme {
             Color::BLACK
         } else {
             Color::WHITE
-        }
-    }
-
-    pub fn checkbox_style(&self) -> CheckboxStyle {
-        CheckboxStyle {
-            fill: Fill::Solid(if self.is_dark {
-                self.surface
-            } else {
-                Color::WHITE
-            }),
-            hover_fill: Fill::Solid(self.surface_subtle),
-            checked_fill: Fill::Solid(self.active),
-            check_color: self.on_active(),
-            border_width: 1.0,
-            border_color: self.border_strong,
-            shadow: Some(self.shadow_sm()[0]),
-            sharp: false,
-            path: Path::rect([4.0; 4]),
-        }
-    }
-
-    pub fn switch_style(&self) -> SwitchStyle {
-        SwitchStyle {
-            track_off_fill: Fill::Solid(self.hovered),
-            track_on_fill: Fill::Solid(self.active),
-            thumb_fill: Fill::Solid(Color::WHITE),
-            border_width: 1.0,
-            border_color: self.border,
-            shadow: Some(self.shadow_sm()[0]),
-            path: Path::rect([11.0; 4]),
-        }
-    }
-
-    pub fn slider_style(&self) -> SliderStyle {
-        SliderStyle {
-            track_fill: Fill::Solid(self.hovered),
-            filled_fill: Fill::Solid(self.active),
-            thumb_fill: Fill::Solid(Color::WHITE),
-            border_width: 1.5,
-            border_color: self.border_strong,
-            track_height: 4.0,
-            thumb_size: 16.0,
-            shadow: Some(self.shadow_sm()[0]),
-            path: Path::from_fn(|position, size| {
-                MeasurablePath::rect(position, size, [size[1] * 0.5; 4])
-            }),
-        }
-    }
-
-    pub fn input_style(&self) -> TextInputStyle {
-        TextInputStyle {
-            fill: Fill::Solid(self.surface),
-            text_color: self.text_primary,
-            placeholder_color: self.text_muted,
-            border_width: 1.0,
-            border_color: self.border_strong,
-            focus_border_color: self.focus_border,
-            padding: [10.0, 10.0],
-            selection_color: self.selection,
-            cursor_color: self.active,
-            shadow: Some(self.shadow_sm()[0]),
-            sharp: false,
-            path: Path::rect([6.0; 4]),
-        }
-    }
-
-    pub fn text_area_style(&self) -> TextAreaStyle {
-        TextAreaStyle {
-            fill: Fill::Solid(self.surface),
-            text_color: self.text_primary,
-            border_width: 1.0,
-            border_color: self.border_strong,
-            focus_border_color: self.focus_border,
-            padding: [10.0, 10.0],
-            selection_color: self.selection,
-            cursor_color: self.active,
-            thumb_fill: Fill::Solid(self.text_muted.with_alpha(0.35)),
-            thumb_dragging_fill: Fill::Solid(self.text_muted.with_alpha(0.65)),
-            shadow: Some(self.shadow_sm()[0]),
-            sharp: false,
-            path: Path::rect([6.0; 4]),
         }
     }
 

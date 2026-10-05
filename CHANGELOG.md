@@ -5,36 +5,67 @@ All notable changes to this project are documented in this file.
 ## [Unreleased]
 
 ### Added
-- `MeasurablePath::Free(BezPath)` now actually renders. Free paths are tessellated on the CPU (flatten + ear-clip triangulation) and drawn through a new, second render pipeline (`vs_mesh`/`fs_mesh` in `shader.wgsl`) alongside the existing SDF quad pipeline. Supports solid and gradient fills (gradient color evaluated per vertex) and borders (drawn as a separately tessellated `kurbo::stroke` outline). `Fill::Image` and blur/shadow aren't supported on `Free` paths yet — see README's Known Limitations.
+- `MeasurablePath::Free(BezPath)` now actually renders. Free paths are tessellated on the CPU (flatten + ear-clip triangulation) and drawn through a new, second render pipeline (`vs_mesh`/`fs_mesh` in `shader.wgsl`) alongside the existing SDF quad pipeline. Supports solid and gradient fills (gradient color evaluated per vertex) and borders (drawn as a separately tessellated `kurbo::stroke` outline). `Fill::Image` and blur/shadow aren't supported on `Free` paths yet: see README's Known Limitations.
+
+- `Stateful<T>`: per-state style values. Holds an `idle` value plus optional `hovered`, `pressed`, `focused`, `selected` and `selected_hovered` values; unset states fall back to the layer below. States blend in the order idle, hovered, selected (selected_hovered while hovered), focused, pressed, each by its own animated weight. A plain value converts into a `Stateful` that never changes (`Color::RED.into()`, `2.0.into()`).
+- `Blend` trait (implemented for `f32`, `[f32; 2]`, `Color`, `Fill`, `ShadowStyle`, `TextStyle`, `Path`, `CursorIcon`, `ScrollConfig` and the relevant `Option`s) and `StateWeights`, for resolving a `Stateful` by hand.
+- `.fill(..)`, `.border_color(..)`, `.border_width(..)` and `.shadow(..)` builder methods on `Button`, `Card`, `Checkbox`, `RadioButton`, `Switch`, `Slider`, `TextInput`, `TextArea`, `SelectBox`, `Badge` and `ProgressBar`, taking a plain value or a `Stateful`. `Label` gains `.fill(..)`, `.text_color(..)`, `.border_color(..)`, `.border_width(..)` and `.padding(..)`.
+- `Badge`, `Label`, `Divider` and `ProgressBar` now track hover (new `hover_motion` style field), so their styles can change on hover too. `Label` gains a `text_color` style field (`None` keeps the variant color).
+- Hover states for the parts of composite widgets: the `Tabs` strip, each tab and the indicator; the `SelectBox` dropdown, search bar and each item; `ScrollView` tracks and thumbs.
+- `From<Color> for Fill`.
+
+### Changed
+- Breaking: every style property that can differ between states is now a `Stateful<T>`, and the separate per-state fields are removed. Only animation timings, on/off flags, enums/alignment, strings, `syntax`, `scroll_speed` and `cursor_blink_period` stay plain. Plain values in style struct literals now need `.into()`. Migration:
+  - `hover_*`, `pressed_*`/`press_*`, `focus_*`, `checked_*`, `selected_*` fields become the matching `.hovered`, `.pressed`, `.focused`, `.selected` (or `.selected_hovered`) value of the base field, e.g. `hover_fill: x` becomes `fill: Stateful::new(base).hovered(x)`.
+  - `ButtonStyle`: `hover_scale`/`press_scale` becomes `scale`; `press_offset` becomes `offset.pressed`; `hover_text_color`/`pressed_text_color` becomes `text_style`.
+  - `SwitchStyle`: `track_off_fill`/`track_on_fill` (and hover variants) becomes `track_fill` with `.selected` for on; `thumb_on_fill` becomes `thumb_fill.selected`; `on_border_color` becomes `border_color.selected`.
+  - `SliderStyle`: `thumb_hover_grow`/`thumb_drag_grow` becomes `thumb_size.hovered`/`.pressed`; `drag_shadow` becomes `shadow.pressed`; `thumb_drag_*` becomes `.pressed`. Dragging counts as `pressed`.
+  - `TabsStyle`: `active_fill` becomes `indicator_fill`; `hover_text_color`, `active_text_color`, `active_font_weight` becomes `text_style.hovered` / `.selected`; `tab_hover_fill` becomes `tab_fill.hovered`.
+  - `SelectBoxStyle`: `item_hover_fill`/`item_active_fill` becomes `item_fill`; `item_text_color`, `item_active_text_color`, `item_active_font_weight` becomes `item_text_style`.
+  - `ScrollViewStyle` / `TextAreaStyle`: `thumb_hover_fill`/`thumb_dragging_fill` becomes `thumb_fill.hovered`/`.pressed`.
+- Widget `.padding(..)` builders, `Divider::color(..)` and `Divider::thickness(..)` accept a `Stateful` (plain values still work).
+- Color blends from a fully transparent color keep the target's hue instead of fading through black; hover and press `scale` now blend instead of multiplying.
+- Size-like stateful fields (padding, heights, sizes) are measured with the previous frame's state, so layout follows state changes one frame behind.
+- Breaking: `TextArea::set_language` takes `&mut self` (it previously took `self` by value and had no effect).
+
+### Removed
+- Breaking: unused `IntoId` and `WidgetStyle` traits, `Ui::get_state` and `Theme::state_color`.
+- Breaking: `CardState`. `Card` now keeps its hover in the shared `HoverState`, like `Badge`, `Label` and `Divider`.
 
 ### Fixed
-- `Ui::new()` no longer calls a leftover debug method (`Painter::test_image_atlas`) that unconditionally loaded `assets/test/1.webp` from the working directory and `unwrap()`-panicked if it wasn't there — this asset isn't published to crates.io, so any consumer running from a directory without it hit an immediate panic on startup.
+- Widget state for widgets without an `.id(..)` was never freed. Their auto-generated ids change every frame, so each such `Button`, `ProgressBar`, `Tabs`, `SelectBox`, etc. leaked one state entry per frame. State for auto-generated ids is now dropped after 120 frames without use; state for user-defined ids is never dropped.
+- `Button` and `ProgressBar` without an id now react to hover and press immediately instead of showing a barely visible partial animation.
+- Widgets that need an id to work (`Checkbox`, `Switch`, `Slider`, `TextInput`, `TextArea`, `SelectBox`, `ScrollView`, `Tabs`, `RadioButton`) now log a warning when drawn without one, once per widget type.
+- Anonymous `Card`, `Container`, `ProgressBar` and `Divider` are no longer registered with accessibility under a new id every frame.
+- `painter::test_image` reads `assets/demo_images/1.jpg`, so `cargo test` passes on a fresh checkout.
+- The `Tabs` example in `docs/widgets.md` gave all three tabs the same id.
+- `Ui::new()` no longer calls a leftover debug method (`Painter::test_image_atlas`) that unconditionally loaded `assets/test/1.webp` from the working directory and `unwrap()`-panicked if it wasn't there: this asset isn't published to crates.io, so any consumer running from a directory without it hit an immediate panic on startup.
 - `Tabs`' `contrasting_text_color` no longer panics (`todo!()`) when a tab's active fill is `Fill::Image`; falls back to `Color::WHITE`, matching the existing empty-gradient-stops fallback in the same function.
 
 ## [0.1.9]
 
 ### Added
-- `Fill::Image` — widgets can now be filled with a loaded image, the
+- `Fill::Image`: widgets can now be filled with a loaded image, the
   same way they can be filled with a solid color or gradient.
-- `Ui::load_image(path)` — decodes a PNG/JPEG/WebP file via `image` and returns an
+- `Ui::load_image(path)`: decodes a PNG/JPEG/WebP file via `image` and returns an
   `ImageHandle` for use with `Fill::Image`.
-- `ImageHandle::width()` / `ImageHandle::height()` — read an image's
+- `ImageHandle::width()` / `ImageHandle::height()`: read an image's
   natural pixel dimensions, e.g. to size a widget to match it.
 
 ### Notes
 - Images are currently stored in a single shared atlas texture with no
-  packing/eviction yet — only one image is supported at a time until a
+  packing/eviction yet, only one image is supported at a time until a
   real atlas packer is built. This will hopefully be fixed in 0.2.0
 
 ## [0.1.8]
 
 ### Added
-- `Tabs` widget (`src/tabs.rs`) — a segmented tab list with a pill-shaped selection indicator that spring-animates (`Motion::FLUID`) between tabs on both position and width, plus a per-tab hover fade (`Motion::SNAPPY`). `TabItem::new(id, label)` builds each entry; `TabsStyle`/`TabsStyle::from_theme()` control height, padding, gap, text colors, and the pill's fill/radius/inset. Selection is backed by `Ui::select`/`selected_option` (same mechanism as radio groups), with `Tabs::selected`/`set_selected` accessors and a `TabsResponse { selected, changed, hovered_index }` returned per frame. Accessibility role `TabList`.
+- `Tabs` widget (`src/tabs.rs`): a segmented tab list with a pill-shaped selection indicator that spring-animates (`Motion::FLUID`) between tabs on both position and width, plus a per-tab hover fade (`Motion::SNAPPY`). `TabItem::new(id, label)` builds each entry; `TabsStyle`/`TabsStyle::from_theme()` control height, padding, gap, text colors, and the pill's fill/radius/inset. Selection is backed by `Ui::select`/`selected_option` (same mechanism as radio groups), with `Tabs::selected`/`set_selected` accessors and a `TabsResponse { selected, changed, hovered_index }` returned per frame. Accessibility role `TabList`.
 - A text-shape cache in `Painter` (`src/painter.rs`): laid-out `glyphon::Buffer`s are now keyed by a hash of `(text, font_size, line_height, weight, mono)` and reused across calls instead of re-shaping the same string up to 3x a frame (once for measurement, once each for the normal and overlay passes). Entries idle for `TEXT_CACHE_EVICTION_FRAME` (180) frames are evicted.
 
 ### Changed
 - `arboard` dependency now enables the `wayland-data-control` feature, so clipboard access works under Wayland compositors without an X11 fallback.
-- `RadioButton`'s selected dot and `Switch`'s thumb now use the new `Theme::on_active()` instead of hard-coded `Color::WHITE`, matching the fix already applied to `Checkbox`'s check mark — themes like shadcn-dark whose `active` color is near-white no longer render an invisible white-on-white dot/thumb.
+- `RadioButton`'s selected dot and `Switch`'s thumb now use the new `Theme::on_active()` instead of hard-coded `Color::WHITE`, matching the fix already applied to `Checkbox`'s check mark: themes like shadcn-dark whose `active` color is near-white no longer render an invisible white-on-white dot/thumb.
 - Minor internal cleanup in `src/painter.rs`: font loading de-duplicated into a `load_font!` macro, and `hash_gradient`'s local `Hash`/`Hasher` imports hoisted to the module level (shared with the new text-cache hashing).
 
 ## [0.1.7]
@@ -48,47 +79,47 @@ All notable changes to this project are documented in this file.
 ### Added
 - `SelectBox` / Combobox widget (`src/select_box.rs`). Spring-animated dropdown (stiffness 380, damping 30) that slides open/closed with an ease-out-cubic curve on the clip rect. Features: trigger button with animated hover/focus states and a chevron icon that rotates 180° on open; keyboard navigation (↑/↓ arrow keys, Enter to select, Escape to close); optional type-to-filter search bar (`.searchable()`); scroll inside long option lists via mouse wheel or auto-scroll to keep the keyboard selection visible; outside-click-to-close; full theme integration via `SelectBoxStyle::from_theme()`; accessibility role `ComboBox`.
 - `SelectBoxStyle` with full customization of trigger, dropdown card, item rows, and search bar.
-- `SelectOption` — lightweight `{ value: String, label: String }` item type.
-- `SelectBoxState` — persistent widget state tracking `selected: Option<String>`, open/close spring, per-item hover animations, keyboard index, and search text.
-- `Ui::draw_overlay_rect` and `Ui::draw_overlay_text_styled` — public wrappers around the existing painter overlay pass so widgets like `SelectBox` can draw their own floating surfaces without a tooltip.
-- `StatefulWidget::take_state` / `put_state`, alongside the existing `.state()` — same `state_id()`/`initial_state()`-backed lookup, for call sites that need to own the state struct (e.g. to mutate it while also touching other widgets) instead of holding a `&mut` borrow through `Ui`.
+- `SelectOption`: lightweight `{ value: String, label: String }` item type.
+- `SelectBoxState`: persistent widget state tracking `selected: Option<String>`, open/close spring, per-item hover animations, keyboard index, and search text.
+- `Ui::draw_overlay_rect` and `Ui::draw_overlay_text_styled`: public wrappers around the existing painter overlay pass so widgets like `SelectBox` can draw their own floating surfaces without a tooltip.
+- `StatefulWidget::take_state` / `put_state`, alongside the existing `.state()`: same `state_id()`/`initial_state()`-backed lookup, for call sites that need to own the state struct (e.g. to mutate it while also touching other widgets) instead of holding a `&mut` borrow through `Ui`.
 - Small typed state accessors, one pair per widget, built on top of those three so most call sites never need to name the state struct or its id twice: `Checkbox::is_checked`/`check`, `Switch::enabled`/`set_enabled`, `Slider::value`/`set_value`, `ScrollView::offset`/`set_offset`, `SelectBox::selected`/`set_selected`, `TextInput`/`TextArea::text`/`set_text`.
 
 ### Changed
-- All four examples (`demo.rs`, `example1.rs`, `example2.rs`, `themes.rs`) now read/write widget state through the new accessors above instead of raw `ui.widget_state::<T>(id)`/`take_widget_state`/`put_widget_state` calls — see `docs/widgets.md`'s new "State access" section for the full picture.
+- All four examples (`demo.rs`, `example1.rs`, `example2.rs`, `themes.rs`) now read/write widget state through the new accessors above instead of raw `ui.widget_state::<T>(id)`/`take_widget_state`/`put_widget_state` calls, see `docs/widgets.md`'s new "State access" section for the full picture.
 
 ### Fixed
-- `README.md`'s `SelectBox` example called a `.show_clear(true)` builder method that doesn't exist on `SelectBox` — removed.
+- `README.md`'s `SelectBox` example called a `.show_clear(true)` builder method that doesn't exist on `SelectBox`: removed.
 
 ## [0.1.5]
 
 ### Added
 - Accessibility support via `AccessKit` (AT-SPI on Linux, UIA on Windows, NSAccessibility on macOS). Opt-in via `App::accessibility_enabled(true)`, off by default.
-- An overlay system — `Painter` is now split into two render passes (normal + overlay) so tooltips and other floating layers draw on top of everything else.
+- An overlay system, `Painter` is now split into two render passes (normal + overlay) so tooltips and other floating layers draw on top of everything else.
 - `.size()` / `.width()` / `.height()` and `.padding()` on `Row` and `Column`, matching the other widgets. A row/column still hugs its content by default; an explicit `.size()` gives `.align()` real cross-axis space to center/end-align children within.
 - Every widget now takes an id (optional or required, depending on the widget) so it can be addressed in the accessibility tree and by persistent state.
 
 ### Fixed
-- `bind_rect_pipeline` was accidentally removed at some point — restored.
+- `bind_rect_pipeline` was accidentally removed at some point: restored.
 - Assorted glyphon rendering glitches.
 - `Button`'s state id.
 - Accessibility tree crashing on the first frame.
 - Tooltip text not showing up.
-- `ScrollView`'s thumb was always visible whenever content overflowed, even though hover/drag/linger state was already tracked — visibility just wasn't gated on it. It now only shows while the pointer is on the track (or dragging), lingering for `ScrollConfig::linger_seconds` (0.5s, was 0.8s) after the pointer leaves. Same fix for `TextArea`'s scrollbar.
+- `ScrollView`'s thumb was always visible whenever content overflowed, even though hover/drag/linger state was already tracked: visibility just wasn't gated on it. It now only shows while the pointer is on the track (or dragging), lingering for `ScrollConfig::linger_seconds` (0.5s, was 0.8s) after the pointer leaves. Same fix for `TextArea`'s scrollbar.
 - `TextInput`'s selection highlight and cursor weren't clipped to the field's bounds, so a selection in overflowing text could paint past the input's edges.
-- `Badge` rendered invisible (no background or border at all). The rounded-rect SDF shader never clamped `corner_radius` against the shape's own half-size, and `Badge` uses `Theme::RADIUS_FULL` (9999.0) as its "fully round" sentinel — uncapped, that blew up the distance field. Clamped the radius in `shader.wgsl` so an oversized radius degrades into a pill shape instead.
+- `Badge` rendered invisible (no background or border at all). The rounded-rect SDF shader never clamped `corner_radius` against the shape's own half-size, and `Badge` uses `Theme::RADIUS_FULL` (9999.0) as its "fully round" sentinel: uncapped, that blew up the distance field. Clamped the radius in `shader.wgsl` so an oversized radius degrades into a pill shape instead.
 - A few unnecessary borrows cleaned up along the way.
 
 ### Removed
-- `ROADMAP.md` — wasn't being kept up to date and had drifted from what's actually planned.
+- `ROADMAP.md`: wasn't being kept up to date and had drifted from what's actually planned.
 
 ## [0.1.4]
 
 ### Added
-- Theme engine with 9 built-in palettes (`src/theme.rs`): `LIGHT` (default), `DARK`, `CATPPUCCIN_MOCHA`, `CATPPUCCIN_LATTE`, `TOKYO_NIGHT`, `GRUVBOX_DARK`, `GRUVBOX_LIGHT`, `NORD`, `ROSE_PINE`. Switch at runtime with `Ui::set_theme()`, read back with `Ui::theme()`. Each theme exposes style factories (`.button_style()`, `.card_style()`, `.checkbox_style()`, etc.) and a full token set — surface ladder (`bg_canvas`/`surface`/`surface_subtle`/`surface_elevated`), border tokens, text color hierarchy, status colors, spacing, and radius scale. `examples/themes.rs` shows all 9 side by side.
+- Theme engine with 9 built-in palettes (`src/theme.rs`): `LIGHT` (default), `DARK`, `CATPPUCCIN_MOCHA`, `CATPPUCCIN_LATTE`, `TOKYO_NIGHT`, `GRUVBOX_DARK`, `GRUVBOX_LIGHT`, `NORD`, `ROSE_PINE`. Switch at runtime with `Ui::set_theme()`, read back with `Ui::theme()`. Each theme exposes style factories (`.button_style()`, `.card_style()`, `.checkbox_style()`, etc.) and a full token set, surface ladder (`bg_canvas`/`surface`/`surface_subtle`/`surface_elevated`), border tokens, text color hierarchy, status colors, spacing, and radius scale. `examples/themes.rs` shows all 9 side by side.
 - Two-layer shadow system in `src/shadow.rs` (wide ambient layer + tight key light), with `Shadow::sm()/md()/lg()` presets.
 - `Ui::draw_text_colored` / `Painter::draw_text_colored` for per-widget text colors.
-- `Motion` timing constants in `src/animation.rs` — `MICRO`/`INSTANT`/`SNAPPY`/`FLUID`/`GENTLE` — plus spring presets (`standard_spring`, `snappy_spring`, `fluid_spring`) and an `EaseOutQuart` curve.
+- `Motion` timing constants in `src/animation.rs`: `MICRO`/`INSTANT`/`SNAPPY`/`FLUID`/`GENTLE`, plus spring presets (`standard_spring`, `snappy_spring`, `fluid_spring`) and an `EaseOutQuart` curve.
 - Bundled Geist and Geist Mono fonts (`assets/fonts/`), embedded via `include_bytes!` and included in the crates.io package via `Cargo.toml`'s `include`. `FontWeight::Regular/Medium/SemiBold/Bold`, `.mono()` on `Label`, 14px/20px line height metrics.
 - Style variants: `Button` gets `.primary()/.outline()/.ghost()/.danger()` plus a 1px press-depth offset; `Label` gets `.color()/.secondary()/.muted()/.accent()`; `Badge` gets tinted surfaces per status; `Card` gets `.subtle()`/`.elevated()`; `Divider` gets `.faint()`.
 - Focus-visible ring on `TextInput`/`TextArea` (border + glow, animated via `Motion::GENTLE`), plus `.placeholder()` on `TextInput`.

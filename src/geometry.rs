@@ -2,6 +2,15 @@ use crate::fill::Fill;
 use kurbo::{BezPath, Ellipse, Point, RoundedRect, Shape as KurboShape};
 use std::sync::Arc;
 
+#[derive(Clone, Copy)]
+pub enum Edge {
+    // don't judge me, I needed this for tabs
+    Top,
+    Bottom,
+    Left,
+    Right,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum MeasurablePath {
     Rect(RoundedRect),
@@ -59,6 +68,42 @@ impl Path {
         f: impl Fn([f32; 2], [f32; 2]) -> MeasurablePath + Send + Sync + 'static,
     ) -> Self {
         Path(Arc::new(f))
+    }
+
+    pub fn size(self, size: [f32; 2]) -> Self {
+        let inner = self.0;
+        Path(Arc::new(move |position, _| inner(position, size)))
+    }
+
+    pub fn width(self, width: f32) -> Self {
+        let inner = self.0;
+        Path(Arc::new(move |position, [_, height]| {
+            inner(position, [width, height])
+        }))
+    }
+
+    pub fn height(self, height: f32) -> Self {
+        let inner = self.0;
+        Path(Arc::new(move |position, [width, _]| {
+            inner(position, [width, height])
+        }))
+    }
+
+    pub fn offset(self, by: [f32; 2]) -> Self {
+        let inner = self.0;
+        Path(Arc::new(move |position, size| {
+            inner([position[0] + by[0], position[1] + by[1]], size)
+        }))
+    }
+
+    pub fn edge(self, edge: Edge, t: f32) -> Self {
+        let inner = self.0;
+        Path(Arc::new(move |[x, y], [w, h]| match edge {
+            Edge::Top => inner([x, y], [w, t]),
+            Edge::Bottom => inner([x, y + h - t], [w, t]),
+            Edge::Left => inner([x, y], [t, h]),
+            Edge::Right => inner([x + w - t, y], [t, h]),
+        }))
     }
 
     pub fn rect(radii: [f32; 4]) -> Self {

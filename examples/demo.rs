@@ -146,8 +146,8 @@ impl Widget for DemoApp {
                                     &mut glacex::column![
                                         &mut Card::new(&mut Label::new("Kitty!"))
                                             .style(CardStyle {
-                                                fill: Fill::Image(kitty_image),
-                                                ..CardStyle::subtle()
+                                                fill: Fill::Image(kitty_image).into(),
+                                                ..CardStyle::subtle(ui.theme())
                                             })
                                             .size(kitty_image.scale(0.2)),
                                         &mut row![
@@ -161,20 +161,40 @@ impl Widget for DemoApp {
                                             &mut Button::new("Fashion button")
                                                 .id("fashion_btn")
                                                 .style(ButtonStyle {
-                                                    fill: Fill::Gradient(Gradient {
+                                                    fill: Stateful::new(Fill::Gradient(Gradient {
                                                         kind: GradientKind::Linear { angle: 45.0 },
                                                         stops: vec![
                                                             GradientStop {
                                                                 position: 0.0,
-                                                                color: Color::rgb(230, 230, 230)
+                                                                color: Color::rgb(200, 230, 200)
                                                             },
                                                             GradientStop {
                                                                 position: 1.0,
-                                                                color: Color::rgb(120, 200, 180)
+                                                                color: Color::rgb(80, 150, 130)
                                                             }
                                                         ],
-                                                    }),
-                                                    path: Path::ellipse(0.0),
+                                                    }))
+                                                    .hovered(Fill::Gradient(Gradient {
+                                                        kind: GradientKind::Linear { angle: 45.0 },
+                                                        stops: vec![
+                                                            GradientStop {
+                                                                position: 0.0,
+                                                                color: Color::rgb(80, 150, 130)
+                                                                    .darken(0.2)
+                                                            },
+                                                            GradientStop {
+                                                                position: 1.0,
+                                                                color: Color::rgb(200, 230, 200)
+                                                                    .darken(0.2)
+                                                            }
+                                                        ],
+                                                    })),
+                                                    path: Path::ellipse(0.0).into(),
+                                                    ..Default::default()
+                                                })
+                                                .text_style(TextStyle {
+                                                    color: Some(Color::BLACK),
+                                                    weight: FontWeight::SemiBold,
                                                     ..Default::default()
                                                 }),
                                             &mut Button::new("Fat button")
@@ -248,8 +268,8 @@ impl Widget for DemoApp {
                                     &mut progress_bar,
                                     &mut Card::new(&mut Label::new("Another kitty!"))
                                         .style(CardStyle {
-                                            fill: Fill::Image(kitty_image),
-                                            ..CardStyle::subtle()
+                                            fill: Fill::Image(kitty_image).into(),
+                                            ..CardStyle::subtle(ui.theme())
                                         })
                                         .size(kitty_image.scale(0.2)),
                                 ]

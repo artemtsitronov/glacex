@@ -61,7 +61,7 @@ impl Default for ReminderApp {
 impl Widget for ReminderApp {
     type Output = ();
     fn ui(&mut self, ui: &mut Ui) {
-        ui.set_bgcolor(Theme::BG_CANVAS);
+        ui.set_bgcolor(ui.theme().bg_canvas);
 
         let window_size = ui.window_size();
 

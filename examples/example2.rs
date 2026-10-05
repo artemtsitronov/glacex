@@ -1,7 +1,7 @@
 use glacex::{
     Alignment, App, Badge, BadgeVariant, Button, ButtonStyle, Card, CardStyle, Checkbox,
     CheckboxStyle, Color, Divider, Fill, Label, Path, ScrollView, ScrollViewStyle, ShadowStyle,
-    TextArea, TextAreaStyle, TextInput, TextInputStyle, Theme, Ui, Widget, column, row,
+    TextArea, TextAreaStyle, TextInput, TextInputStyle, Ui, Widget, column, row,
 };
 use std::collections::HashMap;
 
@@ -68,133 +68,133 @@ fn apply_shadow_attrs(attrs: &HashMap<String, String>, shadow: &mut Option<Shado
 fn button_style(attrs: &HashMap<String, String>) -> ButtonStyle {
     let mut style = ButtonStyle::default();
     if let Some(c) = attr_color(attrs, "color") {
-        style.fill = Fill::Solid(c);
+        style.fill.idle = Fill::Solid(c);
     }
     if let Some(c) = attr_color(attrs, "hover_color") {
-        style.hover_fill = Fill::Solid(c);
+        style.fill.hovered = Some(Fill::Solid(c));
     }
     if let Some(c) = attr_color(attrs, "pressed_color") {
-        style.pressed_fill = Fill::Solid(c);
+        style.fill.pressed = Some(Fill::Solid(c));
     }
     if let Some(c) = attr_color(attrs, "border_color") {
-        style.border_color = c;
+        style.border_color.idle = c;
     }
     if let Some(w) = attr_f32(attrs, "border_width") {
-        style.border_width = w;
+        style.border_width.idle = w;
     }
     if let Some(r) = attr_f32(attrs, "corner_radius") {
-        style.path = Path::rect([r; 4]);
+        style.path = Path::rect([r; 4]).into();
     }
     if let Some(v) = attr_bool(attrs, "sharp") {
         style.sharp = v;
     }
-    apply_shadow_attrs(attrs, &mut style.shadow);
+    apply_shadow_attrs(attrs, &mut style.shadow.idle);
     style
 }
 
 fn checkbox_style(attrs: &HashMap<String, String>) -> CheckboxStyle {
     let mut style = CheckboxStyle::default();
     if let Some(c) = attr_color(attrs, "color") {
-        style.fill = Fill::Solid(c);
+        style.fill.idle = Fill::Solid(c);
     }
     if let Some(c) = attr_color(attrs, "hover_color") {
-        style.hover_fill = Fill::Solid(c);
+        style.fill.hovered = Some(Fill::Solid(c));
     }
     if let Some(c) = attr_color(attrs, "checked_color") {
-        style.checked_fill = Fill::Solid(c);
+        style.fill.selected = Some(Fill::Solid(c));
     }
     if let Some(c) = attr_color(attrs, "border_color") {
-        style.border_color = c;
+        style.border_color.idle = c;
     }
     if let Some(w) = attr_f32(attrs, "border_width") {
-        style.border_width = w;
+        style.border_width.idle = w;
     }
     if let Some(r) = attr_f32(attrs, "corner_radius") {
-        style.path = Path::rect([r; 4]);
+        style.path = Path::rect([r; 4]).into();
     }
     if let Some(v) = attr_bool(attrs, "sharp") {
         style.sharp = v;
     }
-    apply_shadow_attrs(attrs, &mut style.shadow);
+    apply_shadow_attrs(attrs, &mut style.shadow.idle);
     style
 }
 
 fn text_input_style(attrs: &HashMap<String, String>) -> TextInputStyle {
     let mut style = TextInputStyle::default();
     if let Some(c) = attr_color(attrs, "color") {
-        style.fill = Fill::Solid(c);
+        style.fill.idle = Fill::Solid(c);
     }
     if let Some(c) = attr_color(attrs, "border_color") {
-        style.border_color = c;
+        style.border_color.idle = c;
     }
     if let Some(w) = attr_f32(attrs, "border_width") {
-        style.border_width = w;
+        style.border_width.idle = w;
     }
     if let Some(r) = attr_f32(attrs, "corner_radius") {
-        style.path = Path::rect([r; 4]);
+        style.path = Path::rect([r; 4]).into();
     }
     if let Some(c) = attr_color(attrs, "focus_border_color") {
-        style.focus_border_color = c;
+        style.border_color.focused = Some(c);
     }
     if let Some(c) = attr_color(attrs, "selection_color") {
-        style.selection_color = c;
+        style.selection_color.idle = c;
     }
     if let Some(c) = attr_color(attrs, "cursor_color") {
-        style.cursor_color = c;
+        style.cursor_color.idle = c;
     }
     if let Some(v) = attr_bool(attrs, "sharp") {
         style.sharp = v;
     }
-    apply_shadow_attrs(attrs, &mut style.shadow);
+    apply_shadow_attrs(attrs, &mut style.shadow.idle);
     style
 }
 
 fn text_area_style(attrs: &HashMap<String, String>) -> TextAreaStyle {
     let mut style = TextAreaStyle::default();
     if let Some(c) = attr_color(attrs, "color") {
-        style.fill = Fill::Solid(c);
+        style.fill.idle = Fill::Solid(c);
     }
     if let Some(c) = attr_color(attrs, "border_color") {
-        style.border_color = c;
+        style.border_color.idle = c;
     }
     if let Some(w) = attr_f32(attrs, "border_width") {
-        style.border_width = w;
+        style.border_width.idle = w;
     }
     if let Some(r) = attr_f32(attrs, "corner_radius") {
-        style.path = Path::rect([r; 4]);
+        style.path = Path::rect([r; 4]).into();
     }
     if let Some(c) = attr_color(attrs, "focus_border_color") {
-        style.focus_border_color = c;
+        style.border_color.focused = Some(c);
     }
     if let Some(c) = attr_color(attrs, "selection_color") {
-        style.selection_color = c;
+        style.selection_color.idle = c;
     }
     if let Some(c) = attr_color(attrs, "cursor_color") {
-        style.cursor_color = c;
+        style.cursor_color.idle = c;
     }
     if let Some(c) = attr_color(attrs, "thumb_color") {
-        style.thumb_fill = Fill::Solid(c);
+        style.thumb_fill.idle = Fill::Solid(c);
     }
     if let Some(c) = attr_color(attrs, "thumb_dragging_color") {
-        style.thumb_dragging_fill = Fill::Solid(c);
+        style.thumb_fill.pressed = Some(Fill::Solid(c));
     }
     if let Some(v) = attr_bool(attrs, "sharp") {
         style.sharp = v;
     }
-    apply_shadow_attrs(attrs, &mut style.shadow);
+    apply_shadow_attrs(attrs, &mut style.shadow.idle);
     style
 }
 
 fn scroll_view_style(attrs: &HashMap<String, String>) -> ScrollViewStyle {
     let mut style = ScrollViewStyle::default();
     if let Some(c) = attr_color(attrs, "thumb_color") {
-        style.thumb_fill = Fill::Solid(c);
+        style.thumb_fill.idle = Fill::Solid(c);
     }
     if let Some(c) = attr_color(attrs, "thumb_dragging_color") {
-        style.thumb_dragging_fill = Fill::Solid(c);
+        style.thumb_fill.pressed = Some(Fill::Solid(c));
     }
     if let Some(v) = attr_f32(attrs, "thumb_corner_radius") {
-        style.path = Path::rect([v; 4]);
+        style.path = Path::rect([v; 4]).into();
     }
     style
 }
@@ -215,7 +215,7 @@ impl Widget for AppState {
     type Output = ();
 
     fn ui(&mut self, ui: &mut Ui) {
-        ui.set_bgcolor(Theme::BG_CANVAS);
+        ui.set_bgcolor(ui.theme().bg_canvas);
 
         let mut command_input = TextInput::new().width(580.0).id("textinput");
         let command = command_input.text(ui);
@@ -323,7 +323,7 @@ impl Widget for AppState {
             .align(Alignment::Start);
 
         let mut interactive_card = Card::new(&mut card_content).style(CardStyle {
-            padding: [18.0, 18.0],
+            padding: [18.0, 18.0].into(),
             ..Default::default()
         });
 

@@ -35,15 +35,15 @@ impl Widget for ThemesApp {
         )
         .muted();
 
-        let mut btn_0 = Button::new("shadcn Light").outline();
-        let mut btn_1 = Button::new("shadcn Dark").outline();
-        let mut btn_2 = Button::new("Catppuccin Mocha").outline();
-        let mut btn_3 = Button::new("Catppuccin Latte").outline();
-        let mut btn_4 = Button::new("Tokyo Night").outline();
-        let mut btn_5 = Button::new("Gruvbox Dark").outline();
-        let mut btn_6 = Button::new("Gruvbox Light").outline();
-        let mut btn_7 = Button::new("Nord").outline();
-        let mut btn_8 = Button::new("Rosé Pine").outline();
+        let mut btn_0 = Button::new("Light").outline().id("theme_btn_0");
+        let mut btn_1 = Button::new("Dark").outline().id("theme_btn_1");
+        let mut btn_2 = Button::new("Catppuccin Mocha").outline().id("theme_btn_2");
+        let mut btn_3 = Button::new("Catppuccin Latte").outline().id("theme_btn_3");
+        let mut btn_4 = Button::new("Tokyo Night").outline().id("theme_btn_4");
+        let mut btn_5 = Button::new("Gruvbox Dark").outline().id("theme_btn_5");
+        let mut btn_6 = Button::new("Gruvbox Light").outline().id("theme_btn_6");
+        let mut btn_7 = Button::new("Nord").outline().id("theme_btn_7");
+        let mut btn_8 = Button::new("Rosé Pine").outline().id("theme_btn_8");
 
         let mut active_badge =
             Badge::new(format!("Active Theme: {}", current.name)).variant(BadgeVariant::Success);
@@ -55,32 +55,41 @@ impl Widget for ThemesApp {
         .variant(BadgeVariant::Outline);
 
         let mut left_heading = Label::new("Interactive Surface & Controls");
-        let mut primary_btn = Button::new("Primary Action").primary();
-        let mut outline_btn = Button::new("Outline Button").outline();
-        let mut ghost_btn = Button::new("Ghost Button").ghost();
-        let mut danger_btn = Button::new("Destructive Action").danger();
+        let mut primary_btn = Button::new("Primary Action").primary().id("primary_btn");
+        let mut outline_btn = Button::new("Outline Button").outline().id("outline_btn");
+        let mut ghost_btn = Button::new("Ghost Button").ghost().id("ghost_btn");
+        let mut danger_btn = Button::new("Destructive Action").danger().id("danger_btn");
 
         let mut input_label = Label::new("Input Field with Floating Focus").secondary();
         let mut text_input = TextInput::new()
+            .id("showcase_input")
             .width(280.0)
             .placeholder("Enter text here...")
             .default_text("Glacex immediate UI");
 
         let mut area_label = Label::new("Multi-line Text Surface").secondary();
-        let mut text_area = TextArea::new().size([280.0, 75.0]).default_text(
-            "Minimal design tokens.\nGPU-accelerated typography.\nSDF rounded corners.",
-        );
+        let mut text_area = TextArea::new()
+            .id("showcase_area")
+            .size([280.0, 75.0])
+            .default_text(
+                "Minimal design tokens.\nGPU-accelerated typography.\nSDF rounded corners.",
+            );
 
         let mut right_heading = Label::new("Toggles, Sliders & Badges");
-        let mut switch = Switch::new().default_enabled(self.switched);
+        let mut switch = Switch::new()
+            .id("hw_accel_switch")
+            .default_enabled(self.switched);
         let mut switch_label = Label::new("Hardware Acceleration");
 
-        let mut check = Checkbox::new().default_checked(self.checked);
+        let mut check = Checkbox::new()
+            .id("aa_checkbox")
+            .default_checked(self.checked);
         let mut check_label = Label::new("Sub-pixel Text Antialiasing");
 
         let mut slider_label =
             Label::new(format!("Surface Blur Radius: {:.0}px", self.slider_val)).secondary();
         let mut slider = Slider::new(0.0, 100.0)
+            .id("blur_slider")
             .width(280.0)
             .default_value(self.slider_val);
         self.slider_val = slider.value(ui);

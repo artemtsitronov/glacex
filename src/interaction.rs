@@ -1,5 +1,7 @@
+use crate::animation::animate_towards;
 use crate::geometry::MeasurablePath;
 use crate::ui::Ui;
+use crate::widget::is_anonymous;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Interaction {
@@ -22,4 +24,27 @@ impl Interaction {
             clicked,
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct HoverState {
+    pub hover_t: f32,
+}
+
+pub fn animate_hover(ui: &mut Ui, id: &str, hovered: bool, motion: f32) -> f32 {
+    let target = if hovered { 1.0 } else { 0.0 };
+    if is_anonymous(id) {
+        return target;
+    }
+    let dt = ui.dt();
+    let state = ui.widget_state::<HoverState>(id);
+    state.hover_t = animate_towards(state.hover_t, target, dt, motion);
+    state.hover_t
+}
+
+pub fn stored_hover(ui: &mut Ui, id: &str) -> f32 {
+    if is_anonymous(id) {
+        return 0.0;
+    }
+    ui.widget_state::<HoverState>(id).hover_t
 }

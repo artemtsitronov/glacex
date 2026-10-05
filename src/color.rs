@@ -1,11 +1,5 @@
-//! A single, GPU-friendly color type used everywhere in this crate — widget
-//! styling, the theme palette, gradients, and the raw vertex data the GPU
-//! consumes all share this one representation instead of scattering
-//! ad-hoc `[f32; 4]` arrays around.
-//!
-//! `Color` is `#[repr(C)]` and implements `bytemuck::Pod`/`Zeroable`, so it
-//! can be embedded directly in GPU-bound structs (see [`crate::shapes::RectInstance`])
-//! with the exact same memory layout as a `[f32; 4]`.
+// one color type for styling, themes, gradients and gpu vertex data
+// repr(C) + Pod so it sits in gpu structs like a [f32; 4]
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
@@ -168,6 +162,11 @@ impl Color {
     pub fn to_rgb_bytes(&self) -> [u8; 3] {
         let [r, g, b, _] = self.to_rgba_bytes();
         [r, g, b]
+    }
+
+    pub fn to_hex(&self) -> String {
+        let [r, g, b] = self.to_rgb_bytes();
+        format!("#{r:02x}{g:02x}{b:02x}")
     }
 
     pub fn to_linear_rgb(&self) -> [f32; 3] {

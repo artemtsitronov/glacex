@@ -1,6 +1,6 @@
 use glacex::{
-    Alignment, App, Expanded, Language, TabItem, Tabs, TextArea, TextEditState, Theme, Ui, Widget,
-    column,
+    Alignment, App, Expanded, FontFamily, Language, TabItem, Tabs, TextArea, TextEditState,
+    TextStyle, Theme, Ui, Widget, column,
 };
 use std::fs::read_to_string;
 use std::path::Path;
@@ -91,7 +91,13 @@ impl Widget for CodeEditor {
                 .map(|f| (f.filecontent(), f.cursor(), f.selection_anchor()))
                 .unwrap_or_default();
 
-        let mut code_area = TextArea::new().language(Language::Rust).id("code-area");
+        let mut code_area = TextArea::new()
+            .language(Language::Rust)
+            .id("code-area")
+            .text_style(TextStyle {
+                font_family: FontFamily::Mono,
+                ..Default::default()
+            });
 
         if self.loaded_idx != active_idx {
             let code_area_state = ui.widget_state::<TextEditState>("code-area");

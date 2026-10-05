@@ -65,6 +65,13 @@ impl TextStyle {
         self.color = Some(self.color.unwrap_or(color));
         self
     }
+    pub fn inherit(mut self, base: TextStyle) -> Self {
+        self.color = self.color.or(base.color);
+        self
+    }
+    pub fn resolve(custom: Option<TextStyle>, base: TextStyle) -> TextStyle {
+        custom.map(|t| t.inherit(base)).unwrap_or(base)
+    }
     pub fn size(mut self, font_size: f32, line_height: f32) -> Self {
         self.font_size = font_size;
         self.line_height = line_height;

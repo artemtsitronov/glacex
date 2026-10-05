@@ -1,5 +1,13 @@
+use crate::alignment::Alignment;
+use crate::animation::Motion;
 use crate::color::Color;
+use crate::fill::Fill;
+use crate::generate_uuid;
+use crate::geometry::Path;
+use crate::interaction::{Interaction, animate_hover, stored_hover};
+use crate::stateful::{StateWeights, Stateful};
 use crate::text::{FontFamily, FontWeight, TextStyle};
+use crate::theme::Theme;
 use crate::ui::Ui;
 use crate::widget::{Accessible, Measurable, Widget, hash_id};
 use accesskit::{NodeId, Role};
@@ -17,11 +25,60 @@ pub enum LabelVariant {
     Custom(Color),
 }
 
+#[derive(Clone)]
+pub struct LabelStyle {
+    pub padding: Stateful<[f32; 2]>,
+    pub align_x: Alignment,
+    pub align_y: Alignment,
+    pub fill: Stateful<Option<Fill>>,
+    pub text_color: Stateful<Option<Color>>,
+    pub border_width: Stateful<f32>,
+    pub border_color: Stateful<Color>,
+    pub sharp: bool,
+    pub path: Stateful<Path>,
+    pub hover_motion: f32,
+}
+
+impl LabelStyle {
+    pub fn from_theme(_theme: &Theme) -> Self {
+        LabelStyle {
+            padding: Stateful::new([0.0, 0.0]),
+            align_x: Alignment::Start,
+            align_y: Alignment::Start,
+            fill: Stateful::new(None),
+            text_color: Stateful::new(None),
+            border_width: Stateful::new(0.0),
+            border_color: Stateful::new(Color::TRANSPARENT),
+            sharp: false,
+            path: Stateful::new(Path::rect([0.0; 4])),
+            hover_motion: Motion::SNAPPY,
+        }
+    }
+
+    pub fn highlighted(theme: &Theme) -> Self {
+        LabelStyle {
+            padding: Stateful::new([6.0, 2.0]),
+            fill: Stateful::new(Some(Fill::Solid(theme.surface_subtle))),
+            border_width: Stateful::new(1.0),
+            border_color: Stateful::new(theme.border_faint),
+            path: Stateful::new(Path::rect([theme.metrics.radius_sm; 4])),
+            ..Self::from_theme(theme)
+        }
+    }
+}
+
+impl Default for LabelStyle {
+    fn default() -> Self {
+        LabelStyle::from_theme(&Theme::default())
+    }
+}
+
 pub struct Label {
     id: String,
     text: String,
     variant: LabelVariant,
     text_style: TextStyle,
+    style: Option<LabelStyle>,
     width: Option<f32>,
     height: Option<f32>,
 }
@@ -29,10 +86,11 @@ pub struct Label {
 impl Label {
     pub fn new(text: impl Into<String>) -> Self {
         Label {
-            id: uuid::Uuid::new_v4().to_string(),
+            id: generate_uuid(),
             text: text.into(),
             variant: LabelVariant::Primary,
             text_style: TextStyle::new(),
+            style: None,
             width: None,
             height: None,
         }
@@ -158,6 +216,57 @@ impl Label {
         self
     }
 
+    pub fn style(mut self, style: LabelStyle) -> Self {
+        self.style = Some(style);
+        self
+    }
+
+    pub fn set_style(&mut self, style: Option<LabelStyle>) {
+        self.style = style;
+    }
+
+    pub fn align(self, align_x: Alignment) -> Self {
+        self.restyle(|style| style.align_x = align_x)
+    }
+
+    pub fn fill(self, fill: impl Into<Stateful<Option<Fill>>>) -> Self {
+        let fill = fill.into();
+        self.restyle(|style| style.fill = fill)
+    }
+
+    pub fn text_color(self, color: impl Into<Stateful<Option<Color>>>) -> Self {
+        let color = color.into();
+        self.restyle(|style| style.text_color = color)
+    }
+
+    pub fn border_color(self, color: impl Into<Stateful<Color>>) -> Self {
+        let color = color.into();
+        self.restyle(|style| style.border_color = color)
+    }
+
+    pub fn border_width(self, width: impl Into<Stateful<f32>>) -> Self {
+        let width = width.into();
+        self.restyle(|style| style.border_width = width)
+    }
+
+    pub fn padding(self, padding: impl Into<Stateful<[f32; 2]>>) -> Self {
+        let padding = padding.into();
+        self.restyle(|style| style.padding = padding)
+    }
+
+    fn restyle(mut self, f: impl FnOnce(&mut LabelStyle)) -> Self {
+        let mut style = self.style.take().unwrap_or_default();
+        f(&mut style);
+        self.style = Some(style);
+        self
+    }
+
+    fn resolved_style(&self, theme: &Theme) -> LabelStyle {
+        self.style
+            .clone()
+            .unwrap_or_else(|| LabelStyle::from_theme(theme))
+    }
+
     fn styled(mut self, font_size: f32, line_height: f32, weight: FontWeight) -> Self {
         self.text_style = self.text_style.size(font_size, line_height).weight(weight);
         self
@@ -175,10 +284,15 @@ impl Widget for Label {
 
 impl Measurable for Label {
     fn measure(&mut self, ui: &mut Ui) -> [f32; 2] {
+        let style = self.resolved_style(ui.theme());
+        let padding = style
+            .padding
+            .resolve(StateWeights::IDLE.hovered(stored_hover(ui, &self.id)));
         let text_width = ui.measure_text(&self.text, self.text_style);
         [
-            self.width.unwrap_or(text_width),
-            self.height.unwrap_or(self.text_style.line_height),
+            self.width.unwrap_or(text_width + padding[0] * 2.0),
+            self.height
+                .unwrap_or(self.text_style.line_height + padding[1] * 2.0),
         ]
     }
 
@@ -193,7 +307,27 @@ impl Measurable for Label {
         ui.register_accessible(self, clip_rect);
 
         let theme = *ui.theme();
-        let color = match self.variant {
+        let style = self.resolved_style(&theme);
+
+        let previous = StateWeights::IDLE.hovered(stored_hover(ui, &self.id));
+        let hovered =
+            Interaction::update(&(style.path.resolve(previous))(position, size), ui).hovered;
+        let weights =
+            StateWeights::IDLE.hovered(animate_hover(ui, &self.id, hovered, style.hover_motion));
+
+        if let Some(fill) = style.fill.resolve(weights) {
+            ui.draw_shape(
+                (style.path.resolve(weights))(position, size),
+                fill,
+                style.border_width.resolve(weights),
+                style.border_color.resolve(weights),
+                0.0,
+                style.sharp,
+                0.0,
+            );
+        }
+
+        let variant_color = match self.variant {
             LabelVariant::Primary => theme.text_primary,
             LabelVariant::Secondary => theme.text_secondary,
             LabelVariant::Muted => theme.text_muted,
@@ -203,8 +337,31 @@ impl Measurable for Label {
             LabelVariant::Error => theme.error,
             LabelVariant::Custom(c) => c,
         };
-        let text_style = self.text_style.or_color(color);
-        ui.draw_text(&self.text, text_style, position, clip_rect);
+        let text_style = match style.text_color.resolve(weights) {
+            Some(color) => self.text_style.color(color),
+            None => self.text_style.or_color(variant_color),
+        };
+
+        let padding = style.padding.resolve(weights);
+        let inner_size = [
+            (size[0] - padding[0] * 2.0).max(0.0),
+            (size[1] - padding[1] * 2.0).max(0.0),
+        ];
+        let text_width = ui.measure_text(&self.text, text_style);
+        let free = [
+            inner_size[0] - text_width,
+            inner_size[1] - text_style.line_height,
+        ];
+        let offset = |align: Alignment, free: f32| match align {
+            Alignment::Start | Alignment::Stretch => 0.0,
+            Alignment::Center => free / 2.0,
+            Alignment::End => free,
+        };
+        let text_position = [
+            position[0] + padding[0] + offset(style.align_x, free[0]),
+            position[1] + padding[1] + offset(style.align_y, free[1]),
+        ];
+        ui.draw_text(&self.text, text_style, text_position, clip_rect);
     }
 }
 

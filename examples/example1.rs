@@ -1,6 +1,6 @@
 use glacex::{
     Alignment, App, Badge, BadgeVariant, Button, ButtonStyle, Card, CardStyle, Color, Divider,
-    Fill, Label, ShadowStyle, TextInput, Theme, Ui, Widget, column, row,
+    FontWeight, Label, ShadowStyle, Stateful, TextInput, TextStyle, Ui, Widget, column, row,
 };
 
 struct ColorDemo {
@@ -19,7 +19,7 @@ impl Widget for ColorDemo {
     type Output = ();
 
     fn ui(&mut self, ui: &mut Ui) {
-        ui.set_bgcolor(Theme::BG_CANVAS);
+        ui.set_bgcolor(ui.theme().bg_canvas);
 
         let mut hex_input = TextInput::new()
             .width(320.0)
@@ -38,21 +38,28 @@ impl Widget for ColorDemo {
         let mut preview_label = Label::new("Styled Preview");
         let mut preview_btn = Button::new("Sample Button")
             .id("sample-button")
+            .text_style(
+                TextStyle::new()
+                    .size(14.0, 20.0)
+                    .weight(FontWeight::Medium)
+                    .color(Color::WHITE),
+            )
             .style(ButtonStyle {
-                fill: Fill::Solid(parsed_color),
-                hover_fill: Fill::Solid(parsed_color.lighten(0.15)),
-                pressed_fill: Fill::Solid(parsed_color.darken(0.2)),
-                text_color: Color::WHITE,
-                border_width: 1.0,
-                border_color: Color::WHITE.with_alpha(0.2),
-                padding: [14.0, 8.0],
-                shadow: Some(ShadowStyle {
-                    color: parsed_color.with_alpha(0.35),
-                    blur_radius: 16.0,
-                    offset: [0.0, 4.0],
-                }),
-                sharp: false,
-                path: glacex::Path::rect([Theme::RADIUS_MD; 4]),
+                path: glacex::Path::rect([ui.theme().metrics.radius_md; 4]).into(),
+                ..Default::default()
+            })
+            .fill(
+                Stateful::new(parsed_color)
+                    .hovered(parsed_color.lighten(0.15))
+                    .pressed(parsed_color.darken(0.2)),
+            )
+            .border_width(1.0)
+            .border_color(Color::WHITE.with_alpha(0.2))
+            .shadow(ShadowStyle {
+                color: parsed_color.with_alpha(0.35),
+                blur_radius: 16.0,
+                offset: [0.0, 4.0],
+                spread: 0.0,
             });
 
         let mut badge_row = row![&mut badge].align(Alignment::Start);
@@ -71,8 +78,8 @@ impl Widget for ColorDemo {
         .align(Alignment::Start);
 
         let mut card = Card::new(&mut card_content).style(CardStyle {
-            padding: [24.0, 24.0],
-            path: glacex::Path::rect([16.0; 4]),
+            padding: [24.0, 24.0].into(),
+            path: glacex::Path::rect([16.0; 4]).into(),
             ..Default::default()
         });
 

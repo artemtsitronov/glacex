@@ -1,8 +1,7 @@
 use crate::color::Color;
 use wgpu::{BufferAddress, VertexBufferLayout, VertexStepMode, vertex_attr_array};
 
-/// One corner of the unit quad every rectangle is stamped from. Never
-/// changes, instancing reuses this same six-vertex geometry for every shape.
+// unit quad corner, every rect instance reuses these six vertices
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct QuadVertex {

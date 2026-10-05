@@ -1,9 +1,12 @@
 use crate::ui::Ui;
 use accesskit::Node;
 use accesskit::{NodeId, Role};
-use std::any::Any;
+use std::any::{Any, type_name};
+use std::collections::HashSet;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use std::sync::{LazyLock, Mutex};
+use uuid::Uuid;
 
 pub trait Accessible {
     fn accessibility_id(&self) -> NodeId;
@@ -20,37 +23,28 @@ pub fn hash_id(s: &str) -> u64 {
     hasher.finish()
 }
 
-/// Accepted by every widget's `.id(..)` builder method, so callers can pass
-/// a plain `&str`/`String` (the common case), an already-`Option`al id, or
-/// `None` to explicitly clear one — without forcing everyone through
-/// `Some("...".to_string())`. `Into<Option<String>>` can't cover `&str`
-/// directly (no `From<&str> for Option<String>` in std, and orphan rules
-/// block adding one), hence this local trait.
-pub trait IntoId {
-    fn into_id(self) -> Option<String>;
+pub fn generate_uuid() -> String {
+    format!("{ANONYMOUS_ID_PREFIX}{}", Uuid::new_v4())
 }
 
-impl IntoId for Option<String> {
-    fn into_id(self) -> Option<String> {
-        self
+const ANONYMOUS_ID_PREFIX: &str = "__gcx_uuid_";
+
+pub fn is_anonymous(id: &str) -> bool {
+    id.contains(ANONYMOUS_ID_PREFIX)
+}
+
+pub(crate) fn warn_if_anonymous(widget: &str, id: &str) {
+    static WARNED: LazyLock<Mutex<HashSet<String>>> = LazyLock::new(Default::default);
+    if !is_anonymous(id) {
+        return;
     }
-}
-
-impl IntoId for String {
-    fn into_id(self) -> Option<String> {
-        Some(self)
-    }
-}
-
-impl IntoId for &str {
-    fn into_id(self) -> Option<String> {
-        Some(self.to_string())
-    }
-}
-
-impl IntoId for Option<&str> {
-    fn into_id(self) -> Option<String> {
-        self.map(|s| s.to_string())
+    let Ok(mut warned) = WARNED.lock() else {
+        return;
+    };
+    if warned.insert(widget.to_string()) {
+        log::warn!(
+            "{widget} has an auto-generated ID. Stateful widgets require a user-defined ID."
+        );
     }
 }
 
@@ -110,23 +104,25 @@ impl<T: Measurable> AnyWidget for &mut T {
     }
 }
 
-pub trait WidgetStyle: Clone {
-    fn default_style() -> Self;
-}
-
 pub trait StatefulWidget {
     type State: Default + 'static;
     fn state_id(&self) -> &str;
+    fn check_id(&self) {
+        warn_if_anonymous(type_name::<Self>(), self.state_id());
+    }
     fn initial_state(&self) -> Self::State {
         Self::State::default()
     }
     fn state<'a>(&self, ui: &'a mut Ui) -> &'a mut Self::State {
+        self.check_id();
         ui.widget_state_or(self.state_id(), self.initial_state())
     }
     fn take_state(&self, ui: &mut Ui) -> Self::State {
+        self.check_id();
         ui.take_widget_state_or(self.state_id(), self.initial_state())
     }
     fn put_state(&self, ui: &mut Ui, state: Self::State) {
+        self.check_id();
         ui.put_widget_state(self.state_id(), state)
     }
 }

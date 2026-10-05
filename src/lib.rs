@@ -1,12 +1,4 @@
-//! GPU-rendered UI library built with `wgpu`, `winit`, and `taffy`.
-//!
-//! The crate exposes a custom widget system centered around three core pieces:
-//! - [`App`], which owns the native window and event loop
-//! - [`Ui`], which stores frame state, input state, and per-widget persistent state
-//! - [`Widget`], implemented by widgets that render themselves each frame
-//!
-//! Widgets are redrawn every frame, while interactive state is kept inside [`Ui`] and
-//! keyed by stable widget IDs.
+//! gpu ui library built on wgpu, winit and taffy
 
 // long story short:
 pub mod accessibility;
@@ -38,6 +30,7 @@ pub mod select_box;
 pub mod shadow;
 pub mod shapes;
 pub mod slider;
+pub mod stateful;
 pub mod switch;
 pub mod tabs;
 pub mod tessellate;
@@ -78,6 +71,7 @@ pub use select_box::*;
 pub use shadow::*;
 pub use shapes::*;
 pub use slider::*;
+pub use stateful::{Blend, StateWeights, Stateful, StyleOverrides};
 pub use switch::*;
 pub use tabs::*;
 pub use tessellate::*;
@@ -88,6 +82,7 @@ pub use text_input::*;
 pub use theme::*;
 pub use ui::*;
 pub use widget::*;
+pub use winit::window::CursorIcon;
 // and that's the Harry Potter plot
 
 use accesskit_winit::Adapter;
@@ -100,11 +95,7 @@ use winit::window::{Window, WindowId};
 
 type UpdateFn<W> = Box<dyn FnMut(&mut W)>;
 
-/// Entry point for a client app. Call `App::new(root_widget).run()`.
-/// `root` is built once and lives for the whole app; it's re-drawn every
-/// frame. An optional `update` callback runs first each frame, with
-/// mutable access to `root`, so it can react to input (e.g. button clicks)
-/// before drawing happens.
+// entry point, root is built once and redrawn every frame, update runs before drawing
 pub struct App<W: Widget> {
     window: Option<Arc<Window>>,
     ui: Option<Ui>,

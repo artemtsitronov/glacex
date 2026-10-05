@@ -138,9 +138,9 @@ Accessibility is opt-in (`App::accessibility_enabled(true)`) and layered on top 
 - **`SharedTree`**: an `Arc<Mutex<Vec<(NodeId, Node)>>>` shared between the render thread and `accesskit`'s platform adapter thread. Every widget that calls `Ui::register_accessible` during `arrange` appends itself here for the current frame. `Ui::begin_frame` clears the list, so it never accumulates stale entries from previous frames.
 - **`build_update`**: wraps the current node list in a synthetic `Role::Window` root, sets that root's `children` to every registered node id (accesskit requires every non-root node to be reachable from the root), and returns a `TreeUpdate`.
 - **`AccessibilityActivationHandler`** / **`AccessibilityDeactivationHandler`**: called by the platform backend when an assistive technology attaches or detaches. On Linux this only happens once the desktop's `ScreenReaderEnabled` AT-SPI flag is set (normally by a running screen reader), which is a common point of confusion when testing with an inspector like Accerciser instead of an actual screen reader.
-- **`AccessibilityActionHandler`**: receives action requests from the AT client (e.g. "invoke this button"). Currently just logged — wiring it back into widget state is app-specific and left to the caller.
+- **`AccessibilityActionHandler`**: receives action requests from the AT client (e.g. "invoke this button"). Currently just logged: wiring it back into widget state is app-specific and left to the caller.
 - 
-Each widget's `NodeId` is a hash of its own id string (`hash_id`, `src/widget.rs`), so two widgets sharing an id — including two anonymous `Card`/`Container`/`Divider`/`ProgressBar` instances that both fall back to the same default id — collide in the tree.
+Each widget's `NodeId` is a hash of its own id string (`hash_id`, `src/widget.rs`), so two widgets sharing an id collide in the tree. Anonymous `Card`, `Container`, `Divider` and `ProgressBar` instances aren't registered at all.
 
 ## 10. ID-ing system
 

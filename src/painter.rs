@@ -90,9 +90,7 @@ fn hash_text_key(
     hasher.finish()
 }
 
-/// Walks the stop list, finds the two stops `t` falls between, and mixes
-/// them — the same interpolation the shader does per-fragment, just run
-/// once here while baking the ramp texture.
+// cpu copy of the shader's gradient mixing, used to bake the ramp texture
 fn sample_stops(stops: &[GradientStop], t: f32) -> Color {
     if stops.is_empty() {
         return Color::TRANSPARENT;
@@ -1205,7 +1203,7 @@ impl Painter {
 fn test_image() -> Result<(), image::ImageError> {
     use image::ImageReader;
 
-    let img = ImageReader::open("assets/test/1.webp")?.decode()?;
+    let img = ImageReader::open("assets/demo_images/1.jpg")?.decode()?;
     let rgba = img.to_rgba8();
     assert_eq!(rgba.width(), img.width());
     assert_eq!(rgba.height(), img.height());

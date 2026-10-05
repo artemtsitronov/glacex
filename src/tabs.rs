@@ -1,11 +1,14 @@
 use crate::animation::{Motion, animate_towards};
 use crate::color::Color;
 use crate::fill::Fill;
+use crate::generate_uuid;
 use crate::geometry::{MeasurablePath, Path};
+use crate::shadow::{ShadowStyle, draw_shadow};
+use crate::stateful::{StateWeights, Stateful};
 use crate::text::{FontWeight, TextStyle};
 use crate::theme::Theme;
 use crate::ui::Ui;
-use crate::widget::{Accessible, Measurable, Widget, hash_id};
+use crate::widget::{Accessible, Measurable, Widget, hash_id, warn_if_anonymous};
 use accesskit::{NodeId, Role};
 use winit::window::CursorIcon;
 
@@ -18,7 +21,7 @@ pub struct TabItem {
 impl TabItem {
     pub fn new(label: impl Into<String>) -> Self {
         TabItem {
-            id: uuid::Uuid::new_v4().to_string(),
+            id: generate_uuid(),
             label: label.into(),
         }
     }
@@ -29,41 +32,122 @@ impl TabItem {
     }
 }
 
-#[derive(Clone)]
-pub struct TabsStyle {
-    pub height: f32,
-    pub tab_padding_x: f32,
-    pub gap: f32,
-    pub text_color: Color,
-    pub hover_text_color: Color,
-    pub active_fill: Fill,
-    pub pill_inset_y: f32,
-    pub path: Path,
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum TabsIndicator {
+    Pill,
+    Underline { thickness: f32 },
+    None,
 }
 
-impl Default for TabsStyle {
-    fn default() -> Self {
-        TabsStyle {
-            height: 40.0,
-            tab_padding_x: 16.0,
-            gap: 4.0,
-            text_color: Theme::TEXT_SECONDARY,
-            hover_text_color: Theme::TEXT_PRIMARY,
-            active_fill: Fill::Solid(Theme::ACTIVE),
-            pill_inset_y: 4.0,
-            path: Path::rect([Theme::RADIUS_MD; 4]),
-        }
-    }
+#[derive(Clone)]
+pub struct TabsStyle {
+    pub height: Stateful<f32>,
+    pub tab_padding_x: Stateful<f32>,
+    pub tab_min_width: Stateful<f32>,
+    pub gap: Stateful<f32>,
+    pub padding_x: Stateful<f32>,
+    pub fill: Stateful<Fill>,
+    pub border_width: Stateful<f32>,
+    pub border_color: Stateful<Color>,
+    pub shadow: Stateful<Option<ShadowStyle>>,
+    pub text_style: Stateful<TextStyle>,
+    pub tab_fill: Stateful<Fill>,
+    pub indicator_fill: Stateful<Fill>,
+    pub indicator: TabsIndicator,
+    pub indicator_border_width: Stateful<f32>,
+    pub indicator_border_color: Stateful<Color>,
+    pub indicator_shadow: Stateful<Option<ShadowStyle>>,
+    pub pill_inset_y: Stateful<f32>,
+    pub sharp: bool,
+    pub path: Stateful<Path>,
+    pub indicator_path: Stateful<Path>,
+    pub tab_path: Stateful<Path>,
+    pub hover_motion: f32,
+    pub indicator_motion: f32,
+    pub cursor: Stateful<CursorIcon>,
+}
+
+fn tab_text_style(theme: &Theme, active_color: Option<Color>) -> Stateful<TextStyle> {
+    let base = TextStyle::new()
+        .size(14.0, 20.0)
+        .weight(FontWeight::Medium)
+        .color(theme.text_secondary);
+    Stateful::new(base)
+        .hovered(base.color(theme.text_primary))
+        .selected(TextStyle {
+            color: active_color,
+            ..base.weight(FontWeight::SemiBold)
+        })
+}
+
+fn tab_fill(hovered: Color) -> Stateful<Fill> {
+    Stateful::new(Fill::Solid(Color::TRANSPARENT))
+        .hovered(Fill::Solid(hovered))
+        .selected(Fill::Solid(Color::TRANSPARENT))
 }
 
 impl TabsStyle {
     pub fn from_theme(theme: &Theme) -> Self {
         TabsStyle {
-            text_color: theme.text_secondary,
-            hover_text_color: theme.text_primary,
-            active_fill: Fill::Solid(theme.active),
-            ..TabsStyle::default()
+            height: Stateful::new(40.0),
+            tab_padding_x: Stateful::new(16.0),
+            tab_min_width: Stateful::new(0.0),
+            gap: Stateful::new(4.0),
+            padding_x: Stateful::new(0.0),
+            fill: Stateful::new(Fill::Solid(Color::TRANSPARENT)),
+            border_width: Stateful::new(0.0),
+            border_color: Stateful::new(Color::TRANSPARENT),
+            shadow: Stateful::new(None),
+            text_style: tab_text_style(theme, None),
+            tab_fill: tab_fill(Color::TRANSPARENT),
+            indicator_fill: Stateful::new(Fill::Solid(theme.active)),
+            indicator: TabsIndicator::Pill,
+            indicator_border_width: Stateful::new(0.0),
+            indicator_border_color: Stateful::new(Color::TRANSPARENT),
+            indicator_shadow: Stateful::new(None),
+            pill_inset_y: Stateful::new(4.0),
+            sharp: false,
+            path: Stateful::new(Path::rect([theme.metrics.radius_md; 4])),
+            indicator_path: Stateful::new(Path::rect([theme.metrics.radius_md; 4])),
+            tab_path: Stateful::new(Path::rect([theme.metrics.radius_md; 4])),
+            hover_motion: Motion::SNAPPY,
+            indicator_motion: Motion::FLUID,
+            cursor: Stateful::new(CursorIcon::Pointer),
         }
+    }
+
+    pub fn segmented(theme: &Theme) -> Self {
+        TabsStyle {
+            gap: Stateful::new(2.0),
+            padding_x: Stateful::new(4.0),
+            fill: Stateful::new(Fill::Solid(theme.surface_subtle)),
+            border_width: Stateful::new(1.0),
+            border_color: Stateful::new(theme.border_faint),
+            indicator_fill: Stateful::new(Fill::Solid(theme.surface_elevated)),
+            text_style: tab_text_style(theme, Some(theme.text_primary)),
+            indicator_border_width: Stateful::new(1.0),
+            indicator_border_color: Stateful::new(theme.border),
+            indicator_shadow: Stateful::new(Some(theme.shadow_sm()[0])),
+            path: Stateful::new(Path::rect([theme.metrics.radius_lg; 4])),
+            ..Self::from_theme(theme)
+        }
+    }
+
+    pub fn underline(theme: &Theme) -> Self {
+        TabsStyle {
+            gap: Stateful::new(0.0),
+            indicator: TabsIndicator::Underline { thickness: 2.0 },
+            text_style: tab_text_style(theme, Some(theme.text_primary)),
+            tab_fill: tab_fill(theme.surface_subtle),
+            indicator_path: Stateful::new(Path::rect([1.0; 4])),
+            ..Self::from_theme(theme)
+        }
+    }
+}
+
+impl Default for TabsStyle {
+    fn default() -> Self {
+        TabsStyle::from_theme(&Theme::default())
     }
 }
 
@@ -88,6 +172,7 @@ fn contrasting_text_color(bg: &Fill) -> Color {
 #[derive(Clone)]
 struct TabsState {
     hover_ts: Vec<f32>,
+    strip_hover_t: f32,
     indicator_x: f32,
     indicator_w: f32,
     initialized: bool,
@@ -97,6 +182,7 @@ impl Default for TabsState {
     fn default() -> Self {
         TabsState {
             hover_ts: Vec::new(),
+            strip_hover_t: 0.0,
             indicator_x: 0.0,
             indicator_w: 0.0,
             initialized: false,
@@ -115,16 +201,16 @@ pub struct Tabs {
     id: String,
     items: Vec<TabItem>,
     style: Option<TabsStyle>,
-    text_style: TextStyle,
+    text_style: Option<TextStyle>,
 }
 
 impl Tabs {
     pub fn new(items: Vec<TabItem>) -> Self {
         Tabs {
-            id: uuid::Uuid::new_v4().to_string(),
+            id: generate_uuid(),
             items,
             style: None,
-            text_style: TextStyle::new().size(14.0, 20.0).weight(FontWeight::Medium),
+            text_style: None,
         }
     }
 
@@ -138,12 +224,16 @@ impl Tabs {
         self
     }
 
+    pub fn set_style(&mut self, style: Option<TabsStyle>) {
+        self.style = style;
+    }
+
     pub fn text_style(mut self, text_style: TextStyle) -> Self {
-        self.text_style = text_style;
+        self.text_style = Some(text_style);
         self
     }
 
-    pub fn set_text_style(&mut self, text_style: TextStyle) {
+    pub fn set_text_style(&mut self, text_style: Option<TextStyle>) {
         self.text_style = text_style;
     }
 
@@ -156,19 +246,42 @@ impl Tabs {
     }
 
     fn resolved_style(&self, theme: &Theme) -> TabsStyle {
-        self.style
+        let mut style = self
+            .style
             .clone()
-            .unwrap_or_else(|| TabsStyle::from_theme(theme))
+            .unwrap_or_else(|| TabsStyle::from_theme(theme));
+        if let Some(custom) = self.text_style {
+            style.text_style = style.text_style.map(|t| custom.inherit(*t));
+        }
+        style
+    }
+
+    fn active_index(&self, ui: &Ui) -> usize {
+        ui.selected_option(&self.id)
+            .and_then(|selected| self.items.iter().position(|it| it.id == selected))
+            .unwrap_or(0)
+    }
+
+    fn tab_weights(hover_ts: &[f32], active_idx: usize, i: usize) -> StateWeights {
+        StateWeights::IDLE
+            .hovered(hover_ts.get(i).copied().unwrap_or(0.0))
+            .selected(StateWeights::when(i == active_idx))
     }
 
     fn layout_tabs(&self, ui: &mut Ui, style: &TabsStyle) -> Vec<(f32, f32)> {
-        let mut x = 0.0;
+        let previous = ui.widget_state::<TabsState>(&self.id).clone();
+        let active_idx = self.active_index(ui);
+        let strip = StateWeights::IDLE.hovered(previous.strip_hover_t);
+        let gap = style.gap.resolve(strip);
+        let mut x = style.padding_x.resolve(strip);
         let mut out = Vec::with_capacity(self.items.len());
-        for item in &self.items {
-            let text_w = ui.measure_text(&item.label, self.text_style);
-            let w = text_w + style.tab_padding_x * 2.0;
+        for (i, item) in self.items.iter().enumerate() {
+            let weights = Self::tab_weights(&previous.hover_ts, active_idx, i);
+            let text_w = ui.measure_text(&item.label, style.text_style.resolve(weights));
+            let w = (text_w + style.tab_padding_x.resolve(weights) * 2.0)
+                .max(style.tab_min_width.resolve(weights));
             out.push((x, w));
-            x += w + style.gap;
+            x += w + gap;
         }
         out
     }
@@ -188,11 +301,14 @@ impl Measurable for Tabs {
         let theme = *ui.theme();
         let style = self.resolved_style(&theme);
         let tabs = self.layout_tabs(ui, &style);
-        let width = tabs.last().map(|(x, w)| x + w).unwrap_or(0.0);
-        [width, style.height]
+        let strip =
+            StateWeights::IDLE.hovered(ui.widget_state::<TabsState>(&self.id).strip_hover_t);
+        let width = tabs.last().map(|(x, w)| x + w).unwrap_or(0.0) + style.padding_x.resolve(strip);
+        [width, style.height.resolve(strip)]
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) -> TabsResponse {
+        warn_if_anonymous("Tabs", &self.id);
         let theme = *ui.theme();
         let style = self.resolved_style(&theme);
         let dt = ui.dt();
@@ -231,7 +347,7 @@ impl Measurable for Tabs {
             }
 
             let target = if hit { 1.0 } else { 0.0 };
-            state.hover_ts[i] = animate_towards(state.hover_ts[i], target, dt, Motion::SNAPPY);
+            state.hover_ts[i] = animate_towards(state.hover_ts[i], target, dt, style.hover_motion);
         }
 
         if let Some(i) = clicked_index {
@@ -256,8 +372,10 @@ impl Measurable for Tabs {
             state.indicator_w = target_w;
             state.initialized = true;
         } else {
-            state.indicator_x = animate_towards(state.indicator_x, target_x, dt, Motion::FLUID);
-            state.indicator_w = animate_towards(state.indicator_w, target_w, dt, Motion::FLUID);
+            state.indicator_x =
+                animate_towards(state.indicator_x, target_x, dt, style.indicator_motion);
+            state.indicator_w =
+                animate_towards(state.indicator_w, target_w, dt, style.indicator_motion);
         }
 
         ui.register_accessible(
@@ -270,43 +388,107 @@ impl Measurable for Tabs {
             ],
         );
 
+        let strip_path = style
+            .path
+            .resolve(StateWeights::IDLE.hovered(state.strip_hover_t));
+        let strip_hovered = !blocked && in_clip && strip_path(position, size).contains(mouse_pos);
+        state.strip_hover_t = animate_towards(
+            state.strip_hover_t,
+            if strip_hovered { 1.0 } else { 0.0 },
+            dt,
+            style.hover_motion,
+        );
+        let strip_weights = StateWeights::IDLE.hovered(state.strip_hover_t);
+        let path = style.path.resolve(strip_weights);
+
+        if let Some(shadow) = &style.shadow.resolve(strip_weights) {
+            draw_shadow(shadow, position, size, &path, ui);
+        }
+
         ui.draw_shape(
-            (style.path)(
-                [
-                    position[0] + state.indicator_x,
-                    position[1] + style.pill_inset_y,
-                ],
-                [state.indicator_w, size[1] - style.pill_inset_y * 2.0],
-            ),
-            style.active_fill.clone(),
+            path(position, size),
+            style.fill.resolve(strip_weights),
+            style.border_width.resolve(strip_weights),
+            style.border_color.resolve(strip_weights),
             0.0,
-            Color::TRANSPARENT,
-            0.0,
-            false,
+            style.sharp,
             0.0,
         );
 
-        let active_text_color = contrasting_text_color(&style.active_fill);
+        let tab_weights = |i: usize, hover_ts: &[f32]| Self::tab_weights(hover_ts, active_idx, i);
+
+        for (i, &(tab_x, tab_w)) in tabs.iter().enumerate() {
+            let weights = tab_weights(i, &state.hover_ts);
+            let fill = style.tab_fill.resolve(weights);
+            if matches!(fill, Fill::Solid(c) if c.a < 0.003) {
+                continue;
+            }
+            let inset = style.pill_inset_y.resolve(weights);
+            ui.draw_shape(
+                (style.tab_path.resolve(weights))(
+                    [position[0] + tab_x, position[1] + inset],
+                    [tab_w, size[1] - inset * 2.0],
+                ),
+                fill,
+                0.0,
+                Color::TRANSPARENT,
+                0.0,
+                style.sharp,
+                0.0,
+            );
+        }
+
+        let indicator_weights =
+            StateWeights::IDLE.hovered(state.hover_ts.get(active_idx).copied().unwrap_or(0.0));
+        let indicator_inset = style.pill_inset_y.resolve(indicator_weights);
+        let indicator_rect = match style.indicator {
+            TabsIndicator::Pill => Some((
+                [
+                    position[0] + state.indicator_x,
+                    position[1] + indicator_inset,
+                ],
+                [state.indicator_w, size[1] - indicator_inset * 2.0],
+            )),
+            TabsIndicator::Underline { thickness } => Some((
+                [
+                    position[0] + state.indicator_x,
+                    position[1] + size[1] - thickness,
+                ],
+                [state.indicator_w, thickness],
+            )),
+            TabsIndicator::None => None,
+        };
+        let indicator_fill = style.indicator_fill.resolve(indicator_weights);
+        if let Some((indicator_pos, indicator_size)) = indicator_rect {
+            let indicator_path = style.indicator_path.resolve(indicator_weights);
+            if let Some(shadow) = &style.indicator_shadow.resolve(indicator_weights) {
+                draw_shadow(shadow, indicator_pos, indicator_size, &indicator_path, ui);
+            }
+            ui.draw_shape(
+                indicator_path(indicator_pos, indicator_size),
+                indicator_fill.clone(),
+                style.indicator_border_width.resolve(indicator_weights),
+                style.indicator_border_color.resolve(indicator_weights),
+                0.0,
+                style.sharp,
+                0.0,
+            );
+        }
+
+        let auto_active_color = match style.indicator {
+            TabsIndicator::Pill => contrasting_text_color(&indicator_fill),
+            _ => theme.text_primary,
+        };
         for (i, &(tab_x, tab_w)) in tabs.iter().enumerate() {
             let tab_pos = [position[0] + tab_x, position[1]];
-            let is_active = i == active_idx;
-            let hover_t = state.hover_ts[i];
-
-            let color = if is_active {
-                active_text_color
-            } else {
-                self.text_style
-                    .color
-                    .unwrap_or(style.text_color)
-                    .lerp(style.hover_text_color, hover_t)
-            };
-
-            let text_style = if is_active {
-                self.text_style.weight(FontWeight::SemiBold)
-            } else {
-                self.text_style
-            }
-            .color(color);
+            let text_style = style
+                .text_style
+                .resolve(tab_weights(i, &state.hover_ts))
+                .or_color(if i == active_idx {
+                    auto_active_color
+                } else {
+                    theme.text_secondary
+                });
             let text_width = ui.measure_text(&self.items[i].label, text_style);
             let text_x = tab_pos[0] + (tab_w - text_width) / 2.0;
             let text_y = tab_pos[1] + (size[1] - text_style.line_height) / 2.0;
@@ -320,8 +502,15 @@ impl Measurable for Tabs {
             ui.draw_text(&self.items[i].label, text_style, [text_x, text_y], clip);
         }
 
-        if hovered_index.is_some() {
-            ui.set_cursor_icon(CursorIcon::Pointer);
+        if let Some(i) = hovered_index {
+            ui.set_cursor_icon(
+                style.cursor.resolve(
+                    StateWeights::IDLE
+                        .hovered(1.0)
+                        .pressed(StateWeights::when(ui.mouse_pressed()))
+                        .selected(StateWeights::when(i == active_idx)),
+                ),
+            );
         }
 
         ui.put_widget_state(&self.id, state);

@@ -1,3 +1,5 @@
+use crate::color::Color;
+use crate::theme::Theme;
 use std::ops::Range;
 use tree_sitter::{Parser, Query, QueryCursor, StreamingIterator, Tree};
 use tree_sitter_rust;
@@ -12,6 +14,52 @@ pub enum Token {
     Operator,
     Type,
     Plain,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SyntaxColors {
+    pub keyword: Color,
+    pub function: Color,
+    pub string: Color,
+    pub number: Color,
+    pub comment: Color,
+    pub operator: Color,
+    pub type_name: Color,
+    pub plain: Color,
+}
+
+impl SyntaxColors {
+    pub fn from_theme(theme: &Theme) -> Self {
+        SyntaxColors {
+            keyword: theme.token_color(Token::Keyword),
+            function: theme.token_color(Token::Function),
+            string: theme.token_color(Token::String),
+            number: theme.token_color(Token::Number),
+            comment: theme.token_color(Token::Comment),
+            operator: theme.token_color(Token::Operator),
+            type_name: theme.token_color(Token::Type),
+            plain: theme.token_color(Token::Plain),
+        }
+    }
+
+    pub fn color(&self, token: Token) -> Color {
+        match token {
+            Token::Keyword => self.keyword,
+            Token::Function => self.function,
+            Token::String => self.string,
+            Token::Number => self.number,
+            Token::Comment => self.comment,
+            Token::Operator => self.operator,
+            Token::Type => self.type_name,
+            Token::Plain => self.plain,
+        }
+    }
+}
+
+impl Default for SyntaxColors {
+    fn default() -> Self {
+        SyntaxColors::from_theme(&Theme::default())
+    }
 }
 
 fn token_for_capture(name: &str) -> Option<Token> {

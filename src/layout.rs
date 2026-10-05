@@ -118,12 +118,7 @@ macro_rules! row {
     };
 }
 
-/// A vertical stack of widgets. Holds no position of its own — `arrange_at`
-/// is handed where it lives, every frame, by whoever is arranging it.
-/// Delegates the actual placement math to taffy: `measure()` measures
-/// every child exactly once per frame and caches the results;
-/// `arrange()` builds the taffy tree from that cache (no re-measuring)
-/// and reads computed positions back out.
+// vertical stack, measure caches child sizes once per frame, arrange feeds them to taffy
 pub struct Column<'a> {
     spacing: f32,
     align: Alignment,
@@ -242,7 +237,7 @@ impl<'a> Measurable for Column<'a> {
     }
 }
 
-/// A horizontal stack, analogous to `Column`.
+// horizontal stack, same as column
 pub struct Row<'a> {
     spacing: f32,
     align: Alignment,

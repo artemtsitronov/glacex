@@ -1,8 +1,8 @@
 [package]
 name = "glacex"
-version = "0.2.0-alpha"
+version = "0.2.0"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.88"
 description = "GPU-accelerated, immediate-mode GPU UI library built from scratch in Rust"
 license = "MIT"
 repository = "https://github.com/artemtsitronov/glacex"

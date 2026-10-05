@@ -52,12 +52,10 @@ struct VertexOutput {
     @location(10) path_params: vec4<f32>,
 }
 
-// Must be >= AA_PADDING below, or the fade band extends past the padded
-// geometry and gets clipped again
-const AA_FADE_WIDTH: f32 = 1.5;
+// must be >= AA_PADDING or the fade band gets clipped
+const AA_FADE_WIDTH: f32 = 1.0;
 
-// Expands rasterized quad geometry beyond the shape's true bounds so every
-// point on the boundary
+// grows quads past the shape bounds so the aa fade fits
 const AA_PADDING: f32 = 4.0;
 
 fn sd_rounded_box(p: vec2<f32>, half_size: vec2<f32>, radii: vec4<f32>) -> f32 {
@@ -196,11 +194,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         );
     }
 
-    let fill_alpha = 1.0 - smoothstep(0.0, AA_FADE_WIDTH, inner_dist);
-    let color = mix(in.border_color, fill_color, fill_alpha);
+    let fill_alpha = 1.0 - smoothstep(-AA_FADE_WIDTH * 0.5, AA_FADE_WIDTH * 0.5, inner_dist);
+    let color = mix(select(in.border_color, fill_color, border_width <= 0.0), fill_color, fill_alpha);
 
     let alpha = select(
-        1.0 - smoothstep(0.0, AA_FADE_WIDTH, outer_dist),
+        1.0 - smoothstep(-AA_FADE_WIDTH * 0.5, AA_FADE_WIDTH * 0.5, outer_dist),
         select(1.0, 0.0, outer_dist > 0.0),
         sharp > 0.5
     );

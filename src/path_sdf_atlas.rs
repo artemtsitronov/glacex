@@ -113,6 +113,18 @@ impl PathSdfAtlas {
         &self.sampler
     }
 
+    fn alloc_or_flush(&mut self, w: u32, h: u32) -> (u32, u32) {
+        if let Some(pos) = self.shelf_packer.alloc(w, h) {
+            return pos;
+        }
+
+        self.cache.clear();
+        self.shelf_packer = ShelfPacker::default();
+        self.shelf_packer
+            .alloc(w, h)
+            .expect("We got an error over here! 'single path is larger that the whole atlas'")
+    }
+
     fn upload_and_cache(
         &mut self,
         queue: &Queue,
@@ -127,10 +139,7 @@ impl PathSdfAtlas {
             .iter()
             .flat_map(|pair| [f32_to_f16_bits(pair[0]), f32_to_f16_bits(pair[1])])
             .collect();
-        let (x, y) = self
-            .shelf_packer
-            .alloc(w, h)
-            .expect("path sdf atlas full — add eviction");
+        let (x, y) = self.alloc_or_flush(w, h);
 
         queue.write_texture(
             wgpu::TexelCopyTextureInfo {

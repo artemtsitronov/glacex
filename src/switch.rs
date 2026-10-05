@@ -1,9 +1,11 @@
 use crate::animation::{Motion, animate_towards};
 use crate::color::Color;
 use crate::fill::Fill;
+use crate::generate_uuid;
 use crate::geometry::{MeasurablePath, Path};
 use crate::interaction::Interaction;
 use crate::shadow::{ShadowStyle, draw_shadow};
+use crate::stateful::{StateWeights, Stateful, StyleOverrides, style_overrides};
 use crate::theme::Theme;
 use crate::ui::Ui;
 use crate::widget::{Accessible, Measurable, StatefulWidget, Widget, hash_id};
@@ -28,32 +30,88 @@ pub struct SwitchResponse {
 
 #[derive(Clone)]
 pub struct SwitchStyle {
-    pub track_off_fill: Fill,
-    pub track_on_fill: Fill,
-    pub thumb_fill: Fill,
-    pub border_width: f32,
-    pub border_color: Color,
-    pub shadow: Option<ShadowStyle>,
-    pub path: Path,
+    pub track_fill: Stateful<Fill>,
+    pub thumb_fill: Stateful<Fill>,
+    pub thumb_border_width: Stateful<f32>,
+    pub thumb_border_color: Stateful<Color>,
+    pub thumb_padding: Stateful<f32>,
+    pub thumb_size: Stateful<Option<[f32; 2]>>,
+    pub thumb_shadow: Stateful<Option<ShadowStyle>>,
+    pub thumb_path: Stateful<Path>,
+    pub trail_color: Stateful<Color>,
+    pub trail_stretch: Stateful<f32>,
+    pub trail_max: Stateful<f32>,
+    pub border_width: Stateful<f32>,
+    pub border_color: Stateful<Color>,
+    pub shadow: Stateful<Option<ShadowStyle>>,
+    pub sharp: bool,
+    pub path: Stateful<Path>,
+    pub size: Stateful<[f32; 2]>,
+    pub toggle_motion: f32,
+    pub hover_motion: f32,
+    pub cursor: Stateful<CursorIcon>,
+}
+
+fn pill_path() -> Path {
+    Path::from_fn(|position, size| {
+        MeasurablePath::rect(position, size, [size[0].min(size[1]) * 0.5; 4])
+    })
+}
+
+impl SwitchStyle {
+    pub fn from_theme(theme: &Theme) -> Self {
+        SwitchStyle {
+            track_fill: Stateful::new(Fill::Solid(theme.hovered))
+                .selected(Fill::Solid(theme.active)),
+            // blends toward a contrasting color near on, avoids white on white on near white themes
+            thumb_fill: Stateful::new(Fill::Solid(Color::WHITE))
+                .selected(Fill::Solid(theme.on_active())),
+            thumb_border_width: Stateful::new(0.0),
+            thumb_border_color: Stateful::new(Color::TRANSPARENT),
+            thumb_padding: Stateful::new(2.0),
+            thumb_size: Stateful::new(None),
+            thumb_shadow: Stateful::new(Some(ShadowStyle::new(
+                Color::rgba(0, 0, 0, 0.28),
+                3.0,
+                [0.0, 1.0],
+            ))),
+            thumb_path: Stateful::new(pill_path()),
+            trail_color: Stateful::new(Color::WHITE.with_alpha(0.22)),
+            trail_stretch: Stateful::new(0.010),
+            trail_max: Stateful::new(10.0),
+            border_width: Stateful::new(1.0),
+            border_color: Stateful::new(theme.border)
+                .hovered(theme.border_strong)
+                .selected(theme.border.lerp(theme.active, 0.5)),
+            shadow: Stateful::new(Some(theme.shadow_sm()[0])),
+            sharp: false,
+            path: Stateful::new(Path::rect([11.0; 4])),
+            size: Stateful::new([40.0, 22.0]),
+            toggle_motion: Motion::SNAPPY,
+            hover_motion: Motion::SNAPPY,
+            cursor: Stateful::new(CursorIcon::Pointer),
+        }
+    }
+
+    pub fn square(theme: &Theme) -> Self {
+        SwitchStyle {
+            path: Stateful::new(Path::rect([theme.metrics.radius_xs; 4])),
+            thumb_path: Stateful::new(Path::rect([theme.metrics.radius_xs; 4])),
+            ..Self::from_theme(theme)
+        }
+    }
 }
 
 impl Default for SwitchStyle {
     fn default() -> Self {
-        SwitchStyle {
-            track_off_fill: Fill::Solid(Theme::IDLE),
-            track_on_fill: Fill::Solid(Theme::ACTIVE),
-            thumb_fill: Fill::Solid(Color::WHITE),
-            border_width: 1.0,
-            border_color: Theme::BORDER,
-            shadow: Some(ShadowStyle::default()),
-            path: Path::rect([11.0; 4]),
-        }
+        SwitchStyle::from_theme(&Theme::default())
     }
 }
 
 pub struct Switch {
     id: String,
     style: Option<SwitchStyle>,
+    overrides: StyleOverrides,
     interaction: Interaction,
     default_enabled: bool,
     width: Option<f32>,
@@ -63,8 +121,9 @@ pub struct Switch {
 impl Switch {
     pub fn new() -> Self {
         Switch {
-            id: uuid::Uuid::new_v4().to_string(),
+            id: generate_uuid(),
             style: None,
+            overrides: StyleOverrides::default(),
             interaction: Interaction::default(),
             default_enabled: false,
             width: None,
@@ -102,6 +161,20 @@ impl Switch {
         self.style = style;
     }
 
+    fn resolved_style(&self, theme: &Theme) -> SwitchStyle {
+        let mut style = self
+            .style
+            .clone()
+            .unwrap_or_else(|| SwitchStyle::from_theme(theme));
+        self.overrides.apply(
+            &mut style.track_fill,
+            &mut style.border_color,
+            &mut style.border_width,
+            &mut style.shadow,
+        );
+        style
+    }
+
     pub fn default_enabled(mut self, default_enabled: bool) -> Self {
         self.default_enabled = default_enabled;
         self
@@ -125,6 +198,8 @@ impl Switch {
     }
 }
 
+style_overrides!(Switch);
+
 impl Widget for Switch {
     type Output = SwitchResponse;
 
@@ -135,15 +210,31 @@ impl Widget for Switch {
 }
 
 impl Measurable for Switch {
-    fn measure(&mut self, _ui: &mut Ui) -> [f32; 2] {
-        [self.width.unwrap_or(40.0), self.height.unwrap_or(22.0)]
+    fn measure(&mut self, ui: &mut Ui) -> [f32; 2] {
+        let style = self.resolved_style(ui.theme());
+        let previous = ui.widget_state_or::<SwitchState>(&self.id, self.initial_state());
+        let size = style.size.resolve(
+            StateWeights::IDLE
+                .hovered(previous.hover_t)
+                .selected(previous.anim_progress),
+        );
+        [
+            self.width.unwrap_or(size[0]),
+            self.height.unwrap_or(size[1]),
+        ]
     }
 
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) -> SwitchResponse {
+        self.check_id();
         let theme = *ui.theme();
-        let style = self.style.clone().unwrap_or_else(|| theme.switch_style());
-        let shape = (style.path)(position, size);
-        let interaction = Interaction::update(&shape, ui);
+        let style = self.resolved_style(&theme);
+        let previous = ui.widget_state_or::<SwitchState>(&self.id, self.initial_state());
+        let hit_path = style.path.resolve(
+            StateWeights::IDLE
+                .hovered(previous.hover_t)
+                .selected(previous.anim_progress),
+        );
+        let interaction = Interaction::update(&hit_path(position, size), ui);
         self.interaction = interaction;
 
         ui.register_accessible(
@@ -157,7 +248,17 @@ impl Measurable for Switch {
         );
 
         if interaction.hovered {
-            ui.set_cursor_icon(CursorIcon::Pointer);
+            let enabled = ui
+                .widget_state_or::<SwitchState>(&self.id, self.initial_state())
+                .enabled;
+            ui.set_cursor_icon(
+                style.cursor.resolve(
+                    StateWeights::IDLE
+                        .hovered(1.0)
+                        .pressed(StateWeights::when(interaction.pressed))
+                        .selected(StateWeights::when(enabled)),
+                ),
+            );
         }
 
         let dt = ui.dt();
@@ -176,11 +277,15 @@ impl Measurable for Switch {
         let enabled = state.enabled;
         let target_progress = if enabled { 1.0 } else { 0.0 };
 
-        state.anim_progress =
-            animate_towards(state.anim_progress, target_progress, dt, Motion::SNAPPY);
+        state.anim_progress = animate_towards(
+            state.anim_progress,
+            target_progress,
+            dt,
+            style.toggle_motion,
+        );
 
         let hover_target = if interaction.hovered { 1.0f32 } else { 0.0 };
-        state.hover_t = animate_towards(state.hover_t, hover_target, dt, Motion::SNAPPY);
+        state.hover_t = animate_towards(state.hover_t, hover_target, dt, style.hover_motion);
 
         let progress = state.anim_progress;
         let velocity = (progress - state.prev_progress) / dt.max(0.001);
@@ -188,74 +293,49 @@ impl Measurable for Switch {
 
         let hover_t = state.hover_t;
 
-        let track_fill = if let (Fill::Solid(off_col), Fill::Solid(on_col)) =
-            (&style.track_off_fill, &style.track_on_fill)
-        {
-            let idle_or_hover = off_col.lerp(theme.hovered, hover_t);
-            Fill::Solid(idle_or_hover.lerp(*on_col, progress))
-        } else if enabled {
-            style.track_on_fill
-        } else {
-            style.track_off_fill
-        };
+        let weights = StateWeights::IDLE.hovered(hover_t).selected(progress);
+        let path = style.path.resolve(weights);
+        let thumb_path = style.thumb_path.resolve(weights);
 
-        // blends toward a contrasting color near on, avoids white on white on near white themes
-        let thumb_fill = if let Fill::Solid(thumb_color) = style.thumb_fill {
-            Fill::Solid(if progress > 0.01 {
-                thumb_color.lerp(theme.on_active(), progress)
-            } else {
-                thumb_color
-            })
-        } else {
-            style.thumb_fill
-        };
-
-        let border_color = if progress > 0.01 {
-            style.border_color.lerp(theme.active, progress * 0.5)
-        } else if hover_t > 0.01 {
-            style.border_color.lerp(theme.border_strong, hover_t)
-        } else {
-            style.border_color
-        };
-
-        if let Some(shadow) = &style.shadow {
-            draw_shadow(shadow, position, size, &style.path, ui);
+        if let Some(shadow) = &style.shadow.resolve(weights) {
+            draw_shadow(shadow, position, size, &path, ui);
         }
 
         ui.draw_shape(
-            (style.path)(position, size),
-            track_fill,
-            style.border_width,
-            border_color,
+            path(position, size),
+            style.track_fill.resolve(weights),
+            style.border_width.resolve(weights),
+            style.border_color.resolve(weights),
             0.0,
-            false,
+            style.sharp,
             0.0,
         );
 
-        let padding = 2.0;
-        let knob_size = size[1] - padding * 2.0;
+        let padding = style.thumb_padding.resolve(weights);
+        let knob_default = (size[1] - padding * 2.0).max(0.0);
+        let knob = style
+            .thumb_size
+            .resolve(weights)
+            .unwrap_or([knob_default, knob_default]);
         let min_x = position[0] + padding;
-        let max_x = position[0] + size[0] - knob_size - padding;
+        let max_x = position[0] + size[0] - knob[0] - padding;
         let knob_x = min_x + (max_x - min_x) * progress;
-        let knob_pos = [knob_x, position[1] + padding];
-        let knob_radius = knob_size / 2.0;
+        let knob_y = position[1] + (size[1] - knob[1]) / 2.0;
+        let knob_pos = [knob_x, knob_y];
 
         let speed = velocity.abs();
-        if speed > 8.0 {
-            let stretch_amount = (speed * 0.010).min(10.0);
-            let stretch_w = knob_size + stretch_amount;
+        let trail_stretch = style.trail_stretch.resolve(weights);
+        if speed > 8.0 && trail_stretch > 0.0 {
+            let stretch_amount = (speed * trail_stretch).min(style.trail_max.resolve(weights));
+            let stretch_w = knob[0] + stretch_amount;
             let stretch_x = if velocity > 0.0 {
                 knob_x - stretch_amount
             } else {
                 knob_x
             };
             ui.draw_shape(
-                MeasurablePath::rect(
-                    [stretch_x, position[1] + padding],
-                    [stretch_w, knob_size],
-                    [knob_radius; 4],
-                ),
-                Fill::Solid(Color::WHITE.with_alpha(0.22)),
+                thumb_path([stretch_x, knob_y], [stretch_w, knob[1]]),
+                Fill::Solid(style.trail_color.resolve(weights)),
                 0.0,
                 Color::TRANSPARENT,
                 3.0,
@@ -264,26 +344,17 @@ impl Measurable for Switch {
             );
         }
 
-        let thumb_shadow = ShadowStyle {
-            color: Color::rgba(0, 0, 0, 0.28),
-            blur_radius: 3.0,
-            offset: [0.0, 1.0],
-        };
-        draw_shadow(
-            &thumb_shadow,
-            knob_pos,
-            [knob_size, knob_size],
-            &Path::rect([knob_radius; 4]),
-            ui,
-        );
+        if let Some(thumb_shadow) = &style.thumb_shadow.resolve(weights) {
+            draw_shadow(thumb_shadow, knob_pos, knob, &thumb_path, ui);
+        }
 
         ui.draw_shape(
-            MeasurablePath::rect(knob_pos, [knob_size, knob_size], [knob_radius; 4]),
-            thumb_fill,
+            thumb_path(knob_pos, knob),
+            style.thumb_fill.resolve(weights),
+            style.thumb_border_width.resolve(weights),
+            style.thumb_border_color.resolve(weights),
             0.0,
-            Color::TRANSPARENT,
-            0.0,
-            false,
+            style.sharp,
             0.0,
         );
 

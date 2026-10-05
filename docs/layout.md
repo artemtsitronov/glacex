@@ -45,13 +45,13 @@ Sets child alignment along the cross-axis:
 - `Alignment::End`: Align to bottom (rows) or right (columns).
 
 By default a `row!`/`column!` hugs its content, so there's no extra cross-axis
-space for `.align()` to do anything with — it only becomes visible once the
+space for `.align()` to do anything with. It only becomes visible once the
 container is bigger than its content, e.g. via `.size()` below.
 
 ### `.size([w, h]: [f32; 2])` / `.width(px: f32)` / `.height(px: f32)`
 Overrides the row/column's own width and/or height instead of hugging its
 content. `.size()` is shorthand for calling both. Useful together with
-`.align()` — a `row!` given a taller `.size()` than its content, for
+`.align()`: a `row!` given a taller `.size()` than its content, for
 instance, can then vertically center its children in that extra space.
 
 ### `.padding([x, y]: [f32; 2])`

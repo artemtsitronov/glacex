@@ -4,7 +4,7 @@ use crate::geometry::{MeasurablePath, Shape};
 use crate::painter::Painter;
 use crate::text::{FontError, FontWeight};
 use crate::theme::Theme;
-use crate::widget::{Accessible, FocusId, Widget};
+use crate::widget::{Accessible, FocusId, Widget, is_anonymous};
 use crate::{ImageHandle, TextStyle};
 use accesskit::{Node, NodeId};
 use std::any::Any;
@@ -26,6 +26,7 @@ fn intersect_rects(a: [f32; 4], b: [f32; 4]) -> [f32; 4] {
 }
 
 const CLIP_BORDER_OVERDRAW: f32 = 2.0;
+const ANONYMOUS_STATE_LIFETIME_FRAMES: u64 = 120;
 
 fn inflate_rect(rect: [f32; 4], amount: f32) -> [f32; 4] {
     [
@@ -40,6 +41,8 @@ pub struct Ui {
     window: Arc<Window>,
     painter: Painter,
     persistent_state: HashMap<String, Box<dyn Any>>,
+    anonymous_last_used: HashMap<String, u64>,
+    frame_index: u64,
     mouse_position: [f32; 2],
     mouse_pressed: bool,
     mouse_released: bool,
@@ -89,6 +92,8 @@ impl Ui {
             window,
             theme: Theme::LIGHT,
             persistent_state: HashMap::new(),
+            anonymous_last_used: HashMap::new(),
+            frame_index: 0,
             mouse_position: [0.0, 0.0],
             mouse_pressed: false,
             mouse_released: false,
@@ -173,6 +178,7 @@ impl Ui {
     }
 
     pub fn select(&mut self, group_id: &str, option_id: &str) {
+        self.touch_state(group_id);
         self.selected
             .insert(group_id.to_string(), option_id.to_string());
     }
@@ -204,7 +210,26 @@ impl Ui {
         point[0] >= clip[0] && point[0] <= clip[2] && point[1] >= clip[1] && point[1] <= clip[3]
     }
 
+    fn touch_state(&mut self, id: &str) {
+        if is_anonymous(id) {
+            self.anonymous_last_used
+                .insert(id.to_string(), self.frame_index);
+        }
+    }
+
+    fn prune_anonymous_state(&mut self) {
+        let frame_index = self.frame_index;
+        self.anonymous_last_used
+            .retain(|_, last_used| frame_index - *last_used <= ANONYMOUS_STATE_LIFETIME_FRAMES);
+        let live = &self.anonymous_last_used;
+        self.persistent_state
+            .retain(|id, _| !is_anonymous(id) || live.contains_key(id));
+        self.selected
+            .retain(|id, _| !is_anonymous(id) || live.contains_key(id));
+    }
+
     pub fn widget_state<T: Default + 'static>(&mut self, id: &str) -> &mut T {
+        self.touch_state(id);
         self.persistent_state
             .entry(id.to_string())
             .or_insert_with(|| Box::new(T::default()))
@@ -213,6 +238,7 @@ impl Ui {
     }
 
     pub fn widget_state_or<T: 'static>(&mut self, id: &str, initial: T) -> &mut T {
+        self.touch_state(id);
         self.persistent_state
             .entry(id.to_string())
             .or_insert_with(|| Box::new(initial))
@@ -221,6 +247,7 @@ impl Ui {
     }
 
     pub fn take_widget_state<T: Default + 'static>(&mut self, id: &str) -> T {
+        self.touch_state(id);
         self.persistent_state
             .remove(id)
             .and_then(|b| b.downcast::<T>().ok())
@@ -229,6 +256,7 @@ impl Ui {
     }
 
     pub fn take_widget_state_or<T: 'static>(&mut self, id: &str, initial: T) -> T {
+        self.touch_state(id);
         self.persistent_state
             .remove(id)
             .and_then(|b| b.downcast::<T>().ok())
@@ -237,12 +265,9 @@ impl Ui {
     }
 
     pub fn put_widget_state<T: 'static>(&mut self, id: &str, state: T) {
+        self.touch_state(id);
         self.persistent_state
             .insert(id.to_string(), Box::new(state));
-    }
-
-    pub fn get_state<T: Default + Clone + 'static>(&mut self, id: &str) -> T {
-        self.widget_state_or::<T>(id, T::default()).clone()
     }
 
     pub fn scroll_delta_x(&self) -> f32 {
@@ -573,6 +598,11 @@ impl Ui {
         }
         self.cursor_icon_set_this_frame = false;
         self.pending_tooltip = None;
+
+        if self.frame_index % ANONYMOUS_STATE_LIFETIME_FRAMES == 0 {
+            self.prune_anonymous_state();
+        }
+        self.frame_index += 1;
     }
 
     pub fn line_height(&self) -> f32 {
