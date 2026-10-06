@@ -47,10 +47,8 @@ impl Widget for ColorDemo {
         let mut hex_input = TextInput::new()
             .id("hex_input") // stable id → the typed text survives across frames
             .width(320.0)
-            .default_text(&self.default_hex); // shown on the very first frame
-
-        // read the field's CURRENT text out of Ui's memory.
-        // (on frame one this is `default_text`; afterwards, whatever was typed.)
+            .id("text-input")
+            .default_text(&self.default_hex);
         let parsed_color = Color::hex_str(&hex_input.text(ui));
 
         let mut badge = Badge::new("COLOR").variant(BadgeVariant::Success);
@@ -60,6 +58,24 @@ impl Widget for ColorDemo {
         let mut divider = Divider::horizontal(360.0);
         let mut input_label = Label::new("Hex Code (#RRGGBB)");
         let mut preview_label = Label::new("Styled Preview");
+        let mut preview_btn = Button::new("Sample Button")
+            .id("sample-button")
+            .style(ButtonStyle {
+                fill: Fill::Solid(parsed_color),
+                hover_fill: Fill::Solid(parsed_color.lighten(0.15)),
+                pressed_fill: Fill::Solid(parsed_color.darken(0.2)),
+                text_color: Color::WHITE,
+                border_width: 1.0,
+                border_color: Color::WHITE.with_alpha(0.2),
+                padding: [14.0, 8.0],
+                shadow: Some(ShadowStyle {
+                    color: parsed_color.with_alpha(0.35),
+                    blur_radius: 16.0,
+                    offset: [0.0, 4.0],
+                }),
+                sharp: false,
+                path: glacex::Path::rect([Theme::RADIUS_MD; 4]),
+            });
 
         // a button wearing a fully custom outfit, sewn from the typed color.
         // lighten() for hover, darken() for press -- works for ANY base color.

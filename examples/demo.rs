@@ -42,7 +42,8 @@ impl Widget for DemoApp {
     // runs ONCE before the first frame. load images (or do other setup) here --
     // doing it in ui() would reload every frame, which is how you melt a gpu.
     fn on_start(&mut self, ui: &mut Ui) {
-        self.kitty_image = Some(ui.load_image("assets/test/1.webp"));
+        // We load an image in our state using ui.load_image().
+        self.kitty_image = Some(ui.load_image("assets/demo_images/1.jpg"));
     }
 
     fn ui(&mut self, ui: &mut Ui) {
@@ -125,11 +126,8 @@ impl Widget for DemoApp {
             }
         });
 
-        // -- slider → progress bar pipeline --------------------------------------
-        // the slider remembers its position (in Ui); the bar just displays
-        // whatever value it's constructed with each frame.
-        let mut slider = Slider::new(0.0, 1.0).id("demo_slider");
-        let mut progress_bar = ProgressBar::new(slider.value(ui)).id("slider_progress_bar");
+        let mut slider = Slider::new(0.0, 1.0).id("slider");
+        let mut progress_bar = ProgressBar::new(slider.value(ui)).id("slider_progress_bar"); // In this widget, id is optional, so we define it using .id()
 
         // -- theme picker dropdown: one SelectOption per theme -------------------
         let theme_options: Vec<SelectOption> = themes
@@ -152,12 +150,11 @@ impl Widget for DemoApp {
                     &mut glacex::column![
                         // tabs with an animated sliding pill
                         &mut Tabs::new(vec![
-                            TabItem::new("Tab 1").id("tab1"),
-                            TabItem::new("Tab 2").id("tab2"),
-                            TabItem::new("Tab 3").id("tab3"),
+                            TabItem::new("Tab 1").id("tab_1"),
+                            TabItem::new("Tab 2").id("tab_2"),
+                            TabItem::new("Tab 3").id("tab_3"),
                         ])
-                        .id("demo_tabs"),
-                        // header row: labels, a vertical divider, theme button
+                        .id("tabs"),
                         &mut row![
                             &mut window_size_label,
                             &mut Divider::vertical(24.0).thickness(2.0),
@@ -217,15 +214,15 @@ impl Widget for DemoApp {
                                             &mut glacex::column![
                                                 &mut row![
                                                     &mut Label::new("Checkboxy"),
-                                                    &mut Checkbox::new().id("demo_check_1"),
+                                                    &mut Checkbox::new().id("checkbox_1"),
                                                 ],
                                                 &mut row![
                                                     &mut Label::new("Another one"),
-                                                    &mut Checkbox::new().id("demo_check_2"),
+                                                    &mut Checkbox::new().id("checkbox_2"),
                                                 ],
                                                 &mut row![
                                                     &mut Label::new("Hehe"),
-                                                    &mut Checkbox::new().id("demo_check_3"),
+                                                    &mut Checkbox::new().id("checkbox_3"),
                                                 ]
                                             ]
                                             .align(Alignment::End),
@@ -250,12 +247,13 @@ impl Widget for DemoApp {
                                         // theme dropdown + text widgets to play with
                                         &mut theme_select,
                                         &mut TextInput::new()
-                                            .id("demo_input")
+                                            .id("text_input")
                                             .placeholder("Here goes text."),
-                                        &mut TextArea::new().id("demo_area"),
+                                        &mut TextArea::new().id("text_area"),
                                     ]
                                     .spacing(24.0)
                                 )
+                                .id("card_scroll")
                                 .padding([12.0; 2])
                             )
                             .size([400.0, 600.0])
@@ -303,6 +301,7 @@ impl Widget for DemoApp {
                     .spacing(30.0)
                     .align(Alignment::Center)
                 )
+                .id("main_scroll")
                 .size([window_size[0], window_size[1]])
                 .id("page_scroll")
             ]

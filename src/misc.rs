@@ -1,3 +1,6 @@
+// miscellanous stuff, that was abandoned, and didn't fit into anywhere.
+// Tragic.
+
 pub fn center_text_in(
     position: [f32; 2],
     size: [f32; 2],

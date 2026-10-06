@@ -1,3 +1,4 @@
+use crate::text::TextStyle;
 use crate::ui::Ui;
 use std::time::Instant;
 use winit::keyboard::{Key, KeyCode, NamedKey, PhysicalKey};
@@ -44,7 +45,6 @@ impl TextEditState {
         self.cursor = self.text.chars().count();
         self.selection_anchor = None;
         self.scroll_offset = 0.0;
-        self.mark_activity();
     }
 
     pub fn clear(&mut self) {
@@ -78,6 +78,10 @@ impl TextEditState {
             std::mem::swap(&mut start, &mut end);
         }
         Some((start, end))
+    }
+
+    pub fn selection_anchor(&self) -> Option<usize> {
+        self.selection_anchor
     }
 
     pub fn set_selection_anchor(&mut self, anchor: Option<usize>) {
@@ -376,13 +380,13 @@ impl TextEditState {
         }
     }
 
-    pub fn cursor_index_for_x(&self, ui: &mut Ui, click_x: f32) -> usize {
+    pub fn cursor_index_for_x(&self, ui: &mut Ui, text_style: TextStyle, click_x: f32) -> usize {
         let mut best_index = 0;
         let mut best_distance = f32::MAX;
         for (char_index, (byte_index, _)) in self.text.char_indices().enumerate().chain(
             std::iter::once((self.text.chars().count(), (self.text.len(), ' '))),
         ) {
-            let prefix_width = ui.measure_text(&self.text[..byte_index]);
+            let prefix_width = ui.measure_text(&self.text[..byte_index], text_style);
             let distance = (prefix_width - click_x).abs();
             if distance < best_distance {
                 best_distance = distance;

@@ -1,13 +1,16 @@
-use crate::ImageHandle;
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::geometry::{MeasurablePath, Shape};
 use crate::painter::Painter;
+use crate::text::{FontError, FontWeight};
 use crate::theme::Theme;
 use crate::widget::{Accessible, FocusId, Widget};
+use crate::{ImageHandle, TextStyle};
 use accesskit::{Node, NodeId};
 use std::any::Any;
 use std::collections::{HashMap, HashSet};
+use std::fs;
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
 use winit::keyboard::{Key, PhysicalKey};
@@ -135,6 +138,15 @@ impl Ui {
 
     pub fn load_image(&mut self, path: &str) -> ImageHandle {
         self.painter.load_image(path).expect("Failed to load image")
+    }
+
+    pub fn load_font(&mut self, path: impl AsRef<Path>) -> Result<(), FontError> {
+        let data = fs::read(path).map_err(FontError::Io)?;
+        self.load_font_bytes(data)
+    }
+
+    pub fn load_font_bytes(&mut self, data: Vec<u8>) -> Result<(), FontError> {
+        self.painter.load_font_bytes(data)
     }
 
     pub fn accessibility_nodes(&self) -> Vec<(NodeId, Node)> {
@@ -274,6 +286,7 @@ impl Ui {
     }
 
     pub fn request_focus(&mut self, id: FocusId) {
+        // focus Artem, focus... aaah, it's not working! Why is it so easy here and so hard in reality?
         self.focused = Some(id);
         self.focus_requested_this_frame = true;
     }
@@ -283,6 +296,7 @@ impl Ui {
     }
 
     pub fn clear_focus(&mut self) {
+        // doomscrolling alternative
         self.focused = None;
     }
 
@@ -565,10 +579,6 @@ impl Ui {
         self.painter.line_height()
     }
 
-    pub fn measure_text(&mut self, text: &str) -> f32 {
-        self.painter.measure_text(text)
-    }
-
     pub fn set_bgcolor(&mut self, color: Color) {
         self.painter.set_bgcolor(color);
     }
@@ -640,57 +650,20 @@ impl Ui {
         );
     }
 
-    pub fn draw_text(&mut self, text: &str, position: [f32; 2], bounds: [f32; 4]) {
-        self.draw_text_colored(text, position, bounds, self.theme.text_primary);
+    pub fn measure_text(&mut self, text: &str, text_style: TextStyle) -> f32 {
+        self.painter.measure_text(text, &text_style)
     }
 
-    pub fn draw_text_colored(
+    pub fn draw_text(
         &mut self,
         text: &str,
+        text_style: TextStyle,
         position: [f32; 2],
         bounds: [f32; 4],
-        color: Color,
     ) {
         let clipped = intersect_rects(bounds, self.current_clip());
-        self.painter
-            .draw_text_colored(text, position, clipped, color);
-    }
-
-    pub fn measure_text_styled(
-        &mut self,
-        text: &str,
-        font_size: f32,
-        line_height: f32,
-        weight: crate::painter::FontWeight,
-        is_mono: bool,
-    ) -> f32 {
-        self.painter
-            .measure_text_styled(text, font_size, line_height, weight, is_mono)
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    pub fn draw_text_styled(
-        &mut self,
-        text: &str,
-        position: [f32; 2],
-        bounds: [f32; 4],
-        color: Color,
-        font_size: f32,
-        line_height: f32,
-        weight: crate::painter::FontWeight,
-        is_mono: bool,
-    ) {
-        let clipped = intersect_rects(bounds, self.current_clip());
-        self.painter.draw_text_styled(
-            text,
-            position,
-            clipped,
-            color,
-            font_size,
-            line_height,
-            weight,
-            is_mono,
-        );
+        let text_style = text_style.or_color(self.theme.text_primary);
+        self.painter.draw_text(text, &text_style, position, clipped);
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -717,28 +690,16 @@ impl Ui {
         );
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn draw_overlay_text_styled(
+    pub fn draw_overlay_text(
         &mut self,
         text: &str,
+        text_style: TextStyle,
         position: [f32; 2],
         bounds: [f32; 4],
-        color: Color,
-        font_size: f32,
-        line_height: f32,
-        weight: crate::painter::FontWeight,
-        is_mono: bool,
     ) {
-        self.painter.draw_overlay_text_styled(
-            text,
-            position,
-            bounds,
-            color,
-            font_size,
-            line_height,
-            weight,
-            is_mono,
-        );
+        let text_style = text_style.or_color(self.theme.text_primary);
+        self.painter
+            .draw_overlay_text(text, &text_style, position, bounds);
     }
 
     pub fn add<W: Widget>(&mut self, widget: &mut W) -> W::Output {
@@ -747,14 +708,11 @@ impl Ui {
 
     pub fn render(&mut self) {
         if let Some((text, pos)) = self.pending_tooltip.take() {
-            // matches the font used by Label::caption()
-            let text_width = self.painter.measure_text_styled(
-                &text,
-                12.0,
-                18.0,
-                crate::painter::FontWeight::Medium,
-                false,
-            );
+            let style = TextStyle::new()
+                .color(self.theme.text_primary)
+                .size(12.0, 18.0)
+                .weight(FontWeight::Medium);
+            let text_width = self.painter.measure_text(&text, &style);
             let pad_x = 10.0;
             let pad_y = 6.0;
             let width = (text_width + pad_x * 2.0).max(60.0);
@@ -808,8 +766,9 @@ impl Ui {
                 0.0,
             );
 
-            self.painter.draw_overlay_text_styled(
+            self.painter.draw_overlay_text(
                 &text,
+                &style,
                 [tooltip_pos[0] + pad_x, tooltip_pos[1] + pad_y],
                 [
                     tooltip_pos[0] + pad_x,
@@ -817,11 +776,6 @@ impl Ui {
                     tooltip_pos[0] + width - pad_x,
                     tooltip_pos[1] + height,
                 ],
-                self.theme.text_primary,
-                12.0,
-                18.0,
-                crate::painter::FontWeight::Medium,
-                false,
             );
         }
 

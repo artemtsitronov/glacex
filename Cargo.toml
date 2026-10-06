@@ -1,6 +1,6 @@
 [package]
 name = "glacex"
-version = "0.1.95"
+version = "0.2.0-alpha"
 edition = "2024"
 rust-version = "1.85"
 description = "GPU-accelerated, immediate-mode GPU UI library built from scratch in Rust"
@@ -35,3 +35,5 @@ winit = "0.30.13"
 image = "0.25.10"
 kurbo = "0.13.1"
 uuid = { version = "1.26.1", features = ["v4"] }
+tree-sitter = "0.26.13"
+tree-sitter-rust = "0.24.2"

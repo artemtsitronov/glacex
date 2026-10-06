@@ -255,16 +255,15 @@ impl Widget for AppState {
     fn ui(&mut self, ui: &mut Ui) {
         ui.set_bgcolor(Theme::BG_CANVAS);
 
-        // -- the command input. read its text, parse it. ----------------------
-        let mut command_input = TextInput::new().width(580.0).id("style_command");
+        let mut command_input = TextInput::new().width(580.0).id("textinput");
         let command = command_input.text(ui);
         let parsed = parse_command(&command);
 
         // live window title showing what we're editing. cached: only updates
         // the OS window title when the string actually changed.
         let title = match &parsed {
-            Some((widget, _)) => format!("Style Playground - editing: {widget}"),
-            None => "Style Playground - type a command below".to_string(),
+            Some((widget, _)) => format!("Aio, editing: {widget}"),
+            None => "Style Playground: type a command below".to_string(),
         };
         if title != self.last_title {
             ui.set_title(&title);
@@ -298,32 +297,26 @@ impl Widget for AppState {
         let mut divider_top = Divider::horizontal(620.0);
         let mut divider_mid = Divider::horizontal(620.0);
 
-        let mut command_caption = Label::new("Command Input").secondary();
-        let mut preview_caption = Label::new("Live Render Preview").secondary();
+        let mut command_caption = Label::new("Command Input");
 
-        // -- the preview widgets, wearing the computed styles --------------------
-        // every stateful one gets a stable id so its state (ticks, text,
-        // scroll offset) survives the rebuild-every-frame cycle.
-        let mut button_caption = Label::new("Button").secondary();
-        let mut checkbox_caption = Label::new("Checkbox").secondary();
-        let mut input_caption = Label::new("TextInput").secondary();
-        let mut area_caption = Label::new("TextArea").secondary();
-        let mut scroll_caption = Label::new("ScrollView").secondary();
+        let mut preview_caption = Label::new("Live Render Preview");
 
-        let mut demo_button = Button::new("Button")
-            .id("demo_button")
-            .style(button_style_value);
-        let mut demo_checkbox = Checkbox::new()
-            .id("demo_checkbox")
-            .style(checkbox_style_value);
+        let mut button_caption = Label::new("Button");
+        let mut checkbox_caption = Label::new("Checkbox");
+        let mut input_caption = Label::new("TextInput");
+        let mut area_caption = Label::new("TextArea");
+        let mut scroll_caption = Label::new("ScrollView");
+
+        let mut demo_button = Button::new("Button").style(button_style_value).id("button");
+        let mut demo_checkbox = Checkbox::new().style(checkbox_style_value).id("checkbox");
         let mut demo_text_input = TextInput::new()
-            .id("demo_text_input")
             .width(170.0)
-            .style(input_style_value);
+            .style(input_style_value)
+            .id("text-input-2");
         let mut demo_text_area = TextArea::new()
-            .id("demo_text_area")
             .size([270.0, 80.0])
-            .style(area_style_value);
+            .style(area_style_value)
+            .id("text-area");
 
         let mut scroll_item_1 = Label::new("Line one");
         let mut scroll_item_2 = Label::new("Line two");
@@ -354,7 +347,7 @@ impl Widget for AppState {
         ];
 
         let mut demo_scroll = ScrollView::new(&mut scroll_content)
-            .id("demo_scroll")
+            .id("scroll-view")
             .size([270.0, 80.0])
             .style(scroll_style_value);
 

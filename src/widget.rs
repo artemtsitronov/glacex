@@ -75,12 +75,16 @@ pub trait Widget {
 pub trait Measurable: Widget {
     fn measure(&mut self, ui: &mut Ui) -> [f32; 2];
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui) -> Self::Output;
+    fn flex(&self) -> f32 {
+        0.0
+    }
 }
 
 pub trait AnyWidget {
     fn measure(&mut self, ui: &mut Ui) -> [f32; 2];
     fn arrange(&mut self, position: [f32; 2], size: [f32; 2], ui: &mut Ui);
     fn ui(&mut self, ui: &mut Ui);
+    fn flex(&self) -> f32;
     fn as_any_mut(&mut self) -> Option<&mut dyn Any>;
 }
 
@@ -95,6 +99,10 @@ impl<T: Measurable> AnyWidget for &mut T {
 
     fn ui(&mut self, ui: &mut Ui) {
         Widget::ui(*self, ui);
+    }
+
+    fn flex(&self) -> f32 {
+        Measurable::flex(&**self)
     }
 
     fn as_any_mut(&mut self) -> Option<&mut dyn Any> {

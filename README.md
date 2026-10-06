@@ -18,13 +18,94 @@ built with `wgpu`, `winit`, `taffy`, and `glyphon`.
 
 </div>
 
-> glacex is early software. the api may change before 1.0.
+> **Status**: early and actively changing. Expect breaking API changes between 0.x releases.
+
+## Table of Contents
+
+- [What is glacex?](#what-is-glacex)
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Core Concepts](#core-concepts)
+  - [App](#app)
+  - [Widget & Measurable](#widget-and-measurable)
+  - [Ui Context](#ui)
+  - [Layout](#layout)
+- [Widgets](#widgets)
+  - [Controls](#controls)
+  - [Containers](#containers)
+  - [Displays](#displays)
+- [Styling & Theming](#styling)
+  - [Style Structs](#style-structs)
+  - [ShadowStyle](#shadowstyle)
+  - [Color Type](#color)
+  - [Fills, Gradients & Images](#fills-gradients--images)
+  - [Custom Shapes / Paths](#custom-shapes--paths)
+  - [Theme Palette](#theme)
+  - [Window Control](#window-title-and-background)
+- [Accessibility](#accessibility)
+- [How Rendering Works](#how-rendering-works)
+- [Examples](#examples)
+- [Project Layout](#project-layout)
+- [Known Limitations](#known-limitations)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [License](#license)
+
+If you'd like an experimental version of glacex, try visiting programmersd21 fork: https://github.com/programmersd21/glacex [DISCLAIMER]: Artem Tsitronov is not responsible for programmersd21 fork. That includes drastic changes, redesigns, and AI-generated content
+
+[ADVICE]: If you want to laugh, look at the code, you will find some funny comments :)
+I hope you laugh from them and not from the code itself.
+
+## What is glacex?
+
+`glacex` is an immediate-mode UI library for Rust that draws its own pixels instead of wrapping a native toolkit or a browser engine:
+
+- **`winit`** owns the window and the cross-platform event loop.
+- **`wgpu`** renders every shape as an instanced signed-distance-field (SDF) quad on the GPU.
+- **`glyphon`** shapes and rasterizes text into glyph atlases with per-widget clipping.
+- **`taffy`** does the flexbox math for `row!`/`column!` layouts.
+- **`image`** decodes the images.
+- **`kurbo`** is responsible for paths.
+
+There's no retained widget tree and no markup — you describe the UI in plain Rust every frame, and glacex measures, lays out, hit-tests, animates, and renders it.
+
+## Features
+
+- Custom renderer: instanced shapes (anti-aliased SDF), borders, and soft drop shadows, batched into one draw call per shared clip rect.
+- Arbitrary Bezier paths (`MeasurablePath::Free`) via a second tessellated-mesh pipeline, for shapes beyond rect/ellipse — see [Custom Shapes / Paths](#custom-shapes--paths).
+- Text rendering via `glyphon` with independent clip bounds per widget.
+- Fills: solid colors, gradients (linear, radial, conic), and images, cached into a GPU atlas.
+- `Color` is `#[repr(C)]` + `Pod`/`Zeroable`, so it maps straight onto GPU vertex buffers. Hex, RGB, HSV, alpha blending, `lerp`, lighten/darken.
+- Cursor changes (pointer, text, resize, default) driven by hover state.
+- A floating tooltip layer that clamps to the viewport.
+- Widgets: `Button`, `Checkbox`, `RadioButton`, `Switch`, `Slider`, `ProgressBar`, `TextInput`, `TextArea`, `ScrollView`, `Card`, `Container`, `Badge`, `Divider`, `Label`, `SelectBox`, `Tabs`.
+- `row![]` / `column![]` macros backed by `taffy`, with alignment and spacing.
+- Interaction: hover/press/click, secondary/middle mouse buttons, Tab/Shift+Tab focus order, double/triple-click word/line selection, clipboard via `arboard`, blinking cursor.
+- Widget state persists across frames keyed by a stable string id, even though the widget itself is rebuilt every frame. Every stateful widget exposes this via `.state(ui)`/`.take_state(ui)`/`.put_state(ui, state)` (from the `StatefulWidget` trait), plus small typed accessors for the common case (`checkbox.is_checked(ui)`, `slider.value(ui)`, etc.) — see [Widgets](#widgets). `Ui::widget_state`/`take_widget_state`/`put_widget_state` are the lower-level primitives underneath, for state that isn't tied to a single widget's id.
+- Animation via exponential decay (`animate_towards`) plus a small set of easing curves and spring presets, unified under named half-life constants (`Motion::INSTANT`/`SNAPPY`/`FLUID`/`GENTLE`) so transitions feel consistent across widgets.
+- Draggable auto-hiding scrollbars shared by `ScrollView` and `TextArea`.
+- Optional accessibility tree (AT-SPI on Linux via `accesskit`) — see [Accessibility](#accessibility).
+
+## Requirements
+
+- Rust 1.85+ (2024 edition).
+- A GPU/driver backend `wgpu` supports (Vulkan, Metal, DirectX 12, or OpenGL ES).
+- On Linux: a running Wayland or X11 session. Headless environments need a virtual display (e.g. `xvfb`) to create a window surface.
+
+## Installation
+
+### From crates.io
 
 ## what it is
 
 glacex lets you build native desktop interfaces directly in rust.
 
-the ui is described every frame with normal rust code. layout, input, widget state, animation, and rendering are handled by the library.
+```toml
+[dependencies]
+glacex = "0.2.0-alpha"
+```
 
 no markup. no native widget toolkit.
 

@@ -1,5 +1,5 @@
 use crate::color::Color;
-use crate::painter::FontWeight;
+use crate::text::{FontFamily, FontWeight, TextStyle};
 use crate::ui::Ui;
 use crate::widget::{Accessible, Measurable, Widget, hash_id};
 use accesskit::{NodeId, Role};
@@ -21,10 +21,7 @@ pub struct Label {
     id: String,
     text: String,
     variant: LabelVariant,
-    font_size: f32,
-    line_height: f32,
-    weight: FontWeight,
-    is_mono: bool,
+    text_style: TextStyle,
     width: Option<f32>,
     height: Option<f32>,
 }
@@ -35,10 +32,7 @@ impl Label {
             id: uuid::Uuid::new_v4().to_string(),
             text: text.into(),
             variant: LabelVariant::Primary,
-            font_size: 14.0,
-            line_height: 20.0,
-            weight: FontWeight::Regular,
-            is_mono: false,
+            text_style: TextStyle::new(),
             width: None,
             height: None,
         }
@@ -101,69 +95,71 @@ impl Label {
     }
 
     pub fn size_preset(mut self, size: f32) -> Self {
-        self.font_size = size;
-        self.line_height = (size * 1.35).round();
+        self.text_style = self.text_style.size(size, (size * 1.35).round());
         self
     }
 
     pub fn size_with_line_height(mut self, size: f32, line_height: f32) -> Self {
-        self.font_size = size;
-        self.line_height = line_height;
+        self.text_style = self.text_style.size(size, line_height);
         self
     }
 
     pub fn caption(mut self) -> Self {
-        self.font_size = 12.0;
-        self.line_height = 16.0;
+        self.text_style = self.text_style.size(12.0, 16.0);
         self.variant = LabelVariant::Muted;
         self
     }
 
-    pub fn subheading(mut self) -> Self {
-        self.font_size = 16.0;
-        self.line_height = 22.0;
-        self.weight = FontWeight::SemiBold;
+    pub fn subheading(self) -> Self {
+        self.styled(16.0, 22.0, FontWeight::SemiBold)
+    }
+
+    pub fn heading(self) -> Self {
+        self.styled(18.0, 24.0, FontWeight::SemiBold)
+    }
+
+    pub fn title(self) -> Self {
+        self.styled(22.0, 28.0, FontWeight::Bold)
+    }
+
+    pub fn metric(self) -> Self {
+        self.styled(28.0, 34.0, FontWeight::Bold)
+    }
+
+    pub fn weight(mut self, weight: FontWeight) -> Self {
+        self.text_style = self.text_style.weight(weight);
         self
     }
 
-    pub fn heading(mut self) -> Self {
-        self.font_size = 18.0;
-        self.line_height = 24.0;
-        self.weight = FontWeight::SemiBold;
-        self
+    pub fn medium(self) -> Self {
+        self.weight(FontWeight::Medium)
     }
 
-    pub fn title(mut self) -> Self {
-        self.font_size = 22.0;
-        self.line_height = 28.0;
-        self.weight = FontWeight::Bold;
-        self
+    pub fn semibold(self) -> Self {
+        self.weight(FontWeight::SemiBold)
     }
 
-    pub fn metric(mut self) -> Self {
-        self.font_size = 28.0;
-        self.line_height = 34.0;
-        self.weight = FontWeight::Bold;
-        self
-    }
-
-    pub fn medium(mut self) -> Self {
-        self.weight = FontWeight::Medium;
-        self
-    }
-
-    pub fn semibold(mut self) -> Self {
-        self.weight = FontWeight::SemiBold;
-        self
-    }
-
-    pub fn bold(mut self) -> Self {
-        self.weight = FontWeight::Bold;
-        self
+    pub fn bold(self) -> Self {
+        self.weight(FontWeight::Bold)
     }
 
     pub fn mono(mut self) -> Self {
-        self.is_mono = true;
+        self.text_style = self.text_style.mono();
+        self
+    }
+
+    pub fn family(mut self, family: FontFamily) -> Self {
+        self.text_style = self.text_style.family(family);
+        self
+    }
+
+    pub fn text_style(mut self, text_style: TextStyle) -> Self {
+        self.text_style = text_style;
+        self
+    }
+
+    fn styled(mut self, font_size: f32, line_height: f32, weight: FontWeight) -> Self {
+        self.text_style = self.text_style.size(font_size, line_height).weight(weight);
         self
     }
 }
@@ -179,16 +175,10 @@ impl Widget for Label {
 
 impl Measurable for Label {
     fn measure(&mut self, ui: &mut Ui) -> [f32; 2] {
-        let text_width = ui.measure_text_styled(
-            &self.text,
-            self.font_size,
-            self.line_height,
-            self.weight,
-            self.is_mono,
-        );
+        let text_width = ui.measure_text(&self.text, self.text_style);
         [
             self.width.unwrap_or(text_width),
-            self.height.unwrap_or(self.line_height),
+            self.height.unwrap_or(self.text_style.line_height),
         ]
     }
 
@@ -213,16 +203,8 @@ impl Measurable for Label {
             LabelVariant::Error => theme.error,
             LabelVariant::Custom(c) => c,
         };
-        ui.draw_text_styled(
-            &self.text,
-            position,
-            clip_rect,
-            color,
-            self.font_size,
-            self.line_height,
-            self.weight,
-            self.is_mono,
-        );
+        let text_style = self.text_style.or_color(color);
+        ui.draw_text(&self.text, text_style, position, clip_rect);
     }
 }
 

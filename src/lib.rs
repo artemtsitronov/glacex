@@ -8,6 +8,7 @@
 //! Widgets are redrawn every frame, while interactive state is kept inside [`Ui`] and
 //! keyed by stable widget IDs.
 
+// long story short:
 pub mod accessibility;
 pub mod alignment;
 pub mod animation;
@@ -18,8 +19,10 @@ pub mod checkbox;
 pub mod color;
 pub mod container;
 pub mod divider;
+pub mod expanded;
 pub mod fill;
 pub mod geometry;
+pub mod highlight;
 pub mod interaction;
 pub mod label;
 pub mod layout;
@@ -38,6 +41,7 @@ pub mod slider;
 pub mod switch;
 pub mod tabs;
 pub mod tessellate;
+pub mod text;
 pub mod text_area;
 pub mod text_edit;
 pub mod text_input;
@@ -55,8 +59,10 @@ pub use checkbox::*;
 pub use color::*;
 pub use container::*;
 pub use divider::*;
+pub use expanded::*;
 pub use fill::*;
 pub use geometry::*;
+pub use highlight::*;
 pub use interaction::*;
 pub use label::*;
 pub use layout::*;
@@ -75,12 +81,14 @@ pub use slider::*;
 pub use switch::*;
 pub use tabs::*;
 pub use tessellate::*;
+pub use text::*;
 pub use text_area::*;
 pub use text_edit::*;
 pub use text_input::*;
 pub use theme::*;
 pub use ui::*;
 pub use widget::*;
+// and that's the Harry Potter plot
 
 use accesskit_winit::Adapter;
 use std::sync::Arc;
@@ -225,9 +233,10 @@ impl<W: Widget> ApplicationHandler for App<W> {
         };
 
         match event {
-            WindowEvent::CloseRequested => event_loop.exit(),
+            WindowEvent::CloseRequested => event_loop.exit(), // imagine you not being able to exit, because I forgot to implement this
 
             WindowEvent::RedrawRequested => {
+                // every. single. frame. scandalous! Who was the idiot that wrote this!? Ah yes, me. (dw, will be fixed)
                 ui.begin_frame();
                 if let Some(update_fn) = self.update_fn.as_mut() {
                     update_fn(&mut self.root);
