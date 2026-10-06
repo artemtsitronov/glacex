@@ -125,6 +125,12 @@ impl Switch {
     }
 }
 
+impl Default for Switch {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Widget for Switch {
     type Output = SwitchResponse;
 

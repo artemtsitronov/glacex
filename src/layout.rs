@@ -118,7 +118,7 @@ macro_rules! row {
     };
 }
 
-/// A vertical stack of widgets. Holds no position of its own — `arrange_at`
+/// A vertical stack of widgets. Holds no position of its own -- `arrange_at`
 /// is handed where it lives, every frame, by whoever is arranging it.
 /// Delegates the actual placement math to taffy: `measure()` measures
 /// every child exactly once per frame and caches the results;

@@ -22,7 +22,7 @@ pub fn hash_id(s: &str) -> u64 {
 
 /// Accepted by every widget's `.id(..)` builder method, so callers can pass
 /// a plain `&str`/`String` (the common case), an already-`Option`al id, or
-/// `None` to explicitly clear one — without forcing everyone through
+/// `None` to explicitly clear one -- without forcing everyone through
 /// `Some("...".to_string())`. `Into<Option<String>>` can't cover `&str`
 /// directly (no `From<&str> for Option<String>` in std, and orphan rules
 /// block adding one), hence this local trait.

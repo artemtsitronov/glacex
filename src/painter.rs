@@ -91,7 +91,7 @@ fn hash_text_key(
 }
 
 /// Walks the stop list, finds the two stops `t` falls between, and mixes
-/// them — the same interpolation the shader does per-fragment, just run
+/// them -- the same interpolation the shader does per-fragment, just run
 /// once here while baking the ramp texture.
 fn sample_stops(stops: &[GradientStop], t: f32) -> Color {
     if stops.is_empty() {

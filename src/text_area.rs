@@ -185,6 +185,12 @@ impl TextArea {
     }
 }
 
+impl Default for TextArea {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Widget for TextArea {
     type Output = ();
 

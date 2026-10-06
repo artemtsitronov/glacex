@@ -1,4 +1,4 @@
-//! A single, GPU-friendly color type used everywhere in this crate — widget
+//! A single, GPU-friendly color type used everywhere in this crate -- widget
 //! styling, the theme palette, gradients, and the raw vertex data the GPU
 //! consumes all share this one representation instead of scattering
 //! ad-hoc `[f32; 4]` arrays around.

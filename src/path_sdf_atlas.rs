@@ -113,6 +113,7 @@ impl PathSdfAtlas {
         &self.sampler
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn upload_and_cache(
         &mut self,
         queue: &Queue,
@@ -130,7 +131,7 @@ impl PathSdfAtlas {
         let (x, y) = self
             .shelf_packer
             .alloc(w, h)
-            .expect("path sdf atlas full — add eviction");
+            .expect("path sdf atlas full -- add eviction");
 
         queue.write_texture(
             wgpu::TexelCopyTextureInfo {

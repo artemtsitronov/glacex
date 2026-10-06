@@ -163,6 +163,12 @@ impl TextInput {
     }
 }
 
+impl Default for TextInput {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Widget for TextInput {
     type Output = ();
 
