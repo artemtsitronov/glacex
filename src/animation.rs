@@ -164,3 +164,61 @@ impl Spring {
         (self.value - self.target).abs() < 0.0005 && self.velocity.abs() < 0.0005
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const ALL: [Ease; 8] = [
+        Ease::Linear,
+        Ease::EaseOutQuad,
+        Ease::EaseInOutQuad,
+        Ease::EaseOutCubic,
+        Ease::EaseInOutCubic,
+        Ease::EaseOutQuart,
+        Ease::EaseOutExpo,
+        Ease::EaseOutBack,
+    ];
+
+    #[test]
+    fn eases_hit_both_ends() {
+        for ease in ALL {
+            assert!(ease.sample(0.0).abs() < 1e-5, "{ease:?}");
+            assert!((ease.sample(1.0) - 1.0).abs() < 1e-5, "{ease:?}");
+        }
+    }
+
+    #[test]
+    fn ease_clamps_input() {
+        assert_eq!(Ease::Linear.sample(-3.0), 0.0);
+        assert_eq!(Ease::Linear.sample(3.0), 1.0);
+    }
+
+    #[test]
+    fn animate_towards_halves_per_half_life() {
+        let v = animate_towards(0.0, 1.0, 0.1, 0.1);
+        assert!((v - 0.5).abs() < 1e-4);
+    }
+
+    #[test]
+    fn animate_towards_snaps_when_close() {
+        assert_eq!(animate_towards(0.99999, 1.0, 0.016, 0.1), 1.0);
+    }
+
+    #[test]
+    fn spring_settles_on_target() {
+        let mut spring = Motion::standard_spring();
+        spring.set_target(10.0);
+        assert!(!spring.is_settled());
+        for _ in 0..1000 {
+            spring.update(1.0 / 60.0);
+        }
+        assert!(spring.is_settled());
+        assert_eq!(spring.value, 10.0);
+    }
+
+    #[test]
+    fn new_spring_is_settled() {
+        assert!(Spring::new(3.0).is_settled());
+    }
+}

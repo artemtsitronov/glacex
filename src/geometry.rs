@@ -151,3 +151,37 @@ pub struct Shape {
     pub path: MeasurablePath,
     pub fill: Fill,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rect_contains() {
+        let path = Path::rect([0.0; 4])([10.0, 10.0], [20.0, 20.0]);
+        assert!(path.contains([15.0, 15.0]));
+        assert!(!path.contains([5.0, 5.0]));
+    }
+
+    #[test]
+    fn ellipse_is_centered_in_box() {
+        let path = Path::ellipse(0.0)([0.0, 0.0], [20.0, 10.0]);
+        assert!(path.contains([10.0, 5.0]));
+        assert!(!path.contains([1.0, 1.0]));
+    }
+
+    #[test]
+    fn edge_bottom_and_offset() {
+        let path = Path::rect([0.0; 4])
+            .edge(Edge::Bottom, 2.0)
+            .offset([5.0, 0.0]);
+        let shape = path([0.0, 0.0], [10.0, 10.0]);
+        assert!(shape.contains([10.0, 9.0]));
+        assert!(!shape.contains([10.0, 5.0]));
+    }
+
+    #[test]
+    fn open_path_contains_nothing() {
+        assert!(!straight_path(10.0, 2.0).contains([5.0, 0.0]));
+    }
+}

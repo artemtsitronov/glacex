@@ -213,3 +213,53 @@ impl From<Color> for [f32; 4] {
         color.to_linear_rgba()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hex_round_trips() {
+        assert_eq!(Color::hex(0xff8000).to_hex(), "#ff8000");
+        assert_eq!(Color::hex_str("#00ff00"), Color::GREEN);
+        assert_eq!(Color::hex_str("0000ff"), Color::BLUE);
+    }
+
+    #[test]
+    fn bad_hex_str_is_black() {
+        assert_eq!(Color::hex_str("nope"), Color::BLACK);
+    }
+
+    #[test]
+    fn hex_alpha_reads_last_byte() {
+        let c = Color::hex_alpha(0xff000080);
+        assert_eq!(c.to_rgba_bytes(), [255, 0, 0, 128]);
+    }
+
+    #[test]
+    fn hsv_primaries() {
+        assert_eq!(Color::hsv(0.0, 1.0, 1.0), Color::RED);
+        assert_eq!(Color::hsv(120.0, 1.0, 1.0), Color::GREEN);
+        assert_eq!(Color::hsv(240.0, 1.0, 1.0), Color::BLUE);
+        assert_eq!(Color::hsv(360.0, 1.0, 1.0), Color::RED);
+    }
+
+    #[test]
+    fn lerp_halfway() {
+        let mid = Color::BLACK.lerp(Color::WHITE, 0.5);
+        assert_eq!(mid.to_rgb_bytes(), [128, 128, 128]);
+    }
+
+    #[test]
+    fn darken_and_lighten() {
+        assert_eq!(Color::WHITE.darken(1.0), Color::BLACK);
+        assert_eq!(Color::BLACK.lighten(1.0), Color::WHITE);
+        assert_eq!(Color::RED.with_alpha(0.2).darken(0.5).a, 0.2);
+    }
+
+    #[test]
+    fn bytes_are_clamped() {
+        let c = Color::linear_rgba(2.0, -1.0, 0.5, 1.0);
+        assert_eq!(c.to_rgba_bytes(), [255, 0, 128, 255]);
+    }
+}

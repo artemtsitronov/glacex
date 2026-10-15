@@ -406,3 +406,93 @@ impl TextEditState {
         self.scroll_offset = self.scroll_offset.max(0.0);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn state(text: &str) -> TextEditState {
+        let mut s = TextEditState::new();
+        s.set_text(text);
+        s
+    }
+
+    #[test]
+    fn set_text_puts_cursor_at_end() {
+        let s = state("héllo");
+        assert_eq!(s.cursor(), 5);
+        assert_eq!(s.byte_index(), 6);
+    }
+
+    #[test]
+    fn byte_index_handles_unicode() {
+        let s = state("héllo");
+        assert_eq!(s.byte_index_for(2), 3);
+        assert_eq!(s.byte_index_for(100), 6);
+    }
+
+    #[test]
+    fn selection_range_is_ordered() {
+        let mut s = state("hello");
+        s.set_selection_anchor(Some(4));
+        s.set_cursor(1);
+        assert_eq!(s.selection_range(), Some((1, 4)));
+        s.set_cursor(4);
+        assert_eq!(s.selection_range(), None);
+    }
+
+    #[test]
+    fn delete_range_removes_selection() {
+        let mut s = state("hello world");
+        s.delete_range(5, 11);
+        assert_eq!(s.text(), "hello");
+        assert_eq!(s.cursor(), 5);
+    }
+
+    #[test]
+    fn word_boundaries() {
+        let s = state("foo_bar, baz");
+        assert_eq!(s.word_end(0), 7);
+        assert_eq!(s.word_end(7), 12);
+        assert_eq!(s.word_start(12), 9);
+        assert_eq!(s.word_start(9), 0);
+    }
+
+    #[test]
+    fn lines() {
+        let s = state("ab\ncde\n");
+        assert_eq!(s.line_count(), 3);
+        assert_eq!(s.line_start(5), 3);
+        assert_eq!(s.line_end(0), 2);
+        assert_eq!(s.column_of(5), 2);
+        assert_eq!(state("").line_count(), 1);
+    }
+
+    #[test]
+    fn cursor_up_down_clamps_column() {
+        let mut s = state("ab\ncdef");
+        s.set_cursor(7);
+        assert_eq!(s.move_cursor_up(None), 2);
+        s.set_cursor(1);
+        assert_eq!(s.move_cursor_down(None), 4);
+        assert_eq!(s.move_cursor_up(None), 1);
+    }
+
+    #[test]
+    fn insert_newline_at_cursor() {
+        let mut s = state("ab");
+        s.set_cursor(1);
+        s.insert_newline();
+        assert_eq!(s.text(), "a\nb");
+        assert_eq!(s.cursor(), 2);
+    }
+
+    #[test]
+    fn scroll_into_view_follows_cursor() {
+        let mut s = state("");
+        s.scroll_into_view(150.0, 100.0);
+        assert_eq!(s.scroll_offset(), 50.0);
+        s.scroll_into_view(20.0, 100.0);
+        assert_eq!(s.scroll_offset(), 20.0);
+    }
+}
