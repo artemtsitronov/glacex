@@ -1,20 +1,20 @@
 # Contributing to Glacex
 
-Thanks for contributing to Glacex!
+Thanks for wanting to help out with Glacex!
 
 ## Getting Started
 
-1. Fork and clone the repository.
-2. Ensure you have Rust 1.85+ installed (Rust 2024 edition).
-3. Verify that `cargo check` compiles cleanly.
+1. Fork the repo and clone it.
+2. Make sure you have Rust 1.88 or newer (2024 edition).
+3. Run `cargo check` and make sure it builds.
 
 ## Development Workflow
 
 ### Code Style
 
-- Run `cargo fmt --all` before committing.
-- Run `cargo clippy --all-targets --all-features -- -D warnings` and fix any warnings.
-- Follow standard Rust naming conventions and idioms.
+- Run `cargo fmt --all` before you commit.
+- Run `cargo clippy --all-targets --all-features -- -D warnings` and fix whatever it complains about.
+- Just write normal Rust with the usual naming.
 
 ### Building & Testing
 
@@ -25,24 +25,24 @@ cargo clippy --all-targets --all-features -- -D warnings
 cargo test --workspace --all-features
 ```
 
-All commands must pass before submitting a pull request.
+All of these need to pass before you open a pull request.
 
 ### Commit Messages
 
-Use clear, descriptive commit messages with standard prefixes: `fix:`, `feat:`, `refactor:`, `docs:`, `chore:`.
+Write commit messages that actually say what changed. Start them with `fix:`, `feat:`, `refactor:`, `docs:` or `chore:`.
 
 ## Pull Requests
 
-1. Create a feature branch from `main`.
-2. Keep PRs focused on one logical change.
-3. Include rustdoc comments on all new public APIs.
-4. Add examples or tests for new functionality where practical.
-5. Note any breaking API changes in the PR description.
+1. Make a new branch off `main`.
+2. Keep each PR about one thing.
+3. Add rustdoc comments to any new public API.
+4. If you can, add an example or a test for new stuff.
+5. If you break the API, say so in the PR description.
 
 ## Reporting Issues
 
-Open an issue on GitHub with reproduction steps, expected vs actual behavior, and your environment (OS, GPU, and Rust version).
+Open an issue on GitHub. Tell us how to reproduce it, what you expected and what actually happened, and what you're running it on (OS, GPU and Rust version).
 
 ## License
 
-By contributing, you agree that your contributions are licensed under the MIT License.
+If you contribute, your code goes under the MIT License like the rest of the project.

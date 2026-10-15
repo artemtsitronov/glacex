@@ -2,9 +2,9 @@
 
 ## 1. Layout Macros
 
-Glacex provides two declarative macros for layout:
-- `row![...]`: Lays out child widgets horizontally from left to right.
-- `column![...]`: Lays out child widgets vertically from top to bottom.
+Glacex has two macros for layout
+- `row![...]` puts widgets next to each other from left to right
+- `column![...]` stacks widgets from top to bottom
 
 ### Example
 
@@ -36,36 +36,28 @@ impl Widget for LayoutExample {
 ## 2. Layout Modifiers
 
 ### `.spacing(px: f32)`
-Sets the pixel gap between adjacent children along the primary axis. Default is `8.0`.
+The gap in pixels between each child. The default is `8.0`.
 
 ### `.align(alignment: Alignment)`
-Sets child alignment along the cross-axis:
-- `Alignment::Start`: Align to top (rows) or left (columns).
-- `Alignment::Center`: Center along the cross-axis.
-- `Alignment::End`: Align to bottom (rows) or right (columns).
+Lines up the children on the other axis
+- `Alignment::Start` puts them at the top in a row, or on the left in a column
+- `Alignment::Center` puts them in the middle
+- `Alignment::End` puts them at the bottom in a row, or on the right in a column
 
-By default a `row!`/`column!` hugs its content, so there's no extra cross-axis
-space for `.align()` to do anything with. It only becomes visible once the
-container is bigger than its content, e.g. via `.size()` below.
+By default a `row!` or `column!` is exactly as big as its content, so there's no extra space and `.align()` won't look like it does anything. You'll only see it work once the container is bigger than what's inside, like when you use `.size()` from below.
 
 ### `.size([w, h]: [f32; 2])` / `.width(px: f32)` / `.height(px: f32)`
-Overrides the row/column's own width and/or height instead of hugging its
-content. `.size()` is shorthand for calling both. Useful together with
-`.align()`: a `row!` given a taller `.size()` than its content, for
-instance, can then vertically center its children in that extra space.
+Sets the width or height of the row or column yourself, instead of it just fitting the content. `.size()` sets both at once. This goes well with `.align()`. For example if you give a `row!` a `.size()` that's taller than its content, you can center the children vertically in the extra space.
 
 ### `.padding([x, y]: [f32; 2])`
-Insets children from the row/column's own bounds by `x` pixels on the left
-and right, and `y` pixels on the top and bottom. When no explicit `.size()`
-is set, padding is added on top of the hugged content size (so the children
-themselves aren't squeezed).
+Adds space inside the row or column. `x` pixels go on the left and right, and `y` pixels on the top and bottom. If you didn't set a `.size()`, the padding gets added on top of the content size, so the children don't get squished.
 
 ### `.arrange_at(pos: [f32; 2], ui: &mut Ui)`
-Measures and positions the layout tree at the given screen coordinates `[x, y]`.
+Measures everything and places it at the screen position `[x, y]` you give it.
 
 ## 3. The `Measurable` Trait
 
-Widgets placed inside `row![]` or `column![]` implement `Measurable`:
+Any widget you put in `row![]` or `column![]` implements `Measurable`
 
 ```rust
 pub trait Measurable: Widget {
@@ -74,6 +66,7 @@ pub trait Measurable: Widget {
 }
 ```
 
-1. **Measurement**: The container calls `measure` on children to determine natural dimensions.
-2. **Layout**: `taffy` resolves flexbox constraints, sizes, and spacing.
-3. **Arrangement**: The container calls `arrange` on children with resolved position and size, rendering them in place.
+Here's what happens
+1. **Measuring**. The container calls `measure` on each child to see how big it wants to be.
+2. **Layout**. `taffy` does the flexbox math and works out the sizes and spacing.
+3. **Arranging**. The container calls `arrange` on each child with its final position and size, and the child draws itself there.

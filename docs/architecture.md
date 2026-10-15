@@ -1,11 +1,11 @@
 # The architecture and rendering pipeline
 
-Soo here we talk about the internal architecture, rendering pipelines, and other stuff related to the underlying work of `glacex`
+Soo this page is about how `glacex` works on the inside. The architecture, the rendering pipelines and other stuff like that.
 
 ## 1. What's the architecture?
 
-Glacex's an immediate-mode library, but with persistent state.
-It operates on its own, without any underlying GUI frameworks:
+Glacex is an immediate mode library, but it keeps state between frames.
+It doesn't sit on top of any other GUI framework, it does everything by itself.
 
 ```
 [ Your code ]
@@ -39,16 +39,16 @@ It operates on its own, without any underlying GUI frameworks:
 
 ## 2. SDF Shape Pipeline
 
-Our wonderful Glacex renders every shape as a SDF quad.
-The only CPU-side thing that happens is the flattening.
+Every shape in Glacex gets drawn as an SDF quad.
+The only thing done on the CPU is the flattening.
 
 ### But why all the hassle?
-- **No CPU tesselation**: Corner radius, borders are resolved in the shader itself with zero polygon overhead. Your CPU is minimally used.
-- **Sharp Anti-Aliasing**: `smoothstep` on the SDF deliver very clean edges.
-- **Single pass Shadows**: Shadows are evalueated from the same SDF without extra render passes.
+- **No CPU tessellation**. Corner radius and borders are worked out in the shader, so there are no polygons to build and the CPU barely does anything.
+- **Nice anti aliasing**. Running `smoothstep` on the SDF gives really clean edges.
+- **Shadows in one pass**. Shadows come from the same SDF, so there are no extra render passes.
 
 ### Shape Instance Data (`src/shapes.rs`)
-Each shape submitted to the GPU has:
+Every shape sent to the GPU has these fields
 - `position`: `[f32; 2]`
 - `size`: `[f32; 2]`
 - `color`: `Color` (`src/color.rs`)
@@ -63,10 +63,10 @@ Each shape submitted to the GPU has:
 
 ## 3. Animation (`src/animation.rs`)
 
-All transitions use frame-rate independent math!
+All the animations work the same no matter what your frame rate is.
 
-### `Motion` - Named timing constants
-`Motion` is a unit struct that exposes half-life constants:
+### `Motion` and the timing constants
+`Motion` is a unit struct with a bunch of half life constants
 
 | `Motion::MICRO` | 16ms | Single-frame color snaps |
 | `Motion::INSTANT` | 30ms | Press feedback, immediate state snaps |
@@ -75,76 +75,76 @@ All transitions use frame-rate independent math!
 | `Motion::GENTLE` | 90ms | Focus rings, glow shadows |
 
 ### `animate_towards(current, target, dt, half_life) -> f32`
-Exponential decay toward `target`. `half_life` is seconds to close half the gap.
-Used by every animated widget state (`hover_t`, `press_t`, `dot_t`, `anim_progress`, `drag_t`, `focus_t`).
+Moves toward `target` with exponential decay. `half_life` is how many seconds it takes to get halfway there.
+Every animated bit of widget state uses it (`hover_t`, `press_t`, `dot_t`, `anim_progress`, `drag_t` and `focus_t`).
 
 ### Easing Curves (`Ease`)
-Static easing functions for use in timed sequences:
-`EaseOutCubic`, `EaseInOutCubic`, `EaseOutExpo`, `EaseOutBack`, `EaseOutQuad`, `EaseInOutQuad`, `EaseOutQuart`, `Linear`.
+Plain easing functions for when you want a timed animation.
+You get `EaseOutCubic`, `EaseInOutCubic`, `EaseOutExpo`, `EaseOutBack`, `EaseOutQuad`, `EaseInOutQuad`, `EaseOutQuart` and `Linear`.
 
 ### `Spring`
-Physics-based spring simulation (`stiffness`, `damping`) using semi-implicit Euler integration.
-Construct with `Spring::with_physics(initial, stiffness, damping)`. Check `spring.is_settled()` to skip updates when at rest.
-Presets:
-- `Motion::standard_spring()` (400 stiffness, 25 damping): Framer Motion standard UI preset.
-- `Motion::snappy_spring()` (450 stiffness, 32 damping): Fast with zero overshoot.
-- `Motion::fluid_spring()` (300 stiffness, 26 damping): Apple fluid control feel.
+A spring with `stiffness` and `damping`, simulated with semi implicit Euler.
+Make one with `Spring::with_physics(initial, stiffness, damping)`. If `spring.is_settled()` is true it's not moving anymore and you can skip updating it.
+There are some presets too
+- `Motion::standard_spring()` has 400 stiffness and 25 damping. It's the standard UI preset from Framer Motion.
+- `Motion::snappy_spring()` has 450 stiffness and 32 damping. It's fast and doesn't overshoot at all.
+- `Motion::fluid_spring()` has 300 stiffness and 26 damping. It feels like Apple's fluid controls.
 
 ### `lerp(a, b, t) -> f32`
-Standard linear interpolation helper.
+Just normal linear interpolation.
 
 ### `dt` on `Ui`
-`Ui::dt()` returns elapsed seconds since the previous frame (clamped to 1..=100ms).
-Widgets read `dt` once at the top of `arrange` before borrowing mutable state.
+`Ui::dt()` gives you how many seconds passed since the last frame. It's clamped between 1 and 100ms.
+Widgets grab `dt` once at the start of `arrange`, before they borrow their state as mutable.
 
 ## 4. Scissor rects and draw batching
 
-- Widgets push and pop scissor rectangles via `ui.push_clip()` and `ui.pop_clip()`
-- Rects share the same clip bounds
-- `glyphon` clip independently, preventing text overflow
+- Widgets push and pop scissor rects with `ui.push_clip()` and `ui.pop_clip()`
+- Rects with the same clip bounds get drawn together
+- `glyphon` clips text on its own, so text can't spill out
 
 ## 5. Filling system
 
-Gradient and images bake onto a dedicated GPU ramp texture alias:
-- New gradients/images are sampled into an atlas row on first use
-- Gradients/images cache by content hash.
+Gradients and images get baked into their own GPU texture.
+- The first time a gradient or image is used it gets sampled into a row of the atlas
+- They're cached by their content, so the same one is only baked once
 
-`Fill` has three options:
-- `Solid(Color)`: Solid filling
-- `Gradient(Gradient)`: Gradient fillinf
-- `Image(ImageHandle)`: Image filling
+`Fill` can be one of three things
+- `Solid(Color)` for a solid color
+- `Gradient(Gradient)` for a gradient
+- `Image(ImageHandle)` for an image
 
 ## 8. Design Token System & Themes (`src/theme.rs`)
 
-Glacex ships 9 built-in theme presets, that can be swapped at runtime with `ui.set_theme(theme)`
+Glacex comes with 9 themes and you can swap them at runtime with `ui.set_theme(theme)`
 
 ### Surface Elevation Hierarchy
-- **Canvas (`theme.bg_canvas`)**: Root window backdrop.
-- **Surface (`theme.surface`)**: Standard panel, card, and container background.
-- **Subtle (`theme.surface_subtle`)**: Grouped sub-containers, inputs, and control tracks.
-- **Elevated (`theme.surface_elevated`)**: Tooltips, popovers, and floating overlays.
+- **Canvas (`theme.bg_canvas`)** is the background of the whole window.
+- **Surface (`theme.surface`)** is the normal background for panels, cards and containers.
+- **Subtle (`theme.surface_subtle`)** is for things grouped inside other things, inputs and control tracks.
+- **Elevated (`theme.surface_elevated`)** is for tooltips, popovers and anything floating.
 
 ### Shadow Architecture (`src/shadow.rs`)
-Depth is expressed through multi-layered shadows combining an ambient layer (wide, soft) with a key light layer (tight, crisp):
-- `Shadow::sm()` -- resting controls (buttons, inputs)
-- `Shadow::md()` -- cards and panels
-- `Shadow::lg()` -- elevated tooltips and overlays
-- `theme.shadow_sm()`, `theme.shadow_md()`, `theme.shadow_lg()` dynamically tailor blur and alpha to the current palette.
+Depth comes from shadows with two layers. One is wide and soft (ambient) and the other is tight and crisp (key light).
+- `Shadow::sm()` is for controls like buttons and inputs
+- `Shadow::md()` is for cards and panels
+- `Shadow::lg()` is for tooltips and overlays
+- `theme.shadow_sm()`, `theme.shadow_md()` and `theme.shadow_lg()` change the blur and alpha to fit the current theme.
 
 ## 9. Accessibility (`src/accessibility.rs`)
 
-Accessibility is opt-in (`App::accessibility_enabled(true)`) and layered on top of the normal frame loop rather than baked into it, via [`accesskit`](https://accesskit.dev/) / `accesskit_winit`.
+Accessibility is off unless you turn it on with `App::accessibility_enabled(true)`. It runs on top of the normal frame loop instead of being built into it, and it uses [`accesskit`](https://accesskit.dev/) and `accesskit_winit`.
 
-- **`SharedTree`**: an `Arc<Mutex<Vec<(NodeId, Node)>>>` shared between the render thread and `accesskit`'s platform adapter thread. Every widget that calls `Ui::register_accessible` during `arrange` appends itself here for the current frame. `Ui::begin_frame` clears the list, so it never accumulates stale entries from previous frames.
-- **`build_update`**: wraps the current node list in a synthetic `Role::Window` root, sets that root's `children` to every registered node id (accesskit requires every non-root node to be reachable from the root), and returns a `TreeUpdate`.
-- **`AccessibilityActivationHandler`** / **`AccessibilityDeactivationHandler`**: called by the platform backend when an assistive technology attaches or detaches. On Linux this only happens once the desktop's `ScreenReaderEnabled` AT-SPI flag is set (normally by a running screen reader), which is a common point of confusion when testing with an inspector like Accerciser instead of an actual screen reader.
-- **`AccessibilityActionHandler`**: receives action requests from the AT client (e.g. "invoke this button"). Currently just logged: wiring it back into widget state is app-specific and left to the caller.
-- 
-Each widget's `NodeId` is a hash of its own id string (`hash_id`, `src/widget.rs`), so two widgets sharing an id collide in the tree. Anonymous `Card`, `Container`, `Divider` and `ProgressBar` instances aren't registered at all.
+- **`SharedTree`** is an `Arc<Mutex<Vec<(NodeId, Node)>>>` that the render thread and the `accesskit` adapter thread both use. Any widget that calls `Ui::register_accessible` in `arrange` adds itself to it for that frame. `Ui::begin_frame` clears it every frame, so old entries don't pile up.
+- **`build_update`** puts all the current nodes under a fake `Role::Window` root and makes every registered node a child of it. accesskit needs every node to be reachable from the root. Then it returns a `TreeUpdate`.
+- **`AccessibilityActivationHandler`** and **`AccessibilityDeactivationHandler`** get called when a screen reader or similar tool connects or disconnects. On Linux that only happens once the desktop sets the `ScreenReaderEnabled` AT-SPI flag, which usually means a screen reader is running. This trips people up a lot when they test with something like Accerciser instead of a real screen reader.
+- **`AccessibilityActionHandler`** gets action requests from the assistive tool, like "click this button". For now it only logs them, because hooking them up to widget state depends on your app so that part is up to you.
+
+Each widget's `NodeId` is a hash of its id string (`hash_id` in `src/widget.rs`). So if two widgets have the same id they'll clash in the tree. `Card`, `Container`, `Divider` and `ProgressBar` without an id don't get registered at all.
 
 ## 10. ID-ing system
 
-Each widget has an ID, that defaults to a [`uuid`](https://github.com/uuid-rs/uuid). It can be set to a user-defined one via the `.id()` builder.
+Every widget has an id. By default it's a random [`uuid`](https://github.com/uuid-rs/uuid), but you can set your own with `.id()`.
 
-[ATTENTION]: For non-user-defined IDs, `Widget::new()` generate a UUID every time it's called. So this means that the persistent state doesn't work anymore for widgets!
-To avoid this, set an explicit ID for stateful widgets.
+[ATTENTION] If you don't set an id, `Widget::new()` makes a new UUID every time you call it. That means the widget can't find its state from last frame and persistent state just stops working!
+So give stateful widgets their own id.

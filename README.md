@@ -13,15 +13,15 @@
   <a href="https://github.com/artemtsitronov/glacex/stargazers"><img src="https://img.shields.io/github/stars/artemtsitronov/glacex?style=for-the-badge&logo=github&logoColor=cdd6f4&label=stars&labelColor=181825&color=f9e2af" alt="GitHub Stars"></a>
 </p>
 
-GPU-accelerated, immediate-mode UI library built from scratch in Rust on top of `wgpu`, `winit`, and `taffy`.
+An immediate mode UI library for Rust that runs on the GPU. Written from scratch on top of `wgpu`, `winit` and `taffy`.
 
-Built by **Artem Tsitronov** and **Soumalya Das**.
-For every question or concern, you can contact the author at this email: <artemtsitronov@gmail.com>
+Made by **Artem Tsitronov** and **Soumalya Das**.
+If you have any questions or problems, just email me at <artemtsitronov@gmail.com>
 
 </div>
 
-> **Status**: 0.2.0 is a more stable release, big API changes are not planned.
-Every big API change/redesign will be warned.
+> **Status**: 0.2.0 is a lot more stable than before and I'm not planning any big API changes.
+If something big does change, I'll let you know first.
 
 ## Table of Contents
 
@@ -56,43 +56,47 @@ Every big API change/redesign will be warned.
 - [Contributing](#contributing)
 - [License](#license)
 
-If you'd like an experimental version of glacex, try visiting programmersd21 fork: https://github.com/programmersd21/glacex [DISCLAIMER]: Artem Tsitronov is not responsible for programmersd21 fork. That includes drastic changes, redesigns, and AI-generated content
+If you want a more experimental version of glacex, there's the programmersd21 fork at https://github.com/programmersd21/glacex
+
+Just so you know, I'm not responsible for that fork. That includes big changes, redesigns and AI generated stuff in it.
 
 ## What is glacex?
 
-`glacex` is an immediate-mode UI library for Rust that draws its own pixels instead of wrapping a native toolkit or a browser engine:
+`glacex` is an immediate mode UI library for Rust. It doesn't wrap a native toolkit or a browser engine. It draws everything itself.
 
-- **`winit`** owns the window and the cross-platform event loop.
-- **`wgpu`** renders every shape as an instanced signed-distance-field (SDF) quad on the GPU.
-- **`glyphon`** shapes and rasterizes text into glyph atlases with per-widget clipping.
-- **`taffy`** does the flexbox math for `row!`/`column!` layouts.
-- **`image`** decodes the images.
-- **`kurbo`** is responsible for paths.
+Here's what it uses under the hood:
 
-There's no retained widget tree and no markup, you describe the UI in plain Rust every frame, and glacex measures, lays out, hit-tests, animates, and renders it.
+- **`winit`** handles the window and the event loop on every platform.
+- **`wgpu`** draws every shape on the GPU as an instanced SDF quad.
+- **`glyphon`** shapes the text and puts the glyphs into atlases, and each widget gets its own clipping.
+- **`taffy`** does the flexbox math for `row!` and `column!`.
+- **`image`** decodes images.
+- **`kurbo`** handles paths.
+
+There's no retained widget tree and no markup. You just write your UI in normal Rust every frame, and glacex measures it, lays it out, handles input, animates it and renders it.
 
 ## Features
 
-- Custom renderer: instanced shapes (anti-aliased SDF), borders, and soft drop shadows, batched into one draw call per shared clip rect.
-- Arbitrary Bezier paths (`MeasurablePath::Free`) via a second tessellated-mesh pipeline, for shapes beyond rect/ellipse, see [Custom Shapes / Paths](#custom-shapes--paths).
-- Text rendering via `glyphon` with independent clip bounds per widget.
-- Fills: solid colors, gradients (linear, radial, conic), and images, cached into a GPU atlas.
-- `Color` is `#[repr(C)]` + `Pod`/`Zeroable`, so it maps straight onto GPU vertex buffers. Hex, RGB, HSV, alpha blending, `lerp`, lighten/darken.
-- Cursor changes (pointer, text, resize, default) driven by hover state.
-- A floating tooltip layer that clamps to the viewport.
+- Its own renderer. Shapes are anti aliased SDFs with borders and soft shadows, and everything with the same clip rect goes into one draw call.
+- Custom Bezier shapes with `MeasurablePath::Free`, drawn by a second mesh pipeline. So you're not stuck with rects and ellipses. More in [Custom Shapes / Paths](#custom-shapes--paths).
+- Text with `glyphon`, and every widget clips its own text.
+- Solid colors, gradients (linear, radial and conic) and images as fills. They get cached in a GPU atlas.
+- `Color` is `#[repr(C)]` and `Pod`/`Zeroable`, so it goes straight into vertex buffers. You can make colors from hex, RGB or HSV, and blend, lerp, lighten or darken them.
+- The cursor changes on hover (pointer, text, resize or default).
+- Tooltips that float above everything and stay inside the window.
 - Widgets: `Button`, `Checkbox`, `RadioButton`, `Switch`, `Slider`, `ProgressBar`, `TextInput`, `TextArea`, `ScrollView`, `Card`, `Container`, `Badge`, `Divider`, `Label`, `SelectBox`, `Tabs`.
-- `row![]` / `column![]` macros backed by `taffy`, with alignment and spacing.
-- Interaction: hover/press/click, secondary/middle mouse buttons, Tab/Shift+Tab focus order, double/triple-click word/line selection, clipboard via `arboard`, blinking cursor.
-- Widget state persists across frames keyed by a stable string id, even though the widget itself is rebuilt every frame. Every stateful widget exposes this via `.state(ui)`/`.take_state(ui)`/`.put_state(ui, state)` (from the `StatefulWidget` trait), plus small typed accessors for the common case (`checkbox.is_checked(ui)`, `slider.value(ui)`, etc.), see [Widgets](#widgets). `Ui::widget_state`/`take_widget_state`/`put_widget_state` are the lower-level primitives underneath, for state that isn't tied to a single widget's id.
-- Animation via exponential decay (`animate_towards`) plus a small set of easing curves and spring presets, unified under named half-life constants (`Motion::INSTANT`/`SNAPPY`/`FLUID`/`GENTLE`) so transitions feel consistent across widgets.
-- Draggable auto-hiding scrollbars shared by `ScrollView` and `TextArea`.
-- Optional accessibility tree (AT-SPI on Linux via `accesskit`), see [Accessibility](#accessibility).
+- `row![]` and `column![]` macros that use `taffy`, with alignment and spacing.
+- Input stuff like hover, press and click, right and middle mouse buttons, Tab and Shift+Tab focus, double click to select a word and triple click for a line, clipboard through `arboard` and a blinking cursor.
+- Widgets get rebuilt every frame, but their state sticks around because it's saved under a string id. Every stateful widget has `.state(ui)`, `.take_state(ui)` and `.put_state(ui, state)` from the `StatefulWidget` trait. Most of them also have simple helpers like `checkbox.is_checked(ui)` or `slider.value(ui)`. Check out [Widgets](#widgets) for more. Underneath all that are `Ui::widget_state`, `take_widget_state` and `put_widget_state`, which you can use for state that doesn't belong to one widget.
+- Animations use exponential decay (`animate_towards`), plus a few easing curves and spring presets. There are named half life constants (`Motion::INSTANT`, `SNAPPY`, `FLUID` and `GENTLE`) so every widget animates with the same kind of feel.
+- Scrollbars you can drag that hide when you don't need them. `ScrollView` and `TextArea` both use them.
+- Accessibility support you can turn on (AT-SPI on Linux through `accesskit`). See [Accessibility](#accessibility).
 
 ## Requirements
 
-- Rust 1.88+ (2024 edition).
-- A GPU/driver backend `wgpu` supports (Vulkan, Metal, DirectX 12, or OpenGL ES).
-- On Linux: a running Wayland or X11 session. Headless environments need a virtual display (e.g. `xvfb`) to create a window surface.
+- Rust 1.88 or newer (2024 edition)
+- A GPU and driver that `wgpu` supports, so Vulkan, Metal, DirectX 12 or OpenGL ES
+- On Linux you need a Wayland or X11 session running. If you're headless you'll need a virtual display like `xvfb` to get a window surface
 
 ## Installation
 
@@ -102,7 +106,7 @@ There's no retained widget tree and no markup, you describe the UI in plain Rust
 cargo add glacex
 ```
 
-or in `Cargo.toml`:
+Or put it in your `Cargo.toml`
 
 ```toml
 [dependencies]
@@ -131,7 +135,7 @@ sudo pacman -S libx11 libxcursor libxrandr libxi libxkbcommon wayland
 
 ## Quick Start
 
-A minimal counter:
+Here's a tiny counter app
 
 ```rust
 use glacex::{App, Button, Color, Label, Ui, Widget, column};
@@ -164,13 +168,13 @@ fn main() {
 }
 ```
 
-`App::new(root).run()` opens a window, sets up the GPU pipelines, and runs the event loop.
+`App::new(root).run()` opens the window, sets up the GPU and starts the event loop.
 
 ## Core Concepts
 
 ### App
 
-`App<W: Widget>` owns the `winit` window and event loop:
+`App<W: Widget>` owns the `winit` window and the event loop
 
 ```rust
 App::new(root_widget)
@@ -183,7 +187,7 @@ App::new(root_widget)
 
 ### Widget and Measurable
 
-Every UI element implements `Widget`:
+Everything in the UI implements `Widget`
 
 ```rust
 pub trait Widget {
@@ -192,7 +196,7 @@ pub trait Widget {
 }
 ```
 
-Widgets that can be placed inside `row!`/`column!` also implement `Measurable`:
+If a widget can go inside `row!` or `column!` it also implements `Measurable`
 
 ```rust
 pub trait Measurable: Widget {
@@ -201,24 +205,24 @@ pub trait Measurable: Widget {
 }
 ```
 
-- `measure` returns the widget's natural size.
-- `arrange` does hit-testing, input handling, and issues draw calls at the resolved rect.
+`measure` tells the layout how big the widget wants to be. `arrange` gets the final rect, then handles input and hit testing and does the drawing.
 
 ### Ui
 
-`Ui` is the per-frame context passed into every widget:
-- Input: `mouse_position()`, `mouse_pressed()`, `mouse_right_pressed()`, `click_count()`, `key_pressed()`, `ctrl_held()`, `shift_held()`.
-- Cursor: `set_cursor_icon(CursorIcon)`.
-- Tooltips: `show_tooltip(text)`, `show_tooltip_at(text, pos)`.
-- State: `widget_state::<T>(id)`, `take_widget_state::<T>(id)`, `put_widget_state(id, state)`, the primitives behind every widget's `.state(ui)`/`.take_state(ui)`/`.put_state(ui, state)`.
-- Focus: `request_focus(id)`, `is_focused(id)`, `advance_focus(backward)`.
-- Clipping: `push_clip(rect)`, `pop_clip()`, `push_input_block(rect)`.
-- Drawing: `draw_shape(...)`, `draw_text(...)`, `measure_text(...)`, `line_height()`.
-- Window: `set_title(&str)`, `set_bgcolor(Color)`.
+`Ui` is the context every widget gets each frame. Here's roughly what's on it
+
+- Input with `mouse_position()`, `mouse_pressed()`, `mouse_right_pressed()`, `click_count()`, `key_pressed()`, `ctrl_held()` and `shift_held()`
+- Cursor with `set_cursor_icon(CursorIcon)`
+- Tooltips with `show_tooltip(text)` and `show_tooltip_at(text, pos)`
+- State with `widget_state::<T>(id)`, `take_widget_state::<T>(id)` and `put_widget_state(id, state)`. These are what every widget's `.state(ui)`, `.take_state(ui)` and `.put_state(ui, state)` use
+- Focus with `request_focus(id)`, `is_focused(id)` and `advance_focus(backward)`
+- Clipping with `push_clip(rect)`, `pop_clip()` and `push_input_block(rect)`
+- Drawing with `draw_shape(...)`, `draw_text(...)`, `measure_text(...)` and `line_height()`
+- The window with `set_title(&str)` and `set_bgcolor(Color)`
 
 ### Layout
 
-For layout please see `docs/layout.md`.
+Layout has its own page, go check out `docs/layout.md`.
 
 ## Widgets
 
@@ -235,7 +239,7 @@ if btn.clicked() {
     println!("clicked");
 }
 ```
-Variants: `.primary()`, `.outline()`, `.ghost()`, `.danger()`.
+There's also `.primary()`, `.outline()`, `.ghost()` and `.danger()`.
 
 #### Checkbox
 ```rust
@@ -298,7 +302,7 @@ sel.arrange_at([40.0, 40.0], ui);
 let selected = sel.selected(ui);
 ```
 
-Enable live filtering with `.searchable()`:
+If you want to search through the options, add `.searchable()`
 
 ```rust
 let mut sel = SelectBox::new(countries)
@@ -308,7 +312,7 @@ let mut sel = SelectBox::new(countries)
     .searchable();
 ```
 
-The dropdown opens with a spring animation, closes on Escape or outside-click, supports `↑`/`↓` keyboard navigation and `Enter` to confirm.
+The dropdown opens with a spring animation and closes when you press Escape or click somewhere else. You can move through it with the arrow keys and pick something with Enter.
 
 #### Tabs
 ```rust
@@ -325,7 +329,7 @@ let mut tabs = Tabs::new(
 let selected = tabs.selected(ui);
 ```
 
-The active pill slides and resizes to the selected tab with a spring animation; clicking a tab updates the selection immediately. Selection is stored the same way as `RadioButton` groups, so `ui.selected_option("tabs")` also works.
+The pill behind the active tab slides over and resizes with a spring when you click a different tab. The selection updates right away. It's stored the same way as `RadioButton` groups, so `ui.selected_option("tabs")` works too.
 
 ### Containers
 
@@ -344,20 +348,20 @@ ScrollView::new(&mut child_column)
 ```
 
 #### Container & Divider
-- `Container::new(&mut child).size([w, h])`: fixed-size wrapper.
-- `Divider::horizontal(width)` / `Divider::vertical(height)`: separator rule, `.faint()` for a subtler hairline.
+- `Container::new(&mut child).size([w, h])` wraps a child in a box with a fixed size
+- `Divider::horizontal(width)` and `Divider::vertical(height)` draw a separator line. Add `.faint()` if you want it lighter
 
 ### Displays
 
-- `Label::new(text)`: text, with `.secondary()`, `.muted()`, `.accent()`, size presets (`.caption()`, `.heading()`, `.metric()`, ...), and `.mono()`.
-- `Badge::new(text)`: status pill, `.secondary()` / `.outline()` / `.success()` / `.warning()` / `.error()`.
-- `ProgressBar::new(ratio)`: completion bar
+- `Label::new(text)` is just text. It has `.secondary()`, `.muted()` and `.accent()`, some size presets like `.caption()`, `.heading()` and `.metric()`, and `.mono()`
+- `Badge::new(text)` is a little status pill with `.secondary()`, `.outline()`, `.success()`, `.warning()` and `.error()`
+- `ProgressBar::new(ratio)` is a progress bar
 
 ## Styling
 
 ### Style Structs
 
-Every widget has a `*Style` struct that controls everything it draws: fills, borders, shadows, padding, fonts, shapes, animation timings and the hover cursor. Start from a theme preset and override only what you need with `..`:
+Every widget has its own `*Style` struct, and it controls everything the widget draws. That means fills, borders, shadows, padding, fonts, shapes, animation timings and the hover cursor. The easy way is to start from a theme preset and only change the fields you care about with `..`
 
 ```rust
 use glacex::{Button, ButtonStyle, Color, CursorIcon, Fill, Path, ShadowStyle, Stateful};
@@ -378,7 +382,7 @@ let save_btn = Button::new("Save").id("btn").style(ButtonStyle {
 
 ### Per-state values: `Stateful<T>`
 
-Any property that can change with interaction is a `Stateful<T>`: an `idle` value plus optional `hovered`, `pressed`, `focused`, `selected` and `selected_hovered` values. States you don't set fall back to the layer below them. A plain value converts into a `Stateful` that looks the same in every state, so the simple case stays simple:
+If a property can change when you interact with the widget, it's a `Stateful<T>`. It has an `idle` value, and you can also give it `hovered`, `pressed`, `focused`, `selected` and `selected_hovered` values. Any state you don't set just uses the one below it. A plain value turns into a `Stateful` that looks the same in every state, so simple stuff stays simple
 
 ```rust
 Button::new("Save").fill(Color::rgb(200, 40, 40))
@@ -388,20 +392,20 @@ Button::new("Save").fill(
 )
 ```
 
-`Button`, `Card`, `Checkbox`, `RadioButton`, `Switch`, `Slider`, `TextInput`, `TextArea`, `SelectBox`, `Badge` and `ProgressBar` also have `.fill(..)`, `.border_color(..)`, `.border_width(..)` and `.shadow(..)` builder methods that take either a plain value or a `Stateful`. `Label` has `.fill(..)`, `.text_color(..)`, `.border_color(..)`, `.border_width(..)` and `.padding(..)`, and `Divider`'s `.color(..)` and `.thickness(..)` accept a `Stateful` too.
+`Button`, `Card`, `Checkbox`, `RadioButton`, `Switch`, `Slider`, `TextInput`, `TextArea`, `SelectBox`, `Badge` and `ProgressBar` also have `.fill(..)`, `.border_color(..)`, `.border_width(..)` and `.shadow(..)` builders. You can pass them a plain value or a `Stateful`. `Label` has `.fill(..)`, `.text_color(..)`, `.border_color(..)`, `.border_width(..)` and `.padding(..)`. And `.color(..)` and `.thickness(..)` on `Divider` take a `Stateful` too.
 
-States are layered in a fixed order: `idle`, then `hovered`, then `selected` (with `selected_hovered` while hovered), then `focused`, then `pressed`. Each layer blends in by its own animated weight. `selected` is "checked" for `Checkbox`, "on" for `Switch`, the chosen option for `RadioButton`, the active tab in `Tabs` and the chosen item in `SelectBox`. `pressed` is also used while a slider or scrollbar thumb is being dragged.
+The states always stack in the same order. First `idle`, then `hovered`, then `selected` (or `selected_hovered` if it's hovered), then `focused` and then `pressed`. Every layer fades in with its own animation. What `selected` means depends on the widget. It's checked for `Checkbox`, on for `Switch`, the picked option for `RadioButton`, the active tab in `Tabs` and the picked item in `SelectBox`. `pressed` is also used while you drag a slider or a scrollbar thumb.
 
-Blending is per type: numbers, colors, solid fills, shadows and text size/color interpolate smoothly; gradients, images, paths, font weight and family switch at the halfway point. Color blends from a fully transparent value keep the target's hue instead of fading through black. Any type that implements the `Blend` trait can be stored in a `Stateful`.
+How things blend depends on the type. Numbers, colors, solid fills, shadows and text size and color all blend smoothly. Gradients, images, paths, font weight and font family just flip over halfway through. When a color blends from fully transparent it keeps the hue of the target, so it doesn't fade through black. You can put any type that implements `Blend` in a `Stateful`.
 
-Conventions shared by all styles:
+A few things that work the same in every style
 
-- **States**: fields marked † below are `Stateful<T>` (see above). Everything is stateful except animation timings (`*_motion`, spring stiffness/damping), on/off flags (`sharp`, `clip_content`, …), enums and alignment, strings, `syntax`, `scroll_speed` and `cursor_blink_period`. `Badge`, `Label`, `Divider` and `ProgressBar` only have the `hovered` state. Size-like fields (padding, heights, sizes) are measured with the previous frame's state, so layout follows one frame behind.
-- **Sub-parts**: the select box dropdown and search bar react to hovering the dropdown, its items and each tab react to their own hover and to being selected, the tabs indicator reacts to hovering the active tab, and scrollbar tracks/thumbs react to their own hover and drag.
-- **Shape**: `path` is any `Path` (`Path::rect(radii)`, `Path::ellipse(rot)`, `Path::from_fn(..)`); `sharp` disables anti-aliasing.
-- **Text**: `text_style` sets font family, size, line height, weight and color. A widget-level `.text_style(..)` still overrides it; if it has no color, the style's color is used.
-- **Animation**: every `*_motion` field is a half-life in seconds (`Motion::INSTANT`, `SNAPPY`, `FLUID`, `GENTLE`, or any `f32`). `0.0` makes the change instant.
-- **Cursor**: `cursor` picks the hover cursor (`glacex::CursorIcon`).
+- **States**. Fields with a † in the table below are `Stateful<T>`. Almost everything is. The exceptions are animation timings (`*_motion` and spring stiffness and damping), on and off flags like `sharp` or `clip_content`, enums, alignment, strings, `syntax`, `scroll_speed` and `cursor_blink_period`. `Badge`, `Label`, `Divider` and `ProgressBar` only have the `hovered` state. Sizes like padding and heights get measured with last frame's state, so the layout is one frame behind.
+- **Sub parts**. The select box dropdown and its search bar react when you hover the dropdown. Its items and each tab react to their own hover and to being selected. The tabs indicator reacts when you hover the active tab. Scrollbar tracks and thumbs react to their own hover and to dragging.
+- **Shape**. `path` can be any `Path`, so `Path::rect(radii)`, `Path::ellipse(rot)` or `Path::from_fn(..)`. `sharp` turns off anti aliasing.
+- **Text**. `text_style` sets the font family, size, line height, weight and color. If you call `.text_style(..)` on the widget it still wins. If that one has no color, it uses the color from the style.
+- **Animation**. Every `*_motion` field is a half life in seconds. You can use `Motion::INSTANT`, `SNAPPY`, `FLUID`, `GENTLE` or any `f32` you want. `0.0` means no animation at all.
+- **Cursor**. `cursor` is the cursor you get on hover (`glacex::CursorIcon`).
 
 | Style Struct | Target Widget | Fields |
 |---|---|---|
@@ -421,7 +425,7 @@ Conventions shared by all styles:
 | `DividerStyle` | `Divider` | `fill`†, `thickness`†, `margin`†, `inset`†, `sharp`, `path`†, `hover_motion` |
 | `LabelStyle` | `Label` | `padding`†, `align_x`, `align_y`, `fill`†, `text_color`†, `border_width`†, `border_color`†, `sharp`, `path`†, `hover_motion` |
 
-Presets: `ButtonStyle::{from_theme, primary, outline, ghost, danger}`, `BadgeStyle::{.., tinted(theme, color)}`, `CardStyle::{.., interactive}`, `CheckboxStyle::circle`, `RadioButtonStyle::outlined`, `SwitchStyle::square`, `SliderStyle::thick`, `ProgressBarStyle::colored(theme, color)`, `TextInputStyle::filled`, `TextAreaStyle::code`, `ScrollViewStyle::panel`, `SelectBoxStyle::filled`, `TabsStyle::{segmented, underline}`, `DividerStyle::{faint, strong, rounded}`, `LabelStyle::highlighted`.
+Presets you can start from are `ButtonStyle::{from_theme, primary, outline, ghost, danger}`, `BadgeStyle::{.., tinted(theme, color)}`, `CardStyle::{.., interactive}`, `CheckboxStyle::circle`, `RadioButtonStyle::outlined`, `SwitchStyle::square`, `SliderStyle::thick`, `ProgressBarStyle::colored(theme, color)`, `TextInputStyle::filled`, `TextAreaStyle::code`, `ScrollViewStyle::panel`, `SelectBoxStyle::filled`, `TabsStyle::{segmented, underline}`, `DividerStyle::{faint, strong, rounded}` and `LabelStyle::highlighted`.
 
 ### ShadowStyle
 
@@ -438,7 +442,7 @@ let shadow = ShadowStyle::new(Color::BLACK.with_alpha(0.3), 12.0, [0.0, 4.0]).sp
 
 ### Color
 
-`Color` is `#[repr(C)]` and derives `bytemuck::Pod`/`Zeroable` so it can go straight into a GPU vertex buffer:
+`Color` is `#[repr(C)]` and derives `bytemuck::Pod` and `Zeroable`, so you can put it right into a GPU vertex buffer
 
 ```rust
 Color::rgb(255, 128, 0);
@@ -467,20 +471,20 @@ let sunset = Fill::Gradient(Gradient {
 });
 ```
 
-Supported kinds: `GradientKind::Linear { angle }`, `Radial { center, radius }`, `Conic { center }`. Gradients are cached in a GPU ramp atlas by content hash, so reusing the same definition across frames is free.
+You've got `GradientKind::Linear { angle }`, `Radial { center, radius }` and `Conic { center }`. Gradients get cached in a GPU atlas by their content, so using the same one every frame costs basically nothing.
 
-Images work the same way as a solid color or gradient, load once, then use anywhere a `Fill` is expected:
+Images work just like colors and gradients. Load it once and then use it anywhere you'd use a `Fill`
 
 ```rust
 let logo = ui.load_image("assets/logo.png"); // PNG/JPEG/WebP via the `image` crate
 let fill = Fill::Image(logo);
 ```
 
-`ImageHandle::width()` / `height()` / `size()` return the image's natural pixel dimensions, handy for sizing a widget to match it.
+`ImageHandle::width()`, `height()` and `size()` give you the image size in pixels. That's handy if you want a widget to be the same size as the image.
 
 ### Custom Shapes / Paths
 
-Every built-in widget draws a rounded rect or an ellipse (`MeasurablePath::Rect` / `Ellipse`), but the renderer also supports arbitrary shapes via `MeasurablePath::Free(BezPath)`, using [`kurbo`](https://docs.rs/kurbo)'s `BezPath` for the outline:
+All the built in widgets draw either a rounded rect or an ellipse (`MeasurablePath::Rect` or `Ellipse`). But the renderer can also draw any shape you want with `MeasurablePath::Free(BezPath)`. The outline is a `BezPath` from [`kurbo`](https://docs.rs/kurbo)
 
 ```rust
 use glacex::{Color, Fill, MeasurablePath};
@@ -503,11 +507,17 @@ ui.draw_shape(
 );
 ```
 
-Free paths are tessellated on the CPU (flatten + ear-clip) into a triangle mesh and rendered through a second, non-instanced pipeline, separate from the SDF pipeline that draws every rect/ellipse. Solid and gradient fills are supported (gradient color is evaluated per vertex, so it's exact for `Linear` and a close approximation for `Radial`/`Conic`, finer curves tessellate into more vertices and sharpen it further); `Fill::Image` isn't supported on a `Free` path yet and renders transparent, same as `GradientKind::Mesh`. Borders are drawn as a separately tessellated stroke outline (via `kurbo::stroke`), so they read as a classic SVG-style outline around the shape rather than the inset border used by rect/ellipse widgets. Free-path shapes are batched and clipped the same way as everything else, but currently always draw after all rect/ellipse shapes within the same frame, paint-order interleaving with them isn't implemented yet. Only the outer contour of a self-intersecting or multi-hole path is filled correctly; simple (non-self-intersecting) contours are the supported case.
+Free paths get turned into triangles on the CPU and drawn with their own pipeline, not the SDF one that rects and ellipses use.
+
+Solid and gradient fills both work. The gradient color is worked out per vertex, so `Linear` looks exactly right and `Radial` and `Conic` are pretty close. Curvier shapes have more vertices so they look even better. `Fill::Image` doesn't work on free paths yet and just shows up transparent, same as `GradientKind::Mesh`.
+
+Borders are drawn as a separate outline around the shape with `kurbo::stroke`. So it looks like an SVG stroke, not like the inset border that rect and ellipse widgets have.
+
+Free paths get batched and clipped like everything else. Right now though they always draw after all the rects and ellipses in the frame, mixing the draw order isn't done yet. Also only simple shapes work properly. If your path crosses itself or has holes, only the outer edge gets filled right.
 
 ### Theme
 
-9 built-in palettes, switchable at runtime with `ui.set_theme(...)`.
+There are 9 built in themes and you can switch between them at runtime with `ui.set_theme(...)`
 
 ```rust
 ui.set_theme(Theme::LIGHT);
@@ -552,7 +562,7 @@ ui.set_theme(Theme::LIGHT); // also updates the window background color
 
 ## Accessibility
 
-glacex can expose its widget tree to assistive technology through [`accesskit`](https://accesskit.dev/), AT-SPI on Linux, UIA on Windows, NSAccessibility on macOS. It's disabled by default; turn it on when building the app:
+glacex can show its widgets to screen readers and other assistive tech through [`accesskit`](https://accesskit.dev/). That's AT-SPI on Linux, UIA on Windows and NSAccessibility on macOS. It's off by default, so you have to turn it on when you make the app
 
 ```rust
 App::new(root_widget)
@@ -560,7 +570,7 @@ App::new(root_widget)
     .run();
 ```
 
-Widgets pick up a role and label automatically where it makes sense (`Button`, `Checkbox`, `TextInput`, ...). It's been checked against Orca and Accerciser on Arch Linux.
+Widgets like `Button`, `Checkbox` and `TextInput` get a role and a label on their own. I've tested it with Orca and Accerciser on Arch Linux.
 
 ## Examples
 
@@ -586,19 +596,19 @@ cargo run --example themes
 
 ## Known Limitations
 
-- `GradientKind::Mesh` is reserved but not implemented yet: it currently falls back to transparent. Use Linear, Radial, or Conic.
-- `Fill::Image` shares one atlas slot with no packing/eviction yet, so only one image is supported at a time. A real atlas packer is planned for 0.2.0.
-- `MeasurablePath::Free` (see [Custom Shapes / Paths](#custom-shapes--paths)) doesn't support `Fill::Image`, blur/shadow, or holes/self-intersection, and doesn't interleave paint order with rect/ellipse shapes sharing the same clip rect: it always draws after them.
+- `GradientKind::Mesh` is there but doesn't do anything yet. It just draws transparent, so use Linear, Radial or Conic for now.
+- `Fill::Image` only has one atlas slot and no packing, so you can only use one image at a time. A proper atlas packer is planned for 0.2.0.
+- `MeasurablePath::Free` doesn't support `Fill::Image`, blur, shadows, holes or paths that cross themselves. It also always draws after rects and ellipses in the same clip rect. More about it in [Custom Shapes / Paths](#custom-shapes--paths).
 
 ## Documentation
 
-- [Architecture & Rendering](docs/architecture.md): `wgpu`, SDF shaders, the frame lifecycle.
-- [Widget Reference](docs/widgets.md): every widget, its constructor, and its builder methods.
-- [Layout Guide](docs/layout.md): flexbox mechanics with `taffy`.
+- [Architecture & Rendering](docs/architecture.md) is about `wgpu`, the SDF shaders and how a frame works
+- [Widget Reference](docs/widgets.md) has every widget with its constructor and builder methods
+- [Layout Guide](docs/layout.md) explains how flexbox works with `taffy`
 
 ## Contributing
 
-Bug reports and PRs are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md) for coding standards and the PR checklist.
+Bug reports and PRs are always welcome. Have a look at [CONTRIBUTING.md](CONTRIBUTING.md) for the code style and what to check before opening a PR.
 
 ## License
 
@@ -608,9 +618,9 @@ Copyright (c) 2026 Artem Tsitronov and Glacex contibutors.
 
 ## If you scrolled far enough to see this
 
-Thank you! Please, star this project, or download it in cargo.
-Either way it makes my day!
-I would love to hear feedback from you, or criticism.
-Any help is highly appreciated.
+Thank you! Please star the project or grab it from crates.io.
+Either way it really makes my day!
+I'd love to hear any feedback from you, criticism too.
+Any help means a lot.
 
 - Artem Tsitronov
