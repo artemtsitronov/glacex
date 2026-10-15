@@ -27,7 +27,7 @@ impl Widget for DemoApp {
 
     fn on_start(&mut self, ui: &mut Ui) {
         // We load an image in our state using ui.load_image().
-        self.kitty_image = Some(ui.load_image("assets/demo_images/1.jpg"));
+        self.kitty_image = ui.load_image("assets/demo_images/1.jpg").ok();
     }
 
     fn ui(&mut self, ui: &mut Ui) {

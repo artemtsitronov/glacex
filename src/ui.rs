@@ -7,6 +7,7 @@ use crate::theme::Theme;
 use crate::widget::{Accessible, FocusId, Widget, is_anonymous};
 use crate::{ImageHandle, TextStyle};
 use accesskit::{Node, NodeId};
+use image::ImageError;
 use std::any::Any;
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -141,8 +142,8 @@ impl Ui {
         }
     }
 
-    pub fn load_image(&mut self, path: &str) -> ImageHandle {
-        self.painter.load_image(path).expect("Failed to load image")
+    pub fn load_image(&mut self, path: &str) -> Result<ImageHandle, ImageError> {
+        self.painter.load_image(path)
     }
 
     pub fn load_font(&mut self, path: impl AsRef<Path>) -> Result<(), FontError> {
