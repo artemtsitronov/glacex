@@ -1,6 +1,6 @@
 use crate::color::Color;
 use crate::fill::{Fill, Gradient, GradientHandle, GradientKind, GradientStop};
-use crate::path_sdf_atlas::PathSdfAtlas;
+use crate::path_sdf_atlas::{PathSdfAtlas, ShelfPacker};
 use crate::shapes::{QUAD_VERTICES, QuadVertex, ShapeInstance};
 use crate::tessellate::{FLATTEN_TOLERANCE, flatten_polyline};
 use crate::text::{FontError, FontFamily, FontWeight};
@@ -9,7 +9,8 @@ use glyphon::{
     Attrs, Cache, FontSystem, Metrics, Resolution, Shaping, SwashCache, TextArea, TextAtlas,
     TextBounds, TextRenderer, Viewport,
 };
-use image::{ImageError, ImageReader};
+use image::error::{LimitError, LimitErrorKind};
+use image::{ImageError, ImageReader, RgbaImage};
 use kurbo::{BezPath, PathEl, Shape as KurboShape};
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -37,7 +38,8 @@ struct CachedText {
 }
 
 const TEXT_CACHE_EVICTION_FRAME: u64 = 180;
-const IMAGE_ATLAS_SIZE: f32 = 2048.0;
+const IMAGE_ATLAS_MAX_SIZE: u32 = 4096;
+const IMAGE_ATLAS_PADDING: u32 = 1;
 
 fn hash_bezpath(path: &BezPath) -> u64 {
     let mut hasher = DefaultHasher::new();
@@ -228,15 +230,19 @@ struct ImageAtlas {
     texture: wgpu::Texture,
     texture_view: wgpu::TextureView,
     sampler: wgpu::Sampler,
+    size: u32,
+    packer: ShelfPacker,
+    cache: HashMap<std::path::PathBuf, ImageHandle>,
 }
 
 impl ImageAtlas {
     pub fn new(device: &wgpu::Device) -> Self {
+        let size = IMAGE_ATLAS_MAX_SIZE.min(device.limits().max_texture_dimension_2d);
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("image atlas"),
             size: wgpu::Extent3d {
-                width: 2048,
-                height: 2048,
+                width: size,
+                height: size,
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,
@@ -261,7 +267,51 @@ impl ImageAtlas {
             texture,
             texture_view,
             sampler,
+            size,
+            packer: ShelfPacker::with_size(size),
+            cache: HashMap::new(),
         }
+    }
+
+    pub fn insert(
+        &mut self,
+        queue: &wgpu::Queue,
+        rgba: RgbaImage,
+    ) -> Result<ImageHandle, ImageError> {
+        let (width, height) = rgba.dimensions();
+        let max_side = self.size - IMAGE_ATLAS_PADDING * 2;
+        let rgba = if width > max_side || height > max_side {
+            let scale = max_side as f32 / width.max(height) as f32;
+            let new_w = ((width as f32 * scale) as u32).clamp(1, max_side);
+            let new_h = ((height as f32 * scale) as u32).clamp(1, max_side);
+            image::imageops::resize(&rgba, new_w, new_h, image::imageops::FilterType::Triangle)
+        } else {
+            rgba
+        };
+        let (w, h) = rgba.dimensions();
+
+        let (x, y) = self
+            .packer
+            .alloc(w + IMAGE_ATLAS_PADDING * 2, h + IMAGE_ATLAS_PADDING * 2)
+            .ok_or_else(|| {
+                ImageError::Limits(LimitError::from_kind(LimitErrorKind::InsufficientMemory))
+            })?;
+        let x = x + IMAGE_ATLAS_PADDING;
+        let y = y + IMAGE_ATLAS_PADDING;
+
+        self.write_region(queue, x, y, w, h, rgba.as_raw());
+
+        let size = self.size as f32;
+        Ok(ImageHandle {
+            atlas_uv: [
+                (x as f32 + 0.5) / size,
+                (y as f32 + 0.5) / size,
+                ((x + w) as f32 - 0.5) / size,
+                ((y + h) as f32 - 0.5) / size,
+            ],
+            width,
+            height,
+        })
     }
 
     pub fn write_region(
@@ -708,25 +758,15 @@ impl Painter {
     }
 
     pub fn load_image(&mut self, path: &str) -> Result<ImageHandle, ImageError> {
-        let img = ImageReader::open(path)?.decode()?;
-        let rgba = img.into_rgba8();
-        self.image_atlas.write_region(
-            &self.queue,
-            0,
-            0,
-            rgba.width(),
-            rgba.height(),
-            rgba.as_raw(),
-        );
+        let key = std::fs::canonicalize(path).unwrap_or_else(|_| path.into());
+        if let Some(handle) = self.image_atlas.cache.get(&key) {
+            return Ok(*handle);
+        }
 
-        let u1 = rgba.width() as f32 / IMAGE_ATLAS_SIZE;
-        let v1 = rgba.height() as f32 / IMAGE_ATLAS_SIZE;
-
-        Ok(ImageHandle {
-            atlas_uv: [0.0, 0.0, u1, v1],
-            width: rgba.width(),
-            height: rgba.height(),
-        })
+        let rgba = ImageReader::open(path)?.decode()?.into_rgba8();
+        let handle = self.image_atlas.insert(&self.queue, rgba)?;
+        self.image_atlas.cache.insert(key, handle);
+        Ok(handle)
     }
 
     #[allow(clippy::too_many_arguments)]

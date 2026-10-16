@@ -27,21 +27,39 @@ fn f32_to_f16_bits(value: f32) -> u16 {
     }
 }
 
-#[derive(Default)]
 pub struct ShelfPacker {
+    size: u32,
     cursor_x: u32,
     cursor_y: u32,
     shelf_height: u32,
 }
 
+impl Default for ShelfPacker {
+    fn default() -> Self {
+        ShelfPacker::with_size(ATLAS_SIZE)
+    }
+}
+
 impl ShelfPacker {
+    pub fn with_size(size: u32) -> Self {
+        ShelfPacker {
+            size,
+            cursor_x: 0,
+            cursor_y: 0,
+            shelf_height: 0,
+        }
+    }
+
     pub fn alloc(&mut self, w: u32, h: u32) -> Option<(u32, u32)> {
-        if self.cursor_x + w > ATLAS_SIZE {
+        if w > self.size {
+            return None;
+        }
+        if self.cursor_x + w > self.size {
             self.cursor_x = 0;
             self.cursor_y += self.shelf_height;
             self.shelf_height = 0;
         }
-        if self.cursor_y + h > ATLAS_SIZE {
+        if self.cursor_y + h > self.size {
             return None;
         }
         let pos = (self.cursor_x, self.cursor_y);
@@ -222,5 +240,18 @@ mod tests {
         let second = packer.alloc(1500, 100).unwrap();
         assert_eq!(first, (0, 0));
         assert_eq!(second.1, 100);
+    }
+
+    #[test]
+    fn packs_multiple_items_in_custom_size() {
+        let mut packer = ShelfPacker::with_size(4096);
+        let first = packer.alloc(2050, 1367).unwrap();
+        let second = packer.alloc(2050, 1367).unwrap();
+        let third = packer.alloc(1000, 1000).unwrap();
+        assert_eq!(first, (0, 0));
+        assert_eq!(second, (0, 1367));
+        assert_eq!(third, (2050, 1367));
+        assert!(packer.alloc(2050, 1367).is_none());
+        assert!(packer.alloc(5000, 10).is_none());
     }
 }

@@ -110,7 +110,7 @@ Or put it in your `Cargo.toml`
 
 ```toml
 [dependencies]
-glacex = "0.2.0"
+glacex = "0.2.1"
 ```
 
 ### From GitHub (main branch)
@@ -597,7 +597,6 @@ cargo run --example themes
 ## Known Limitations
 
 - `GradientKind::Mesh` is there but doesn't do anything yet. It just draws transparent, so use Linear, Radial or Conic for now.
-- `Fill::Image` only has one atlas slot and no packing, so you can only use one image at a time. A proper atlas packer is planned for 0.2.0.
 - `MeasurablePath::Free` doesn't support `Fill::Image`, blur, shadows, holes or paths that cross themselves. It also always draws after rects and ellipses in the same clip rect. More about it in [Custom Shapes / Paths](#custom-shapes--paths).
 
 ## Documentation

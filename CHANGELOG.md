@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.2.1]
+
+### Fixed
+- `Fill::Image` supports more than one image at a time. `Ui::load_image` used to write every image to the same corner of the image atlas, so each new load overwrote the previous one. Images are now shelf-packed into the atlas (up to 4096x4096, or the device's limit if lower) with 1px padding and half-texel UV insets, so neighbouring images don't bleed into each other.
+- Images larger than the atlas are downscaled to fit instead of failing in `wgpu`; `ImageHandle` still reports the original size.
+- `Ui::load_image` returns the existing handle when the same file is loaded again, so calling it more than once doesn't use up atlas space.
+- `Ui::load_image` returns `ImageError::Limits` (`InsufficientMemory`) when the atlas is full.
+
+## [0.2.0]
+
 ### Added
 - `MeasurablePath::Free(BezPath)` now actually renders. Free paths are tessellated on the CPU (flatten + ear-clip triangulation) and drawn through a new, second render pipeline (`vs_mesh`/`fs_mesh` in `shader.wgsl`) alongside the existing SDF quad pipeline. Supports solid and gradient fills (gradient color evaluated per vertex) and borders (drawn as a separately tessellated `kurbo::stroke` outline). `Fill::Image` and blur/shadow aren't supported on `Free` paths yet: see README's Known Limitations.
 
