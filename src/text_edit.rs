@@ -357,26 +357,28 @@ impl TextEditState {
             self.cursor = self.text.chars().count();
         }
 
-        if ui.ctrl_held() && ctrl_c {
-            if let Some((start, end)) = self.selection_range() {
-                let start_byte = self.byte_index_for(start);
-                let end_byte = self.byte_index_for(end);
-                let selected = &self.text[start_byte..end_byte];
-                ui.copy_to_clipboard(selected);
-            }
+        if ui.ctrl_held()
+            && ctrl_c
+            && let Some((start, end)) = self.selection_range()
+        {
+            let start_byte = self.byte_index_for(start);
+            let end_byte = self.byte_index_for(end);
+            let selected = &self.text[start_byte..end_byte];
+            ui.copy_to_clipboard(selected);
         }
 
-        if ui.ctrl_held() && ctrl_v {
-            if let Some(pasted) = ui.paste_from_clipboard() {
-                let pasted: String = pasted.chars().filter(|c| !c.is_control()).collect();
-                if let Some((start, end)) = self.selection_range() {
-                    self.delete_range(start, end);
-                }
-                let idx = self.byte_index();
-                self.text.insert_str(idx, &pasted);
-                self.cursor += pasted.chars().count();
-                self.selection_anchor = None;
+        if ui.ctrl_held()
+            && ctrl_v
+            && let Some(pasted) = ui.paste_from_clipboard()
+        {
+            let pasted: String = pasted.chars().filter(|c| !c.is_control()).collect();
+            if let Some((start, end)) = self.selection_range() {
+                self.delete_range(start, end);
             }
+            let idx = self.byte_index();
+            self.text.insert_str(idx, &pasted);
+            self.cursor += pasted.chars().count();
+            self.selection_anchor = None;
         }
     }
 
