@@ -216,6 +216,12 @@ impl TextInput {
     }
 }
 
+impl Default for TextInput {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 style_overrides!(TextInput);
 
 impl Widget for TextInput {
