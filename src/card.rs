@@ -253,10 +253,8 @@ impl<'a> Measurable for Card<'a> {
         let weights =
             StateWeights::IDLE.hovered(animate_hover(ui, &self.id, hovered, style.hover_motion));
 
-        if hovered {
-            if let Some(cursor) = style.cursor.resolve(StateWeights::IDLE.hovered(1.0)) {
-                ui.set_cursor_icon(cursor);
-            }
+        if hovered && let Some(cursor) = style.cursor.resolve(StateWeights::IDLE.hovered(1.0)) {
+            ui.set_cursor_icon(cursor);
         }
 
         let path = style.path.resolve(weights);

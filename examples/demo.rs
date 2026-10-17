@@ -303,12 +303,11 @@ impl Widget for DemoApp {
             self.current_theme_idx = (self.current_theme_idx + 1) % themes.len();
         }
 
-        if let Some(idx_str) = theme_select.selected(ui) {
-            if let Ok(idx) = idx_str.parse::<usize>() {
-                if idx < themes.len() {
-                    self.current_theme_idx = idx;
-                }
-            }
+        if let Some(idx_str) = theme_select.selected(ui)
+            && let Ok(idx) = idx_str.parse::<usize>()
+            && idx < themes.len()
+        {
+            self.current_theme_idx = idx;
         }
     }
 }

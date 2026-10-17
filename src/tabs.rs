@@ -319,10 +319,10 @@ impl Measurable for Tabs {
 
         let tabs = self.layout_tabs(ui, &style);
 
-        if ui.selected_option(&self.id).is_none() {
-            if let Some(first) = self.items.first() {
-                ui.select(&self.id, &first.id);
-            }
+        if ui.selected_option(&self.id).is_none()
+            && let Some(first) = self.items.first()
+        {
+            ui.select(&self.id, &first.id);
         }
         let previous_selected = ui.selected_option(&self.id).map(|s| s.to_string());
 
