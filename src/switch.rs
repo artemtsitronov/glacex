@@ -198,6 +198,12 @@ impl Switch {
     }
 }
 
+impl Default for Switch {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 style_overrides!(Switch);
 
 impl Widget for Switch {

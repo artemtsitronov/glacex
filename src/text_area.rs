@@ -239,6 +239,12 @@ impl TextArea {
     }
 }
 
+impl Default for TextArea {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 style_overrides!(TextArea);
 
 impl Widget for TextArea {

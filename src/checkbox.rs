@@ -194,6 +194,12 @@ impl Checkbox {
     }
 }
 
+impl Default for Checkbox {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 style_overrides!(Checkbox);
 
 impl Widget for Checkbox {
