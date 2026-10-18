@@ -726,8 +726,8 @@ impl Measurable for TextArea {
             let base = ls[first];
             let tokens = h.paint(base..line_end(last - 1));
 
-            for i in first..last {
-                let (s, e) = (ls[i], line_end(i));
+            for (i, &s) in ls.iter().enumerate().take(last).skip(first) {
+                let e = line_end(i);
                 if s == e {
                     continue;
                 }
