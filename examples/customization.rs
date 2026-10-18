@@ -1,7 +1,6 @@
 use glacex::{
-    App, Card, CardStyle, Color, Edge, Fill, MeasurablePath, Motion, Path, ScrollConfig,
-    ScrollView, ScrollViewStyle, ShadowStyle, Shape, TabItem, Tabs, TabsStyle, Theme, Ui, Widget,
-    column, row,
+    App, Card, CardStyle, Fill, MeasurablePath, Motion, Path, ScrollConfig, ScrollView,
+    ScrollViewStyle, TabItem, Tabs, TabsStyle, Theme, Ui, Widget, column, row,
 };
 use kurbo::BezPath;
 

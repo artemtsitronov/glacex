@@ -35,7 +35,7 @@ impl EditorFile {
     }
 
     pub fn cursor(&self) -> usize {
-        self.cursor.clone()
+        self.cursor
     }
 
     pub fn set_cursor(&mut self, cursor: usize) {
@@ -43,7 +43,7 @@ impl EditorFile {
     }
 
     pub fn selection_anchor(&self) -> Option<usize> {
-        self.selection_anchor.clone()
+        self.selection_anchor
     }
 
     pub fn set_selection_anchor(&mut self, selection_anchor: Option<usize>) {
