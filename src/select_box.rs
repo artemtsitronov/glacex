@@ -854,7 +854,6 @@ impl Measurable for SelectBox {
                 let item_pos = [dropdown_pos[0] + item_inset_x, item_y];
                 let item_size = [dropdown_size[0] - item_inset_x * 2.0, item_height];
 
-                // hit test only the visible part, scrolled out rows can sit under the trigger
                 let item_hovered = mouse_pos[0] >= item_pos[0]
                     && mouse_pos[0] <= item_pos[0] + item_size[0]
                     && mouse_pos[1] >= item_pos[1].max(items_clip[1])
