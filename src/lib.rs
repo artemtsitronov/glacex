@@ -216,10 +216,10 @@ impl<W: Widget> ApplicationHandler for App<W> {
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
-        if let Some(adapter) = &mut self.accesskit_adapter {
-            if let Some(window) = &self.window {
-                adapter.process_event(window, &event);
-            }
+        if let Some(adapter) = &mut self.accesskit_adapter
+            && let Some(window) = &self.window
+        {
+            adapter.process_event(window, &event);
         }
 
         let ui = match self.ui.as_mut() {

@@ -445,7 +445,8 @@ impl Measurable for SelectBox {
             }
         }
 
-        if trigger_hovered && mouse_pressed_frame {
+        let trigger_clicked = trigger_hovered && mouse_pressed_frame;
+        if trigger_clicked {
             if state.open {
                 state.open = false;
                 state.keyboard_index = -1;
@@ -841,8 +842,8 @@ impl Measurable for SelectBox {
 
                 let item_hovered = mouse_pos[0] >= item_pos[0]
                     && mouse_pos[0] <= item_pos[0] + item_size[0]
-                    && mouse_pos[1] >= item_pos[1]
-                    && mouse_pos[1] <= item_pos[1] + item_size[1]
+                    && mouse_pos[1] >= item_pos[1].max(items_clip[1])
+                    && mouse_pos[1] <= (item_pos[1] + item_size[1]).min(items_clip[3])
                     && !mouse_blocked_by_others;
 
                 let is_keyboard_focused = state.keyboard_index == list_idx as i32;
@@ -863,7 +864,7 @@ impl Measurable for SelectBox {
                 }
                 let item_hover_t = state.item_hover_ts.get(opt_idx).copied().unwrap_or(0.0);
 
-                if item_hovered && mouse_pressed_frame {
+                if item_hovered && mouse_pressed_frame && state.open && !trigger_clicked {
                     state.selected = Some(self.options[opt_idx].value.clone());
                     state.open = false;
                     state.keyboard_index = -1;

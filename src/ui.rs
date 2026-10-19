@@ -600,7 +600,10 @@ impl Ui {
         self.cursor_icon_set_this_frame = false;
         self.pending_tooltip = None;
 
-        if self.frame_index % ANONYMOUS_STATE_LIFETIME_FRAMES == 0 {
+        if self
+            .frame_index
+            .is_multiple_of(ANONYMOUS_STATE_LIFETIME_FRAMES)
+        {
             self.prune_anonymous_state();
         }
         self.frame_index += 1;

@@ -148,8 +148,7 @@ impl PathSdfAtlas {
         queue: &Queue,
         field: Vec<[f32; 2]>,
         bounds: Rect,
-        w: u32,
-        h: u32,
+        (w, h): (u32, u32),
         key: u64,
         total_length: f32,
     ) -> PathSdfHandle {
@@ -206,7 +205,7 @@ impl PathSdfAtlas {
             .map(|d| [d, 0.0])
             .collect();
 
-        self.upload_and_cache(queue, field, bounds, w, h, key, NO_LENGTH)
+        self.upload_and_cache(queue, field, bounds, (w, h), key, NO_LENGTH)
     }
 
     pub fn bake_open_cached(
@@ -225,7 +224,7 @@ impl PathSdfAtlas {
         let (field, total_length) =
             bake_open_sdf(centerline, thickness, bounds, w as usize, h as usize);
 
-        self.upload_and_cache(queue, field, bounds, w, h, key, total_length)
+        self.upload_and_cache(queue, field, bounds, (w, h), key, total_length)
     }
 }
 
