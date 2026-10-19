@@ -2,6 +2,7 @@
 
 // long story short:
 pub mod accessibility;
+pub mod accordion;
 pub mod alignment;
 pub mod animation;
 pub mod badge;
@@ -15,6 +16,7 @@ pub mod expanded;
 pub mod fill;
 pub mod geometry;
 pub mod highlight;
+pub mod icons;
 pub mod interaction;
 pub mod label;
 pub mod layout;
@@ -43,6 +45,7 @@ pub mod ui;
 pub mod widget;
 
 pub use accessibility::*;
+pub use accordion::*;
 pub use alignment::*;
 pub use animation::*;
 pub use badge::*;
@@ -56,6 +59,7 @@ pub use expanded::*;
 pub use fill::*;
 pub use geometry::*;
 pub use highlight::*;
+pub use icons::*;
 pub use interaction::*;
 pub use label::*;
 pub use layout::*;
@@ -83,7 +87,7 @@ pub use theme::*;
 pub use ui::*;
 pub use widget::*;
 pub use winit::window::CursorIcon;
-// and that's the Harry Potter plot
+// ...and that's the Harry Potter plot
 
 use accesskit_winit::Adapter;
 use std::sync::Arc;

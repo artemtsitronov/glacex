@@ -420,7 +420,7 @@ impl Measurable for Button {
         let padding = style.padding.resolve(weights);
         let text_width = ui.measure_text(&self.label, text_style);
         let text_position = align_text_in(
-            draw_position,
+            [draw_position[0].round(), draw_position[1].round()],
             draw_size,
             text_width,
             text_style.line_height,

@@ -28,6 +28,7 @@ Use these when you need the whole state struct, like when you're changing a few 
 | `ScrollView` | `.offset(ui) -> [f32; 2]` | `.set_offset(ui, [f32; 2])` |
 | `SelectBox` | `.selected(ui) -> Option<String>` | `.set_selected(ui, Option<String>)` |
 | `TextInput` / `TextArea` | `.text(ui) -> String` | `.set_text(ui, String)` |
+| `Accordion` | `.is_open(ui, index) -> bool` | `.set_open(ui, index, bool)` |
 
 `Ui::widget_state`, `take_widget_state` and `put_widget_state` are still there underneath, and the widget methods above just call them. You can use them yourself for state that doesn't belong to one widget. For example `examples/demo.rs` keeps a plain `TripleToggleOrder` struct this way to remember which of the three switches was turned on last.
 
@@ -153,6 +154,25 @@ A container that scrolls and has a scrollbar you can drag.
 - **Constructor** `ScrollView::new(&mut child)`
 - **Builder methods** `.id("...")`, `.size([w, h])`, `.padding([x, y])`, `.default_offset([x, y])` and `.style(ScrollViewStyle)`
 - **Reading and writing state** `scroll.offset(ui) -> [f32; 2]` and `scroll.set_offset(ui, [f32; 2])`
+
+### Accordion
+A list of sections you can open and close by clicking their header.
+- Only one section is open at a time, unless you call `.multiple()`
+- `Enter` or `Space` toggles the focused header, and the arrow keys, `Home` and `End` move between them
+- **Constructor** `Accordion::new(vec![AccordionItem::new("Title", &mut content), ...])`
+- **Item methods** `.id("...")` and `.default_open(bool)`. Items without an id are kept by their index
+- **Builder methods** `.id("...")`, `.width(px)`, `.multiple()`, `.text_style(TextStyle)` and `.style(AccordionStyle)` with the preset `AccordionStyle::filled`
+- **Reading and writing state** `accordion.is_open(ui, index) -> bool` and `accordion.set_open(ui, index, bool)`
+- **Animation** A spring (stiffness 380 and damping 30) opens and closes each section and turns the chevron. Headers fade on hover with `Motion::SNAPPY`.
+
+```rust
+let mut content = Label::new("Inside");
+Accordion::new(vec![
+    AccordionItem::new("Section", &mut content).default_open(true),
+])
+.id("accordion")
+.ui(ui);
+```
 
 ### Container
 Wraps a child widget in a box with a fixed size.

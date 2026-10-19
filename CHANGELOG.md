@@ -2,7 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
-## [Unreleased]
+## [0.2.2]
+
+### Fixed
+- `Button` text was changing the position slightly when clicked, also with delay, due to the `draw_position` variable being a float. It was fixed by rounding it in the text position calculations. Thanks @BadMachine.
+
+### Added
+- `Accordion` widget. It's a list of sections with a header you click to open or close, and the content slides open with a spring. Only one section is open at a time unless you call `.multiple()`. Works with the keyboard too, so `Enter` or `Space` toggles and the arrow keys, `Home` and `End` move between headers.
 
 ## [0.2.1]
 

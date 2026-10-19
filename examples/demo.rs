@@ -1,4 +1,7 @@
-use glacex::*;
+use glacex::{
+    accordion::{Accordion, AccordionItem},
+    *,
+};
 
 // First of all, we create out application state struct
 struct DemoApp {
@@ -122,6 +125,22 @@ impl Widget for DemoApp {
             .placeholder("Select theme...")
             .width(200.0);
 
+        let mut accordion_item1_label = Label::new("Hey, this is a label");
+        let mut accordion_item1_checkbox = Checkbox::new().id("chb0x"); // hehe, hacker stuff
+        let mut accordion_item1_content =
+            glacex::column![&mut accordion_item1_label, &mut accordion_item1_checkbox];
+
+        let mut accordion_item2_label = Label::new("Hey, this is a label");
+        let mut accordion_item2_checkbox = Checkbox::new().id("chb0x"); // hehe, hacker stuff
+        let mut accordion_item2_content =
+            glacex::column![&mut accordion_item2_label, &mut accordion_item2_checkbox];
+
+        let mut accordion = Accordion::new(vec![
+            AccordionItem::new("Accordion Item 1", &mut accordion_item1_content),
+            AccordionItem::new("Accordion Item 2", &mut accordion_item2_content),
+        ])
+        .id("accordion");
+
         let kitty_image = self.kitty_image.unwrap();
 
         {
@@ -144,12 +163,6 @@ impl Widget for DemoApp {
                             &mut Card::new(
                                 &mut ScrollView::new(
                                     &mut glacex::column![
-                                        &mut Card::new(&mut Label::new("Kitty!"))
-                                            .style(CardStyle {
-                                                fill: Fill::Image(kitty_image).into(),
-                                                ..CardStyle::subtle(ui.theme())
-                                            })
-                                            .size(kitty_image.scale(0.2)),
                                         &mut row![
                                             &mut Badge::new("Badge").variant(BadgeVariant::Outline),
                                             &mut Badge::new("Success").success(),
@@ -240,6 +253,7 @@ impl Widget for DemoApp {
                                         .align(Alignment::Center)
                                         .spacing(100.0),
                                         &mut theme_select,
+                                        &mut accordion,
                                         &mut TextInput::new()
                                             .id("text_input")
                                             .placeholder("Here goes text."),

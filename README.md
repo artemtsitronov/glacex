@@ -23,6 +23,8 @@ If you have any questions or problems, just email me at <artemtsitronov@gmail.co
 > **Status**: 0.2.0 is a lot more stable than before and I'm not planning any big API changes.
 If something big does change, I'll let you know first.
 
+> **Warning**: In the next version, a `BorderStyle` struct is planned, to replace `border_width` and `border_color`, as well as adding stroke types. In 0.2.3 `border_width` and `border_color` will become deprecated, and will be removed by 0.2.5.
+
 ## Table of Contents
 
 - [What is glacex?](#what-is-glacex)
@@ -84,7 +86,7 @@ There's no retained widget tree and no markup. You just write your UI in normal 
 - `Color` is `#[repr(C)]` and `Pod`/`Zeroable`, so it goes straight into vertex buffers. You can make colors from hex, RGB or HSV, and blend, lerp, lighten or darken them.
 - The cursor changes on hover (pointer, text, resize or default).
 - Tooltips that float above everything and stay inside the window.
-- Widgets: `Button`, `Checkbox`, `RadioButton`, `Switch`, `Slider`, `ProgressBar`, `TextInput`, `TextArea`, `ScrollView`, `Card`, `Container`, `Badge`, `Divider`, `Label`, `SelectBox`, `Tabs`.
+- Widgets: `Button`, `Checkbox`, `RadioButton`, `Switch`, `Slider`, `ProgressBar`, `TextInput`, `TextArea`, `ScrollView`, `Card`, `Container`, `Badge`, `Divider`, `Label`, `SelectBox`, `Tabs`, `Accordion`.
 - `row![]` and `column![]` macros that use `taffy`, with alignment and spacing.
 - Input stuff like hover, press and click, right and middle mouse buttons, Tab and Shift+Tab focus, double click to select a word and triple click for a line, clipboard through `arboard` and a blinking cursor.
 - Widgets get rebuilt every frame, but their state sticks around because it's saved under a string id. Every stateful widget has `.state(ui)`, `.take_state(ui)` and `.put_state(ui, state)` from the `StatefulWidget` trait. Most of them also have simple helpers like `checkbox.is_checked(ui)` or `slider.value(ui)`. Check out [Widgets](#widgets) for more. Underneath all that are `Ui::widget_state`, `take_widget_state` and `put_widget_state`, which you can use for state that doesn't belong to one widget.
@@ -110,7 +112,7 @@ Or put it in your `Cargo.toml`
 
 ```toml
 [dependencies]
-glacex = "0.2.1"
+glacex = "0.2.2"
 ```
 
 ### From GitHub (main branch)
@@ -347,6 +349,9 @@ ScrollView::new(&mut child_column)
     .arrange_at([20.0, 20.0], ui);
 ```
 
+#### Accordion
+- `Accordion::new(vec![AccordionItem::new("Title", &mut content)])` stacks sections you can open and close. Add `.multiple()` if more than one can be open at once
+
 #### Container & Divider
 - `Container::new(&mut child).size([w, h])` wraps a child in a box with a fixed size
 - `Divider::horizontal(width)` and `Divider::vertical(height)` draw a separator line. Add `.faint()` if you want it lighter
@@ -423,9 +428,10 @@ A few things that work the same in every style
 | `SelectBoxStyle` | `SelectBox` | `fill`†, `text_style`†, `placeholder_color`†, `border_width`†, `border_color`†, `shadow`†, `height`†, `padding_x`†, `show_chevron`, `chevron_color`†, `chevron_size`†, `chevron_thickness`†, `chevron_open_angle`†, `chevron_space`†, `dropdown_fill`†, `dropdown_border_width`†, `dropdown_border_color`†, `dropdown_padding`†, `dropdown_max_height`†, `dropdown_screen_margin`†, `dropdown_shadow`†, `item_height`†, `item_inset_x`†, `item_padding_x`†, `item_fill`†, `item_text_style`†, `item_corner_radius`†, `show_check`, `check_color`†, `check_thickness`†, `searchable`, `search_height`†, `search_gap`†, `search_padding_x`†, `search_fill`†, `search_border_width`†, `search_border_color`†, `search_corner_radius`†, `search_text_style`†, `search_placeholder`, `sharp`, `path`†, `hover_motion`, `focus_motion`, `chevron_motion`, `item_hover_motion`, `open_stiffness`, `open_damping`, `cursor`† |
 | `TabsStyle` | `Tabs` | `height`†, `tab_padding_x`†, `tab_min_width`†, `gap`†, `padding_x`†, `fill`†, `border_width`†, `border_color`†, `shadow`†, `text_style`†, `tab_fill`†, `indicator_fill`†, `indicator`, `indicator_border_width`†, `indicator_border_color`†, `indicator_shadow`†, `pill_inset_y`†, `sharp`, `path`†, `indicator_path`†, `tab_path`†, `hover_motion`, `indicator_motion`, `cursor`† |
 | `DividerStyle` | `Divider` | `fill`†, `thickness`†, `margin`†, `inset`†, `sharp`, `path`†, `hover_motion` |
+| `AccordionStyle` | `Accordion` | `header_height`, `header_padding_x`, `header_fill`†, `header_border_width`, `header_border_color`†, `header_path`†, `header_text_style`†, `chevron`, `content_padding`, `show_dividers`, `divider_color`, `sharp`, `hover_motion`, `focus_motion`, `open_stiffness`, `open_damping`, `cursor`† |
 | `LabelStyle` | `Label` | `padding`†, `align_x`, `align_y`, `fill`†, `text_color`†, `border_width`†, `border_color`†, `sharp`, `path`†, `hover_motion` |
 
-Presets you can start from are `ButtonStyle::{from_theme, primary, outline, ghost, danger}`, `BadgeStyle::{.., tinted(theme, color)}`, `CardStyle::{.., interactive}`, `CheckboxStyle::circle`, `RadioButtonStyle::outlined`, `SwitchStyle::square`, `SliderStyle::thick`, `ProgressBarStyle::colored(theme, color)`, `TextInputStyle::filled`, `TextAreaStyle::code`, `ScrollViewStyle::panel`, `SelectBoxStyle::filled`, `TabsStyle::{segmented, underline}`, `DividerStyle::{faint, strong, rounded}` and `LabelStyle::highlighted`.
+Presets you can start from are `ButtonStyle::{from_theme, primary, outline, ghost, danger}`, `BadgeStyle::{.., tinted(theme, color)}`, `CardStyle::{.., interactive}`, `CheckboxStyle::circle`, `RadioButtonStyle::outlined`, `SwitchStyle::square`, `SliderStyle::thick`, `ProgressBarStyle::colored(theme, color)`, `TextInputStyle::filled`, `TextAreaStyle::code`, `ScrollViewStyle::panel`, `SelectBoxStyle::filled`, `TabsStyle::{segmented, underline}`, `AccordionStyle::filled`, `DividerStyle::{faint, strong, rounded}` and `LabelStyle::highlighted`.
 
 ### ShadowStyle
 
