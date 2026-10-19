@@ -6,7 +6,7 @@ rust-version = "1.88"
 description = "GPU-accelerated, immediate-mode GPU UI library built from scratch in Rust"
 license = "MIT"
 repository = "https://github.com/artemtsitronov/glacex"
-keywords = ["gui", "wgpu", "ui", "immediate-mode", "graphics", "rust-gui", "gpu"]
+keywords = ["gui", "wgpu", "ui", "immediate-mode", "graphics"]
 categories = ["gui", "graphics", "rendering", "gpu"]
 # Fonts are embedded at compile-time via include_bytes! and must travel with
 # the source tree on crates.io. List them explicitly so they are included in
