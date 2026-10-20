@@ -100,6 +100,7 @@ pub struct TextInput {
     placeholder: Option<String>,
     custom_padding: Option<Stateful<[f32; 2]>>,
     overrides: StyleOverrides,
+    secure: bool,
 }
 
 impl TextInput {
@@ -118,6 +119,7 @@ impl TextInput {
             placeholder: None,
             custom_padding: None,
             overrides: StyleOverrides::default(),
+            secure: false,
         }
     }
 
@@ -161,6 +163,11 @@ impl TextInput {
 
     pub fn text_style(mut self, text_style: TextStyle) -> Self {
         self.text_style = Some(text_style);
+        self
+    }
+
+    pub fn secure(mut self, secure: bool) -> Self {
+        self.secure = secure;
         self
     }
 
@@ -283,6 +290,7 @@ impl Measurable for TextInput {
 
         let mut state = ui.take_widget_state_or(&self.id, self.initial_state());
         state.hovered = hovered;
+        state.set_secure(self.secure);
 
         if hovered {
             ui.set_cursor_icon(
@@ -305,7 +313,7 @@ impl Measurable for TextInput {
                     state.set_cursor(index);
                     state.set_selection_anchor(Some(index));
                 }
-                2 => {
+                2 if !self.secure => {
                     let start = state.word_start(index);
                     let end = state.word_end(index);
                     state.set_selection_anchor(Some(start));
@@ -335,7 +343,10 @@ impl Measurable for TextInput {
         }
 
         let text_width = size[0] - padding * 2.0;
-        let cursor_x = ui.measure_text(state.prefix(), text_style);
+        let cursor_x = ui.measure_text(
+            &state.display_text()[..state.display_byte_index_for(state.cursor())],
+            text_style,
+        );
         state.scroll_into_view(cursor_x, text_width);
 
         let focus_target = if focused { 1.0f32 } else { 0.0 };
@@ -371,10 +382,13 @@ impl Measurable for TextInput {
         ];
         ui.push_clip(clip_rect);
 
+        let display = state.display_text();
+
         if let Some((start, end)) = state.selection_range() {
-            let text = state.text();
-            let prefix_start = ui.measure_text(&text[..state.byte_index_for(start)], text_style);
-            let prefix_end = ui.measure_text(&text[..state.byte_index_for(end)], text_style);
+            let prefix_start =
+                ui.measure_text(&display[..state.display_byte_index_for(start)], text_style);
+            let prefix_end =
+                ui.measure_text(&display[..state.display_byte_index_for(end)], text_style);
 
             let highlight_position = [
                 (text_position[0] + prefix_start - state.scroll_offset()).round(),
@@ -408,7 +422,7 @@ impl Measurable for TextInput {
             }
         } else {
             ui.draw_text(
-                state.text(),
+                &display,
                 text_style,
                 [text_position[0] - state.scroll_offset(), text_position[1]],
                 clip_rect,
@@ -463,6 +477,9 @@ impl Accessible for TextInput {
         NodeId(hash_id(&self.id))
     }
     fn accessibility_role(&self) -> Role {
+        if self.secure {
+            return Role::PasswordInput;
+        }
         Role::TextInput
     }
     fn accessibility_label(&self) -> Option<String> {

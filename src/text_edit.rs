@@ -1,5 +1,6 @@
 use crate::text::TextStyle;
 use crate::ui::Ui;
+use std::borrow::Cow;
 use std::time::Instant;
 use winit::keyboard::{Key, KeyCode, NamedKey, PhysicalKey};
 
@@ -13,6 +14,7 @@ pub struct TextEditState {
     pub hovered: bool,
     pub focus_t: f32,
     pub hover_t: f32,
+    secure: bool,
 }
 
 impl Default for TextEditState {
@@ -27,6 +29,7 @@ impl Default for TextEditState {
             hovered: false,
             focus_t: 0.0,
             hover_t: 0.0,
+            secure: false,
         }
     }
 }
@@ -36,8 +39,33 @@ impl TextEditState {
         Self::default()
     }
 
+    pub fn is_secure(&self) -> bool {
+        self.secure
+    }
+
+    pub fn set_secure(&mut self, secure: bool) {
+        self.secure = secure;
+    }
+
     pub fn text(&self) -> &str {
         &self.text
+    }
+
+    pub fn display_text(&self) -> Cow<'_, str> {
+        if self.secure {
+            Cow::Owned('*'.to_string().repeat(self.text.chars().count()))
+        } else {
+            Cow::Borrowed(self.text())
+        }
+    }
+
+    // byte_index_for, but into display_text()
+    pub fn display_byte_index_for(&self, char_index: usize) -> usize {
+        if self.secure {
+            char_index.min(self.text.chars().count()) * '*'.len_utf8()
+        } else {
+            self.byte_index_for(char_index)
+        }
     }
 
     pub fn set_text(&mut self, text: impl Into<String>) {
@@ -313,7 +341,9 @@ impl TextEditState {
             if ui.shift_held() && self.selection_anchor.is_none() {
                 self.selection_anchor = Some(self.cursor);
             }
-            if ui.ctrl_held() {
+            if ui.ctrl_held() && self.secure {
+                self.cursor = 0;
+            } else if ui.ctrl_held() {
                 self.cursor = self.word_start(self.cursor.saturating_sub(1));
             } else if self.cursor > 0 {
                 self.cursor -= 1;
@@ -324,7 +354,9 @@ impl TextEditState {
             if ui.shift_held() && self.selection_anchor.is_none() {
                 self.selection_anchor = Some(self.cursor);
             }
-            if ui.ctrl_held() {
+            if ui.ctrl_held() && self.secure {
+                self.cursor = self.text().chars().count();
+            } else if ui.ctrl_held() {
                 self.cursor = self.word_end(self.cursor);
             } else {
                 let char_count = self.text.chars().count();
@@ -359,6 +391,7 @@ impl TextEditState {
 
         if ui.ctrl_held()
             && ctrl_c
+            && !self.secure
             && let Some((start, end)) = self.selection_range()
         {
             let start_byte = self.byte_index_for(start);
@@ -383,12 +416,15 @@ impl TextEditState {
     }
 
     pub fn cursor_index_for_x(&self, ui: &mut Ui, text_style: TextStyle, click_x: f32) -> usize {
+        let text = self.display_text();
         let mut best_index = 0;
         let mut best_distance = f32::MAX;
-        for (char_index, (byte_index, _)) in self.text.char_indices().enumerate().chain(
-            std::iter::once((self.text.chars().count(), (self.text.len(), ' '))),
-        ) {
-            let prefix_width = ui.measure_text(&self.text[..byte_index], text_style);
+        for (char_index, (byte_index, _)) in text
+            .char_indices()
+            .enumerate()
+            .chain(std::iter::once((text.chars().count(), (text.len(), ' '))))
+        {
+            let prefix_width = ui.measure_text(&text[..byte_index], text_style);
             let distance = (prefix_width - click_x).abs();
             if distance < best_distance {
                 best_distance = distance;
