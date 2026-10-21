@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::animation::{Motion, Spring, animate_towards};
+use crate::border::Border;
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::geometry::{MeasurablePath, Path};
@@ -22,8 +23,7 @@ pub struct AccordionStyle {
     pub header_height: f32,
     pub header_padding_x: f32,
     pub header_fill: Stateful<Fill>,
-    pub header_border_width: f32,
-    pub header_border_color: Stateful<Color>,
+    pub header_border: Stateful<Border>,
     pub header_path: Stateful<Path>,
     pub header_text_style: Stateful<TextStyle>,
     pub chevron: ChevronStyle,
@@ -45,8 +45,7 @@ impl AccordionStyle {
             header_padding_x: 12.0,
             header_fill: Stateful::new(Fill::Solid(Color::TRANSPARENT))
                 .hovered(Fill::Solid(theme.surface_subtle)),
-            header_border_width: 1.0,
-            header_border_color: Stateful::new(Color::TRANSPARENT),
+            header_border: Stateful::new(Border::new(1.0, Color::TRANSPARENT)),
             header_path: Stateful::new(Path::rect([theme.metrics.radius_sm; 4])),
             header_text_style: Stateful::new(
                 TextStyle::new()
@@ -451,13 +450,12 @@ impl<'a> Measurable for Accordion<'a> {
             );
 
             let fill = style.header_fill.resolve(weights);
-            let border_color = style.header_border_color.resolve(weights);
-            if !matches!(fill, Fill::Solid(c) if c.a < 0.003) || border_color.a >= 0.003 {
+            let border = style.header_border.resolve(weights);
+            if !matches!(fill, Fill::Solid(c) if c.a < 0.003) || border.color.a >= 0.003 {
                 ui.draw_shape(
                     path(header_pos, header_size),
                     fill,
-                    style.header_border_width,
-                    border_color,
+                    border,
                     0.0,
                     style.sharp,
                     0.0,
@@ -511,8 +509,7 @@ impl<'a> Measurable for Accordion<'a> {
                 ui.draw_shape(
                     MeasurablePath::rect([x, y], [w, 1.0], [0.0; 4]),
                     Fill::Solid(style.divider_color),
-                    0.0,
-                    Color::TRANSPARENT,
+                    Border::NONE,
                     0.0,
                     false,
                     0.0,

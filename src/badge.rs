@@ -1,5 +1,6 @@
 use crate::alignment::Alignment;
 use crate::animation::Motion;
+use crate::border::Border;
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::generate_uuid;
@@ -28,8 +29,7 @@ pub enum BadgeVariant {
 #[derive(Clone)]
 pub struct BadgeStyle {
     pub fill: Stateful<Fill>,
-    pub border_width: Stateful<f32>,
-    pub border_color: Stateful<Color>,
+    pub border: Stateful<Border>,
     pub padding: Stateful<[f32; 2]>,
     pub height: Stateful<f32>,
     pub min_width: Stateful<f32>,
@@ -98,8 +98,7 @@ impl BadgeStyle {
     fn build(theme: &Theme, fill: Fill, border_color: Color, text_color: Color) -> Self {
         BadgeStyle {
             fill: Stateful::new(fill),
-            border_width: Stateful::new(1.0),
-            border_color: Stateful::new(border_color),
+            border: Stateful::new(Border::new(1.0, border_color)),
             padding: Stateful::new([8.0, 2.0]),
             height: Stateful::new(20.0),
             min_width: Stateful::new(0.0),
@@ -240,12 +239,8 @@ impl Badge {
         if let Some(custom) = self.text_style {
             style.text_style = style.text_style.map(|t| custom.inherit(*t));
         }
-        self.overrides.apply(
-            &mut style.fill,
-            &mut style.border_color,
-            &mut style.border_width,
-            &mut style.shadow,
-        );
+        self.overrides
+            .apply(&mut style.fill, &mut style.border, &mut style.shadow);
         style
     }
 }
@@ -309,8 +304,7 @@ impl Measurable for Badge {
         ui.draw_shape(
             path(position, size),
             style.fill.resolve(weights),
-            style.border_width.resolve(weights),
-            style.border_color.resolve(weights),
+            style.border.resolve(weights),
             0.0,
             style.sharp,
             0.0,

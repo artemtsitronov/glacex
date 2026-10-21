@@ -1,3 +1,4 @@
+use crate::border::Border;
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::geometry::{MeasurablePath, Shape};
@@ -639,8 +640,7 @@ impl Ui {
         &mut self,
         path: MeasurablePath,
         fill: Fill,
-        border_width: f32,
-        border_color: Color,
+        border: Border,
         blur_radius: f32,
         sharp: bool,
         rotation: f32,
@@ -649,8 +649,7 @@ impl Ui {
         let shape = Shape { path, fill };
         self.painter.draw_shape(
             shape,
-            border_width,
-            border_color,
+            border,
             blur_radius,
             if sharp { 1.0 } else { 0.0 },
             clip,
@@ -663,8 +662,7 @@ impl Ui {
         &mut self,
         path: MeasurablePath,
         fill: Fill,
-        border_width: f32,
-        border_color: Color,
+        border: Border,
         blur_radius: f32,
         sharp: bool,
         rotation: f32,
@@ -674,8 +672,7 @@ impl Ui {
         let shape = Shape { path, fill };
         self.painter.draw_open_shape(
             shape,
-            border_width,
-            border_color,
+            border,
             blur_radius,
             if sharp { 1.0 } else { 0.0 },
             clip,
@@ -705,8 +702,7 @@ impl Ui {
         &mut self,
         path: MeasurablePath,
         fill: Fill,
-        border_width: f32,
-        border_color: Color,
+        border: Border,
         blur_radius: f32,
         sharp: bool,
         clip: [f32; 4],
@@ -715,8 +711,7 @@ impl Ui {
         let shape = Shape { path, fill };
         self.painter.draw_overlay_shape(
             shape,
-            border_width,
-            border_color,
+            border,
             blur_radius,
             if sharp { 1.0 } else { 0.0 },
             clip,
@@ -776,15 +771,8 @@ impl Ui {
                     a: if self.theme.is_dark { 0.55 } else { 0.12 },
                 }),
             };
-            self.painter.draw_overlay_shape(
-                shadow_shape,
-                0.0,
-                Color::TRANSPARENT,
-                14.0,
-                0.0,
-                full_clip,
-                0.0,
-            );
+            self.painter
+                .draw_overlay_shape(shadow_shape, Border::NONE, 14.0, 0.0, full_clip, 0.0);
 
             let card_shape = Shape {
                 path: MeasurablePath::rect(tooltip_pos, [width, height], [8.0; 4]),
@@ -792,8 +780,7 @@ impl Ui {
             };
             self.painter.draw_overlay_shape(
                 card_shape,
-                1.0,
-                self.theme.border_strong,
+                Border::new(1.0, self.theme.border_strong),
                 0.0,
                 0.0,
                 full_clip,

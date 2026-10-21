@@ -1,4 +1,5 @@
 use crate::animation::Motion;
+use crate::border::Border;
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::generate_uuid;
@@ -15,8 +16,7 @@ use winit::window::CursorIcon;
 #[derive(Clone)]
 pub struct CardStyle {
     pub fill: Stateful<Fill>,
-    pub border_width: Stateful<f32>,
-    pub border_color: Stateful<Color>,
+    pub border: Stateful<Border>,
     pub padding: Stateful<[f32; 2]>,
     pub min_size: Stateful<[f32; 2]>,
     pub shadow: Stateful<Option<ShadowStyle>>,
@@ -65,7 +65,10 @@ impl CardStyle {
                 .fill
                 .clone()
                 .hovered(Fill::Solid(theme.surface_elevated)),
-            border_color: base.border_color.clone().hovered(theme.border_strong),
+            border: base
+                .border
+                .clone()
+                .hovered(base.border.idle.with_color(theme.border_strong)),
             shadow: base.shadow.clone().hovered(Some(theme.shadow_md()[0])),
             cursor: CursorIcon::Pointer.into(),
             ..base
@@ -81,8 +84,7 @@ impl CardStyle {
     ) -> Self {
         CardStyle {
             fill: Stateful::new(fill),
-            border_width: Stateful::new(1.0),
-            border_color: Stateful::new(border_color),
+            border: Stateful::new(Border::new(1.0, border_color)),
             padding: Stateful::new(padding),
             min_size: Stateful::new([0.0, 0.0]),
             shadow: Stateful::new(shadow),
@@ -192,12 +194,8 @@ impl<'a> Card<'a> {
         if let Some(p) = &self.custom_padding {
             base.padding = p.clone();
         }
-        self.overrides.apply(
-            &mut base.fill,
-            &mut base.border_color,
-            &mut base.border_width,
-            &mut base.shadow,
-        );
+        self.overrides
+            .apply(&mut base.fill, &mut base.border, &mut base.shadow);
         base
     }
 }
@@ -265,8 +263,7 @@ impl<'a> Measurable for Card<'a> {
         ui.draw_shape(
             path(position, size),
             style.fill.resolve(weights),
-            style.border_width.resolve(weights),
-            style.border_color.resolve(weights),
+            style.border.resolve(weights),
             0.0,
             style.sharp,
             0.0,

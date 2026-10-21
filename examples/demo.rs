@@ -1,7 +1,4 @@
-use glacex::{
-    accordion::{Accordion, AccordionItem},
-    *,
-};
+use glacex::*;
 
 // First of all, we create out application state struct
 struct DemoApp {

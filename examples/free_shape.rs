@@ -1,4 +1,6 @@
-use glacex::{App, Color, Fill, Gradient, GradientKind, GradientStop, MeasurablePath, Ui, Widget};
+use glacex::{
+    App, Border, Color, Fill, Gradient, GradientKind, GradientStop, MeasurablePath, Ui, Widget,
+};
 use kurbo::BezPath;
 use std::f64::consts::PI;
 
@@ -30,8 +32,7 @@ impl Widget for FreeShapeDemo {
         ui.draw_shape(
             MeasurablePath::free(star_path([160.0, 180.0], 90.0, 38.0, 5)),
             Fill::Solid(Color::hex_str("#f59e0b")),
-            4.0,
-            Color::hex_str("#1e293b"),
+            Border::new(4.0, Color::hex_str("#1e293b")),
             0.0,
             false,
             0.0,
@@ -52,8 +53,7 @@ impl Widget for FreeShapeDemo {
                     },
                 ],
             }),
-            0.0,
-            Color::TRANSPARENT,
+            Border::NONE,
             0.0,
             false,
             0.3,
@@ -65,8 +65,7 @@ impl Widget for FreeShapeDemo {
         ui.draw_open_shape(
             MeasurablePath::open(track.clone(), 16.0),
             Fill::Solid(Color::hex_str("#334155")),
-            0.0,
-            Color::TRANSPARENT,
+            Border::NONE,
             0.0,
             false,
             0.0,
@@ -75,8 +74,7 @@ impl Widget for FreeShapeDemo {
         ui.draw_open_shape(
             MeasurablePath::open(track, 16.0),
             Fill::Solid(Color::hex_str("#22c55e")),
-            0.0,
-            Color::TRANSPARENT,
+            Border::NONE,
             0.0,
             false,
             0.0,
@@ -89,8 +87,7 @@ impl Widget for FreeShapeDemo {
         ui.draw_open_shape(
             MeasurablePath::open(wave, 10.0),
             Fill::Solid(Color::hex_str("#f59e0b")),
-            0.0,
-            Color::TRANSPARENT,
+            Border::NONE,
             0.0,
             false,
             0.0,

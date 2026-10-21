@@ -1,5 +1,6 @@
 use crate::alignment::Alignment;
 use crate::animation::{Motion, animate_towards};
+use crate::border::Border;
 use crate::color::Color;
 use crate::geometry::Path;
 use crate::interaction::Interaction;
@@ -19,8 +20,7 @@ pub type ButtonResponse = Interaction;
 #[derive(Clone)]
 pub struct ButtonStyle {
     pub fill: Stateful<Fill>,
-    pub border_width: Stateful<f32>,
-    pub border_color: Stateful<Color>,
+    pub border: Stateful<Border>,
     pub padding: Stateful<[f32; 2]>,
     pub min_size: Stateful<[f32; 2]>,
     pub text_style: Stateful<TextStyle>,
@@ -49,8 +49,7 @@ impl ButtonStyle {
             Stateful::new(Fill::Solid(theme.surface_subtle))
                 .hovered(Fill::Solid(theme.hovered))
                 .pressed(Fill::Solid(theme.pressed)),
-            1.0,
-            theme.border,
+            Border::new(1.0, theme.border),
             theme.text_primary,
             Some(theme.shadow_sm()[0]),
         )
@@ -67,8 +66,7 @@ impl ButtonStyle {
             Stateful::new(Fill::Solid(theme.active))
                 .hovered(Fill::Solid(theme.active_hover))
                 .pressed(Fill::Solid(theme.active.darken(0.12))),
-            1.0,
-            Color::WHITE.with_alpha(0.15),
+            Border::new(1.0, Color::WHITE.with_alpha(0.15)),
             text_color,
             Some(ShadowStyle::new(
                 theme.active.with_alpha(0.20),
@@ -84,8 +82,7 @@ impl ButtonStyle {
             Stateful::new(Fill::Solid(Color::TRANSPARENT))
                 .hovered(Fill::Solid(theme.surface_subtle))
                 .pressed(Fill::Solid(theme.hovered)),
-            1.0,
-            theme.border_strong,
+            Border::new(1.0, theme.border_strong),
             theme.text_primary,
             Some(theme.shadow_sm()[0]),
         )
@@ -97,8 +94,7 @@ impl ButtonStyle {
             Stateful::new(Fill::Solid(Color::TRANSPARENT))
                 .hovered(Fill::Solid(theme.surface_subtle))
                 .pressed(Fill::Solid(theme.hovered)),
-            0.0,
-            Color::TRANSPARENT,
+            Border::NONE,
             theme.text_secondary,
             None,
         )
@@ -110,8 +106,7 @@ impl ButtonStyle {
             Stateful::new(Fill::Solid(theme.error))
                 .hovered(Fill::Solid(theme.error.lighten(0.08)))
                 .pressed(Fill::Solid(theme.error.darken(0.12))),
-            1.0,
-            theme.error.darken(0.15),
+            Border::new(1.0, theme.error.darken(0.15)),
             Color::WHITE,
             Some(ShadowStyle::new(
                 theme.error.with_alpha(0.25),
@@ -124,18 +119,16 @@ impl ButtonStyle {
     fn build(
         theme: &Theme,
         fill: Stateful<Fill>,
-        border_width: f32,
-        border_color: Color,
+        border: Border,
         text_color: Color,
         shadow: Option<ShadowStyle>,
     ) -> Self {
         let press_offset = [0.0, 2.0];
         ButtonStyle {
             fill,
-            border_width: Stateful::new(border_width),
-            border_color: Stateful::new(border_color)
-                .hovered(theme.border_strong)
-                .pressed(theme.border_strong),
+            border: Stateful::new(border)
+                .hovered(border.with_color(theme.border_strong))
+                .pressed(border.with_color(theme.border_strong)),
             padding: Stateful::new([14.0, 8.0]),
             min_size: Stateful::new([0.0, 0.0]),
             text_style: Stateful::new(
@@ -313,12 +306,8 @@ impl Button {
         if let Some(custom) = self.text_style {
             style.text_style = style.text_style.map(|t| custom.inherit(*t));
         }
-        self.overrides.apply(
-            &mut style.fill,
-            &mut style.border_color,
-            &mut style.border_width,
-            &mut style.shadow,
-        );
+        self.overrides
+            .apply(&mut style.fill, &mut style.border, &mut style.shadow);
         style
     }
 }
@@ -406,8 +395,7 @@ impl Measurable for Button {
         ui.draw_shape(
             path(draw_position, draw_size),
             style.fill.resolve(weights),
-            style.border_width.resolve(weights),
-            style.border_color.resolve(weights),
+            style.border.resolve(weights),
             0.0,
             style.sharp,
             0.0,

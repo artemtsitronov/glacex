@@ -1,3 +1,4 @@
+use crate::border::Border;
 use crate::color::Color;
 use crate::fill::{Fill, Gradient, GradientHandle, GradientKind, GradientStop};
 use crate::path_sdf_atlas::{PathSdfAtlas, ShelfPacker};
@@ -773,8 +774,7 @@ impl Painter {
     fn lower_shape(
         &mut self,
         shape: Shape,
-        border_width: f32,
-        border_color: Color,
+        border: Border,
         blur_radius: f32,
         sharp: f32,
         rotation: f32,
@@ -866,8 +866,8 @@ impl Painter {
             size,
             color,
             corner_radius,
-            border_color,
-            render_params: [border_width, blur_radius, sharp, fill_kind],
+            border_color: border.color,
+            render_params: [border.width, blur_radius, sharp, fill_kind],
             shape_params: [shape_kind, gradient_angle, gradient_row, rotation],
             gradient_center,
             image_uv,
@@ -887,22 +887,13 @@ impl Painter {
     pub fn draw_shape(
         &mut self,
         shape: Shape,
-        border_width: f32,
-        border_color: Color,
+        border: Border,
         blur_radius: f32,
         sharp: f32,
         clip: [f32; 4],
         rotation: f32,
     ) {
-        let instance = self.lower_shape(
-            shape,
-            border_width,
-            border_color,
-            blur_radius,
-            sharp,
-            rotation,
-            1.0,
-        );
+        let instance = self.lower_shape(shape, border, blur_radius, sharp, rotation, 1.0);
         self.pending_shapes.push((clip, instance));
     }
 
@@ -910,22 +901,13 @@ impl Painter {
     pub fn draw_overlay_shape(
         &mut self,
         shape: Shape,
-        border_width: f32,
-        border_color: Color,
+        border: Border,
         blur_radius: f32,
         sharp: f32,
         clip: [f32; 4],
         rotation: f32,
     ) {
-        let instance = self.lower_shape(
-            shape,
-            border_width,
-            border_color,
-            blur_radius,
-            sharp,
-            rotation,
-            1.0,
-        );
+        let instance = self.lower_shape(shape, border, blur_radius, sharp, rotation, 1.0);
         self.pending_overlay_shapes.push((clip, instance));
     }
 
@@ -933,23 +915,14 @@ impl Painter {
     pub fn draw_open_shape(
         &mut self,
         shape: Shape,
-        border_width: f32,
-        border_color: Color,
+        border: Border,
         blur_radius: f32,
         sharp: f32,
         clip: [f32; 4],
         rotation: f32,
         reveal: f32,
     ) {
-        let instance = self.lower_shape(
-            shape,
-            border_width,
-            border_color,
-            blur_radius,
-            sharp,
-            rotation,
-            reveal,
-        );
+        let instance = self.lower_shape(shape, border, blur_radius, sharp, rotation, reveal);
         self.pending_shapes.push((clip, instance));
     }
 

@@ -1,4 +1,5 @@
 use crate::animation::{Motion, animate_towards};
+use crate::border::Border;
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::generate_uuid;
@@ -32,8 +33,7 @@ pub struct SwitchResponse {
 pub struct SwitchStyle {
     pub track_fill: Stateful<Fill>,
     pub thumb_fill: Stateful<Fill>,
-    pub thumb_border_width: Stateful<f32>,
-    pub thumb_border_color: Stateful<Color>,
+    pub thumb_border: Stateful<Border>,
     pub thumb_padding: Stateful<f32>,
     pub thumb_size: Stateful<Option<[f32; 2]>>,
     pub thumb_shadow: Stateful<Option<ShadowStyle>>,
@@ -41,8 +41,7 @@ pub struct SwitchStyle {
     pub trail_color: Stateful<Color>,
     pub trail_stretch: Stateful<f32>,
     pub trail_max: Stateful<f32>,
-    pub border_width: Stateful<f32>,
-    pub border_color: Stateful<Color>,
+    pub border: Stateful<Border>,
     pub shadow: Stateful<Option<ShadowStyle>>,
     pub sharp: bool,
     pub path: Stateful<Path>,
@@ -66,8 +65,7 @@ impl SwitchStyle {
             // blends toward a contrasting color near on, avoids white on white on near white themes
             thumb_fill: Stateful::new(Fill::Solid(Color::WHITE))
                 .selected(Fill::Solid(theme.on_active())),
-            thumb_border_width: Stateful::new(0.0),
-            thumb_border_color: Stateful::new(Color::TRANSPARENT),
+            thumb_border: Stateful::new(Border::NONE),
             thumb_padding: Stateful::new(2.0),
             thumb_size: Stateful::new(None),
             thumb_shadow: Stateful::new(Some(ShadowStyle::new(
@@ -79,10 +77,10 @@ impl SwitchStyle {
             trail_color: Stateful::new(Color::WHITE.with_alpha(0.22)),
             trail_stretch: Stateful::new(0.010),
             trail_max: Stateful::new(10.0),
-            border_width: Stateful::new(1.0),
-            border_color: Stateful::new(theme.border)
+            border: Stateful::new(theme.border)
                 .hovered(theme.border_strong)
-                .selected(theme.border.lerp(theme.active, 0.5)),
+                .selected(theme.border.lerp(theme.active, 0.5))
+                .map(|&color| Border::new(1.0, color)),
             shadow: Stateful::new(Some(theme.shadow_sm()[0])),
             sharp: false,
             path: Stateful::new(Path::rect([11.0; 4])),
@@ -166,12 +164,8 @@ impl Switch {
             .style
             .clone()
             .unwrap_or_else(|| SwitchStyle::from_theme(theme));
-        self.overrides.apply(
-            &mut style.track_fill,
-            &mut style.border_color,
-            &mut style.border_width,
-            &mut style.shadow,
-        );
+        self.overrides
+            .apply(&mut style.track_fill, &mut style.border, &mut style.shadow);
         style
     }
 
@@ -310,8 +304,7 @@ impl Measurable for Switch {
         ui.draw_shape(
             path(position, size),
             style.track_fill.resolve(weights),
-            style.border_width.resolve(weights),
-            style.border_color.resolve(weights),
+            style.border.resolve(weights),
             0.0,
             style.sharp,
             0.0,
@@ -342,8 +335,7 @@ impl Measurable for Switch {
             ui.draw_shape(
                 thumb_path([stretch_x, knob_y], [stretch_w, knob[1]]),
                 Fill::Solid(style.trail_color.resolve(weights)),
-                0.0,
-                Color::TRANSPARENT,
+                Border::NONE,
                 3.0,
                 false,
                 0.0,
@@ -357,8 +349,7 @@ impl Measurable for Switch {
         ui.draw_shape(
             thumb_path(knob_pos, knob),
             style.thumb_fill.resolve(weights),
-            style.thumb_border_width.resolve(weights),
-            style.thumb_border_color.resolve(weights),
+            style.thumb_border.resolve(weights),
             0.0,
             style.sharp,
             0.0,

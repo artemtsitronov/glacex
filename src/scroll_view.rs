@@ -1,4 +1,5 @@
 use crate::animation::Motion;
+use crate::border::Border;
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::generate_uuid;
@@ -21,8 +22,7 @@ pub struct ScrollState {
 #[derive(Clone)]
 pub struct ScrollViewStyle {
     pub fill: Stateful<Option<Fill>>,
-    pub border_width: Stateful<f32>,
-    pub border_color: Stateful<Color>,
+    pub border: Stateful<Border>,
     pub background_path: Stateful<Path>,
     pub track_fill: Stateful<Fill>,
     pub thumb_fill: Stateful<Fill>,
@@ -55,8 +55,7 @@ impl ScrollViewStyle {
         };
         ScrollViewStyle {
             fill: Stateful::new(None),
-            border_width: Stateful::new(0.0),
-            border_color: Stateful::new(Color::TRANSPARENT),
+            border: Stateful::new(Border::NONE),
             background_path: Stateful::new(Path::rect([0.0; 4])),
             track_fill: Stateful::new(Fill::Solid(Color::TRANSPARENT)),
             thumb_fill: Stateful::new(Fill::Solid(thumb))
@@ -77,8 +76,7 @@ impl ScrollViewStyle {
     pub fn panel(theme: &Theme) -> Self {
         ScrollViewStyle {
             fill: Stateful::new(Some(Fill::Solid(theme.surface))),
-            border_width: Stateful::new(1.0),
-            border_color: Stateful::new(theme.border),
+            border: Stateful::new(Border::new(1.0, theme.border)),
             background_path: Stateful::new(Path::rect([theme.metrics.radius_md; 4])),
             track_fill: Stateful::new(Fill::Solid(theme.surface_subtle)),
             ..Self::from_theme(theme)
@@ -224,8 +222,7 @@ impl<'a> Measurable for ScrollView<'a> {
             ui.draw_shape(
                 (style.background_path.resolve(weights))(position, size),
                 fill,
-                style.border_width.resolve(weights),
-                style.border_color.resolve(weights),
+                style.border.resolve(weights),
                 0.0,
                 style.sharp,
                 0.0,
@@ -435,8 +432,7 @@ impl<'a> Measurable for ScrollView<'a> {
                     [config.thickness, size[1] - config.padding * 2.0],
                 ),
                 style.track_fill.resolve(track),
-                0.0,
-                Color::TRANSPARENT,
+                Border::NONE,
                 0.0,
                 style.sharp,
                 0.0,
@@ -449,8 +445,7 @@ impl<'a> Measurable for ScrollView<'a> {
                     [config.thickness, geometry_y_final.thumb_size],
                 ),
                 thumb_fill,
-                0.0,
-                Color::TRANSPARENT,
+                Border::NONE,
                 0.0,
                 style.sharp,
                 0.0,
@@ -465,8 +460,7 @@ impl<'a> Measurable for ScrollView<'a> {
                     [size[0] - config.padding * 2.0, config.thickness],
                 ),
                 style.track_fill.resolve(track),
-                0.0,
-                Color::TRANSPARENT,
+                Border::NONE,
                 0.0,
                 style.sharp,
                 0.0,
@@ -479,8 +473,7 @@ impl<'a> Measurable for ScrollView<'a> {
                     [geometry_x_final.thumb_size, config.thickness],
                 ),
                 thumb_fill,
-                0.0,
-                Color::TRANSPARENT,
+                Border::NONE,
                 0.0,
                 style.sharp,
                 0.0,

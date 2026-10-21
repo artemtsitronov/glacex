@@ -1,4 +1,5 @@
 use crate::animation::{Motion, animate_towards};
+use crate::border::Border;
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::generate_uuid;
@@ -18,8 +19,7 @@ pub struct TextInputStyle {
     pub fill: Stateful<Fill>,
     pub text_style: Stateful<TextStyle>,
     pub placeholder_color: Stateful<Color>,
-    pub border_width: Stateful<f32>,
-    pub border_color: Stateful<Color>,
+    pub border: Stateful<Border>,
     pub padding: Stateful<[f32; 2]>,
     pub selection_color: Stateful<Color>,
     pub selection_radius: Stateful<f32>,
@@ -52,8 +52,8 @@ impl TextInputStyle {
             fill: Stateful::new(Fill::Solid(theme.surface)),
             text_style: Stateful::new(TextStyle::new().color(theme.text_primary)),
             placeholder_color: Stateful::new(theme.text_muted),
-            border_width: Stateful::new(1.0).focused(1.5),
-            border_color: Stateful::new(theme.border_strong).focused(theme.focus_border),
+            border: Stateful::new(Border::new(1.0, theme.border_strong))
+                .focused(Border::new(1.5, theme.focus_border)),
             padding: Stateful::new([10.0, 10.0]),
             selection_color: Stateful::new(theme.selection),
             selection_radius: Stateful::new(0.0),
@@ -75,7 +75,8 @@ impl TextInputStyle {
             fill: Stateful::new(Fill::Solid(theme.surface_subtle))
                 .hovered(Fill::Solid(theme.hovered))
                 .focused(Fill::Solid(theme.surface)),
-            border_color: Stateful::new(Color::TRANSPARENT).focused(theme.focus_border),
+            border: Stateful::new(Border::new(1.0, Color::TRANSPARENT))
+                .focused(Border::new(1.5, theme.focus_border)),
             shadow: Stateful::new(None)
                 .focused(focus_ring(Some(theme.shadow_sm()[0]), theme.focus_border)),
             ..base
@@ -197,12 +198,8 @@ impl TextInput {
         if let Some(custom) = self.text_style {
             style.text_style = style.text_style.map(|t| custom.inherit(*t));
         }
-        self.overrides.apply(
-            &mut style.fill,
-            &mut style.border_color,
-            &mut style.border_width,
-            &mut style.shadow,
-        );
+        self.overrides
+            .apply(&mut style.fill, &mut style.border, &mut style.shadow);
         style
     }
 
@@ -355,8 +352,7 @@ impl Measurable for TextInput {
         ui.draw_shape(
             path(position, size),
             style.fill.resolve(weights),
-            style.border_width.resolve(weights),
-            style.border_color.resolve(weights),
+            style.border.resolve(weights),
             0.0,
             style.sharp,
             0.0,
@@ -389,8 +385,7 @@ impl Measurable for TextInput {
                     [style.selection_radius.resolve(weights); 4],
                 ),
                 Fill::Solid(style.selection_color.resolve(weights)),
-                0.0,
-                Color::TRANSPARENT,
+                Border::NONE,
                 0.0,
                 false,
                 0.0,
@@ -429,8 +424,7 @@ impl Measurable for TextInput {
                         [0.0; 4],
                     ),
                     Fill::Solid(style.cursor_color.resolve(weights)),
-                    0.0,
-                    Color::TRANSPARENT,
+                    Border::NONE,
                     0.0,
                     true,
                     0.0,

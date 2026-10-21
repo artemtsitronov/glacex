@@ -1,5 +1,6 @@
 use crate::alignment::Alignment;
 use crate::animation::Motion;
+use crate::border::Border;
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::generate_uuid;
@@ -32,8 +33,7 @@ pub struct LabelStyle {
     pub align_y: Alignment,
     pub fill: Stateful<Option<Fill>>,
     pub text_color: Stateful<Option<Color>>,
-    pub border_width: Stateful<f32>,
-    pub border_color: Stateful<Color>,
+    pub border: Stateful<Border>,
     pub sharp: bool,
     pub path: Stateful<Path>,
     pub hover_motion: f32,
@@ -47,8 +47,7 @@ impl LabelStyle {
             align_y: Alignment::Start,
             fill: Stateful::new(None),
             text_color: Stateful::new(None),
-            border_width: Stateful::new(0.0),
-            border_color: Stateful::new(Color::TRANSPARENT),
+            border: Stateful::new(Border::NONE),
             sharp: false,
             path: Stateful::new(Path::rect([0.0; 4])),
             hover_motion: Motion::SNAPPY,
@@ -59,8 +58,7 @@ impl LabelStyle {
         LabelStyle {
             padding: Stateful::new([6.0, 2.0]),
             fill: Stateful::new(Some(Fill::Solid(theme.surface_subtle))),
-            border_width: Stateful::new(1.0),
-            border_color: Stateful::new(theme.border_faint),
+            border: Stateful::new(Border::new(1.0, theme.border_faint)),
             path: Stateful::new(Path::rect([theme.metrics.radius_sm; 4])),
             ..Self::from_theme(theme)
         }
@@ -239,14 +237,21 @@ impl Label {
         self.restyle(|style| style.text_color = color)
     }
 
-    pub fn border_color(self, color: impl Into<Stateful<Color>>) -> Self {
-        let color = color.into();
-        self.restyle(|style| style.border_color = color)
+    pub fn border(self, border: impl Into<Stateful<Border>>) -> Self {
+        let border = border.into();
+        self.restyle(|style| style.border = border)
     }
 
+    #[deprecated(since = "0.2.3", note = "use `.border(..)` instead")]
+    pub fn border_color(self, color: impl Into<Stateful<Color>>) -> Self {
+        let color = color.into();
+        self.restyle(|style| style.border = style.border.with_color(&color))
+    }
+
+    #[deprecated(since = "0.2.3", note = "use `.border(..)` instead")]
     pub fn border_width(self, width: impl Into<Stateful<f32>>) -> Self {
         let width = width.into();
-        self.restyle(|style| style.border_width = width)
+        self.restyle(|style| style.border = style.border.with_width(&width))
     }
 
     pub fn padding(self, padding: impl Into<Stateful<[f32; 2]>>) -> Self {
@@ -319,8 +324,7 @@ impl Measurable for Label {
             ui.draw_shape(
                 (style.path.resolve(weights))(position, size),
                 fill,
-                style.border_width.resolve(weights),
-                style.border_color.resolve(weights),
+                style.border.resolve(weights),
                 0.0,
                 style.sharp,
                 0.0,

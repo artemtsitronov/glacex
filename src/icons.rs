@@ -1,4 +1,5 @@
 use crate::animation::Motion;
+use crate::border::Border;
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::geometry::MeasurablePath;
@@ -144,8 +145,7 @@ pub fn draw_line(ui: &mut Ui, a: [f32; 2], b: [f32; 2], thickness: f32, color: C
             [thickness / 2.0; 4],
         ),
         Fill::Solid(color),
-        0.0,
-        Color::TRANSPARENT,
+        Border::NONE,
         0.0,
         false,
         angle,
@@ -177,8 +177,7 @@ pub fn draw_line_overlay(
             [thickness / 2.0; 4],
         ),
         Fill::Solid(color),
-        0.0,
-        Color::TRANSPARENT,
+        Border::NONE,
         0.0,
         false,
         clip,

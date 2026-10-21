@@ -1,4 +1,5 @@
 use crate::animation::{Motion, animate_towards};
+use crate::border::Border;
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::generate_uuid;
@@ -34,10 +35,8 @@ pub struct SliderStyle {
     pub track_fill: Stateful<Fill>,
     pub filled_fill: Stateful<Fill>,
     pub thumb_fill: Stateful<Fill>,
-    pub thumb_border_width: Stateful<f32>,
-    pub thumb_border_color: Stateful<Color>,
-    pub border_width: Stateful<f32>,
-    pub border_color: Stateful<Color>,
+    pub thumb_border: Stateful<Border>,
+    pub border: Stateful<Border>,
     pub track_height: Stateful<f32>,
     pub thumb_size: Stateful<f32>,
     pub vertical_padding: Stateful<f32>,
@@ -68,10 +67,8 @@ impl SliderStyle {
             track_fill: Stateful::new(Fill::Solid(theme.hovered)),
             filled_fill: Stateful::new(Fill::Solid(theme.active)),
             thumb_fill: Stateful::new(Fill::Solid(Color::WHITE)),
-            thumb_border_width: Stateful::new(1.0),
-            thumb_border_color: Stateful::new(theme.border),
-            border_width: Stateful::new(1.5),
-            border_color: Stateful::new(theme.border_strong),
+            thumb_border: Stateful::new(Border::new(1.0, theme.border)),
+            border: Stateful::new(Border::new(1.5, theme.border_strong)),
             track_height: Stateful::new(4.0),
             thumb_size: Stateful::new(16.0).pressed(18.5),
             vertical_padding: Stateful::new(8.0),
@@ -97,7 +94,7 @@ impl SliderStyle {
         SliderStyle {
             track_height: Stateful::new(8.0),
             thumb_size: Stateful::new(20.0).pressed(22.5),
-            border_width: Stateful::new(0.0),
+            border: Stateful::new(Border::NONE),
             ..Self::from_theme(theme)
         }
     }
@@ -171,12 +168,8 @@ impl Slider {
             .style
             .clone()
             .unwrap_or_else(|| SliderStyle::from_theme(theme));
-        self.overrides.apply(
-            &mut style.track_fill,
-            &mut style.border_color,
-            &mut style.border_width,
-            &mut style.shadow,
-        );
+        self.overrides
+            .apply(&mut style.track_fill, &mut style.border, &mut style.shadow);
         style
     }
 
@@ -304,8 +297,7 @@ impl Measurable for Slider {
         ui.draw_shape(
             (style.path.resolve(weights))([position[0], track_y], [size[0], track_height]),
             style.track_fill.resolve(weights),
-            style.border_width.resolve(weights),
-            style.border_color.resolve(weights),
+            style.border.resolve(weights),
             0.0,
             style.sharp,
             0.0,
@@ -320,8 +312,7 @@ impl Measurable for Slider {
                     [filled_width, track_height],
                 ),
                 style.filled_fill.resolve(weights),
-                0.0,
-                Color::TRANSPARENT,
+                Border::NONE,
                 0.0,
                 style.sharp,
                 0.0,
@@ -349,8 +340,7 @@ impl Measurable for Slider {
             ui.draw_shape(
                 thumb_path([trail_x, thumb_y], [trail_w, thumb_current_size]),
                 Fill::Solid(style.trail_color.resolve(weights)),
-                0.0,
-                Color::TRANSPARENT,
+                Border::NONE,
                 4.0,
                 false,
                 0.0,
@@ -364,8 +354,7 @@ impl Measurable for Slider {
         ui.draw_shape(
             thumb_path(thumb_pos, thumb_size),
             style.thumb_fill.resolve(weights),
-            style.thumb_border_width.resolve(weights),
-            style.thumb_border_color.resolve(weights),
+            style.thumb_border.resolve(weights),
             0.0,
             style.sharp,
             0.0,

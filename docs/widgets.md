@@ -41,7 +41,7 @@ A normal button that animates when you hover and press it.
 - **Builder methods**
   - `.id("...")`
   - `.style(ButtonStyle)` sets the fill, text style, border, shadow, scale and offset. Each one can be different per state with `Stateful<T>`
-  - `.fill(..)`, `.border_color(..)`, `.border_width(..)` and `.shadow(..)` take a plain value or a `Stateful`
+  - `.fill(..)`, `.border(..)` and `.shadow(..)` take a plain value or a `Stateful`
   - `.tooltip("text")` shows a tooltip when you hover
   - `.size([w, h])`, `.width(px)` and `.height(px)`
   - `.padding([x, y])` which also takes a `Stateful<[f32; 2]>`

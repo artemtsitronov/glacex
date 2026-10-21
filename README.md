@@ -369,14 +369,14 @@ ScrollView::new(&mut child_column)
 Every widget has its own `*Style` struct, and it controls everything the widget draws. That means fills, borders, shadows, padding, fonts, shapes, animation timings and the hover cursor. The easy way is to start from a theme preset and only change the fields you care about with `..`
 
 ```rust
-use glacex::{Button, ButtonStyle, Color, CursorIcon, Fill, Path, ShadowStyle, Stateful};
+use glacex::{Border, Button, ButtonStyle, Color, CursorIcon, Fill, Path, ShadowStyle, Stateful};
 
 let save_btn = Button::new("Save").id("btn").style(ButtonStyle {
     fill: Stateful::new(Color::hex_str("#4f46e5"))
         .hovered(Color::hex_str("#6366f1"))
         .pressed(Color::hex_str("#4338ca"))
         .into(),
-    border_color: Color::WHITE.with_alpha(0.2).into(),
+    border: Border::new(1.0, Color::WHITE.with_alpha(0.2)).into(),
     path: Path::rect([8.0; 4]).into(),
     shadow: ShadowStyle::new(Color::hex_str("#4f46e5").with_alpha(0.4), 12.0, [0.0, 3.0]).into(),
     scale: Stateful::new(1.0).hovered(1.03).pressed(0.97),
@@ -397,7 +397,7 @@ Button::new("Save").fill(
 )
 ```
 
-`Button`, `Card`, `Checkbox`, `RadioButton`, `Switch`, `Slider`, `TextInput`, `TextArea`, `SelectBox`, `Badge` and `ProgressBar` also have `.fill(..)`, `.border_color(..)`, `.border_width(..)` and `.shadow(..)` builders. You can pass them a plain value or a `Stateful`. `Label` has `.fill(..)`, `.text_color(..)`, `.border_color(..)`, `.border_width(..)` and `.padding(..)`. And `.color(..)` and `.thickness(..)` on `Divider` take a `Stateful` too.
+`Button`, `Card`, `Checkbox`, `RadioButton`, `Switch`, `Slider`, `TextInput`, `TextArea`, `SelectBox`, `Badge` and `ProgressBar` also have `.fill(..)`, `.border(..)` and `.shadow(..)` builders. You can pass them a plain value or a `Stateful`. `Label` has `.fill(..)`, `.text_color(..)`, `.border(..)` and `.padding(..)`. And `.color(..)` and `.thickness(..)` on `Divider` take a `Stateful` too.
 
 The states always stack in the same order. First `idle`, then `hovered`, then `selected` (or `selected_hovered` if it's hovered), then `focused` and then `pressed`. Every layer fades in with its own animation. What `selected` means depends on the widget. It's checked for `Checkbox`, on for `Switch`, the picked option for `RadioButton`, the active tab in `Tabs` and the picked item in `SelectBox`. `pressed` is also used while you drag a slider or a scrollbar thumb.
 
@@ -414,22 +414,22 @@ A few things that work the same in every style
 
 | Style Struct | Target Widget | Fields |
 |---|---|---|
-| `ButtonStyle` | `Button` | `fill`†, `border_width`†, `border_color`†, `padding`†, `min_size`†, `text_style`†, `text_align`, `shadow`†, `sharp`, `path`†, `scale`†, `offset`†, `hover_motion`, `press_motion`, `cursor`† |
-| `BadgeStyle` | `Badge` | `fill`†, `border_width`†, `border_color`†, `padding`†, `height`†, `min_width`†, `text_style`†, `text_align`, `shadow`†, `sharp`, `path`†, `hover_motion` |
-| `CardStyle` | `Card` | `fill`†, `border_width`†, `border_color`†, `padding`†, `min_size`†, `shadow`†, `sharp`, `clip_content`, `path`†, `hover_motion`, `cursor`† |
-| `CheckboxStyle` | `Checkbox` | `fill`†, `check_color`†, `check_thickness`†, `check_scale`†, `border_width`†, `border_color`†, `shadow`†, `sharp`, `path`†, `size`†, `pop_scale`†, `check_motion`, `hover_motion`, `pop_motion`, `cursor`† |
-| `RadioButtonStyle` | `RadioButton` | `fill`†, `border_width`†, `border_color`†, `shadow`†, `sharp`, `dot_color`†, `dot_inset`†, `dot_path`†, `path`†, `size`†, `dot_motion`, `hover_motion`, `cursor`† |
-| `SwitchStyle` | `Switch` | `track_fill`†, `thumb_fill`†, `thumb_border_width`†, `thumb_border_color`†, `thumb_padding`†, `thumb_size`†, `thumb_shadow`†, `thumb_path`†, `trail_color`†, `trail_stretch`†, `trail_max`†, `border_width`†, `border_color`†, `shadow`†, `sharp`, `path`†, `size`†, `toggle_motion`, `hover_motion`, `cursor`† |
-| `SliderStyle` | `Slider` | `track_fill`†, `filled_fill`†, `thumb_fill`†, `thumb_border_width`†, `thumb_border_color`†, `border_width`†, `border_color`†, `track_height`†, `thumb_size`†, `vertical_padding`†, `shadow`†, `trail_color`†, `trail_stretch`†, `trail_max`†, `sharp`, `path`†, `filled_path`†, `thumb_path`†, `hover_motion`, `drag_motion`, `velocity_motion`, `cursor`† |
-| `ProgressBarStyle` | `ProgressBar` | `track_fill`†, `progress_fill`†, `border_width`†, `border_color`†, `progress_border_width`†, `progress_border_color`†, `progress_inset`†, `min_progress_width`†, `size`†, `shadow`†, `sharp`, `path`†, `progress_path`†, `progress_motion`, `hover_motion` |
-| `TextInputStyle` | `TextInput` | `fill`†, `text_style`†, `placeholder_color`†, `border_width`†, `border_color`†, `padding`†, `selection_color`†, `selection_radius`†, `cursor_color`†, `cursor_width`†, `cursor_blink_period`, `shadow`†, `sharp`, `path`†, `hover_motion`, `focus_motion`, `cursor`† |
-| `TextAreaStyle` | `TextArea` | `fill`†, `text_style`†, `syntax`, `border_width`†, `border_color`†, `padding`†, `selection_color`†, `selection_radius`†, `current_line_fill`†, `cursor_color`†, `cursor_width`†, `cursor_blink_period`, `thumb_fill`†, `thumb_path`†, `scrollbar`†, `scroll_speed`, `shadow`†, `sharp`, `path`†, `hover_motion`, `focus_motion`, `cursor`† |
-| `ScrollViewStyle` | `ScrollView` | `fill`†, `border_width`†, `border_color`†, `background_path`†, `track_fill`†, `thumb_fill`†, `scrollbar`†, `always_show_scrollbars`, `scroll_speed`, `clip_content`, `sharp`, `path`†, `track_path`†, `hover_motion`, `cursor`† |
-| `SelectBoxStyle` | `SelectBox` | `fill`†, `text_style`†, `placeholder_color`†, `border_width`†, `border_color`†, `shadow`†, `height`†, `padding_x`†, `show_chevron`, `chevron_color`†, `chevron_size`†, `chevron_thickness`†, `chevron_open_angle`†, `chevron_space`†, `dropdown_fill`†, `dropdown_border_width`†, `dropdown_border_color`†, `dropdown_padding`†, `dropdown_max_height`†, `dropdown_screen_margin`†, `dropdown_shadow`†, `item_height`†, `item_inset_x`†, `item_padding_x`†, `item_fill`†, `item_text_style`†, `item_corner_radius`†, `show_check`, `check_color`†, `check_thickness`†, `searchable`, `search_height`†, `search_gap`†, `search_padding_x`†, `search_fill`†, `search_border_width`†, `search_border_color`†, `search_corner_radius`†, `search_text_style`†, `search_placeholder`, `sharp`, `path`†, `hover_motion`, `focus_motion`, `chevron_motion`, `item_hover_motion`, `open_stiffness`, `open_damping`, `cursor`† |
-| `TabsStyle` | `Tabs` | `height`†, `tab_padding_x`†, `tab_min_width`†, `gap`†, `padding_x`†, `fill`†, `border_width`†, `border_color`†, `shadow`†, `text_style`†, `tab_fill`†, `indicator_fill`†, `indicator`, `indicator_border_width`†, `indicator_border_color`†, `indicator_shadow`†, `pill_inset_y`†, `sharp`, `path`†, `indicator_path`†, `tab_path`†, `hover_motion`, `indicator_motion`, `cursor`† |
+| `ButtonStyle` | `Button` | `fill`†, `border`†, `padding`†, `min_size`†, `text_style`†, `text_align`, `shadow`†, `sharp`, `path`†, `scale`†, `offset`†, `hover_motion`, `press_motion`, `cursor`† |
+| `BadgeStyle` | `Badge` | `fill`†, `border`†, `padding`†, `height`†, `min_width`†, `text_style`†, `text_align`, `shadow`†, `sharp`, `path`†, `hover_motion` |
+| `CardStyle` | `Card` | `fill`†, `border`†, `padding`†, `min_size`†, `shadow`†, `sharp`, `clip_content`, `path`†, `hover_motion`, `cursor`† |
+| `CheckboxStyle` | `Checkbox` | `fill`†, `check_color`†, `check_thickness`†, `check_scale`†, `border`†, `shadow`†, `sharp`, `path`†, `size`†, `pop_scale`†, `check_motion`, `hover_motion`, `pop_motion`, `cursor`† |
+| `RadioButtonStyle` | `RadioButton` | `fill`†, `border`†, `shadow`†, `sharp`, `dot_color`†, `dot_inset`†, `dot_path`†, `path`†, `size`†, `dot_motion`, `hover_motion`, `cursor`† |
+| `SwitchStyle` | `Switch` | `track_fill`†, `thumb_fill`†, `thumb_border`†, `thumb_padding`†, `thumb_size`†, `thumb_shadow`†, `thumb_path`†, `trail_color`†, `trail_stretch`†, `trail_max`†, `border`†, `shadow`†, `sharp`, `path`†, `size`†, `toggle_motion`, `hover_motion`, `cursor`† |
+| `SliderStyle` | `Slider` | `track_fill`†, `filled_fill`†, `thumb_fill`†, `thumb_border`†, `border`†, `track_height`†, `thumb_size`†, `vertical_padding`†, `shadow`†, `trail_color`†, `trail_stretch`†, `trail_max`†, `sharp`, `path`†, `filled_path`†, `thumb_path`†, `hover_motion`, `drag_motion`, `velocity_motion`, `cursor`† |
+| `ProgressBarStyle` | `ProgressBar` | `track_fill`†, `progress_fill`†, `border`†, `progress_border`†, `progress_inset`†, `min_progress_width`†, `size`†, `shadow`†, `sharp`, `path`†, `progress_path`†, `progress_motion`, `hover_motion` |
+| `TextInputStyle` | `TextInput` | `fill`†, `text_style`†, `placeholder_color`†, `border`†, `padding`†, `selection_color`†, `selection_radius`†, `cursor_color`†, `cursor_width`†, `cursor_blink_period`, `shadow`†, `sharp`, `path`†, `hover_motion`, `focus_motion`, `cursor`† |
+| `TextAreaStyle` | `TextArea` | `fill`†, `text_style`†, `syntax`, `border`†, `padding`†, `selection_color`†, `selection_radius`†, `current_line_fill`†, `cursor_color`†, `cursor_width`†, `cursor_blink_period`, `thumb_fill`†, `thumb_path`†, `scrollbar`†, `scroll_speed`, `shadow`†, `sharp`, `path`†, `hover_motion`, `focus_motion`, `cursor`† |
+| `ScrollViewStyle` | `ScrollView` | `fill`†, `border`†, `background_path`†, `track_fill`†, `thumb_fill`†, `scrollbar`†, `always_show_scrollbars`, `scroll_speed`, `clip_content`, `sharp`, `path`†, `track_path`†, `hover_motion`, `cursor`† |
+| `SelectBoxStyle` | `SelectBox` | `fill`†, `text_style`†, `placeholder_color`†, `border`†, `shadow`†, `height`†, `padding_x`†, `show_chevron`, `chevron_color`†, `chevron_size`†, `chevron_thickness`†, `chevron_open_angle`†, `chevron_space`†, `dropdown_fill`†, `dropdown_border`†, `dropdown_padding`†, `dropdown_max_height`†, `dropdown_screen_margin`†, `dropdown_shadow`†, `item_height`†, `item_inset_x`†, `item_padding_x`†, `item_fill`†, `item_text_style`†, `item_corner_radius`†, `show_check`, `check_color`†, `check_thickness`†, `searchable`, `search_height`†, `search_gap`†, `search_padding_x`†, `search_fill`†, `search_border`†, `search_corner_radius`†, `search_text_style`†, `search_placeholder`, `sharp`, `path`†, `hover_motion`, `focus_motion`, `chevron_motion`, `item_hover_motion`, `open_stiffness`, `open_damping`, `cursor`† |
+| `TabsStyle` | `Tabs` | `height`†, `tab_padding_x`†, `tab_min_width`†, `gap`†, `padding_x`†, `fill`†, `border`†, `shadow`†, `text_style`†, `tab_fill`†, `indicator_fill`†, `indicator`, `indicator_border`†, `indicator_shadow`†, `pill_inset_y`†, `sharp`, `path`†, `indicator_path`†, `tab_path`†, `hover_motion`, `indicator_motion`, `cursor`† |
 | `DividerStyle` | `Divider` | `fill`†, `thickness`†, `margin`†, `inset`†, `sharp`, `path`†, `hover_motion` |
-| `AccordionStyle` | `Accordion` | `header_height`, `header_padding_x`, `header_fill`†, `header_border_width`, `header_border_color`†, `header_path`†, `header_text_style`†, `chevron`, `content_padding`, `show_dividers`, `divider_color`, `sharp`, `hover_motion`, `focus_motion`, `open_stiffness`, `open_damping`, `cursor`† |
-| `LabelStyle` | `Label` | `padding`†, `align_x`, `align_y`, `fill`†, `text_color`†, `border_width`†, `border_color`†, `sharp`, `path`†, `hover_motion` |
+| `AccordionStyle` | `Accordion` | `header_height`, `header_padding_x`, `header_fill`†, `header_border`†, `header_path`†, `header_text_style`†, `chevron`, `content_padding`, `show_dividers`, `divider_color`, `sharp`, `hover_motion`, `focus_motion`, `open_stiffness`, `open_damping`, `cursor`† |
+| `LabelStyle` | `Label` | `padding`†, `align_x`, `align_y`, `fill`†, `text_color`†, `border`†, `sharp`, `path`†, `hover_motion` |
 
 Presets you can start from are `ButtonStyle::{from_theme, primary, outline, ghost, danger}`, `BadgeStyle::{.., tinted(theme, color)}`, `CardStyle::{.., interactive}`, `CheckboxStyle::circle`, `RadioButtonStyle::outlined`, `SwitchStyle::square`, `SliderStyle::thick`, `ProgressBarStyle::colored(theme, color)`, `TextInputStyle::filled`, `TextAreaStyle::code`, `ScrollViewStyle::panel`, `SelectBoxStyle::filled`, `TabsStyle::{segmented, underline}`, `AccordionStyle::filled`, `DividerStyle::{faint, strong, rounded}` and `LabelStyle::highlighted`.
 
@@ -505,8 +505,7 @@ star.close_path();
 ui.draw_shape(
     MeasurablePath::free(star),
     Fill::Solid(Color::hex_str("#f59e0b")),
-    4.0,                          // border_width
-    Color::hex_str("#1e293b"),    // border_color
+    Border::new(4.0, Color::hex_str("#1e293b")),
     0.0,                          // blur_radius, not supported for Free paths, ignored
     false,                        // sharp
     0.0,                          // rotation, radians

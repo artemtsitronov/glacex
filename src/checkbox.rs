@@ -1,4 +1,5 @@
 use crate::animation::{Motion, animate_towards};
+use crate::border::Border;
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::generate_uuid;
@@ -49,8 +50,7 @@ pub struct CheckboxStyle {
     pub check_color: Stateful<Color>,
     pub check_thickness: Stateful<f32>,
     pub check_scale: Stateful<f32>,
-    pub border_width: Stateful<f32>,
-    pub border_color: Stateful<Color>,
+    pub border: Stateful<Border>,
     pub shadow: Stateful<Option<ShadowStyle>>,
     pub sharp: bool,
     pub path: Stateful<Path>,
@@ -76,9 +76,9 @@ impl CheckboxStyle {
             check_color: Stateful::new(theme.on_active()),
             check_thickness: Stateful::new(2.0),
             check_scale: Stateful::new(1.0),
-            border_width: Stateful::new(1.0),
-            border_color: Stateful::new(theme.border_strong)
-                .selected(theme.border_strong.lerp(theme.active, 0.5)),
+            border: Stateful::new(theme.border_strong)
+                .selected(theme.border_strong.lerp(theme.active, 0.5))
+                .map(|&color| Border::new(1.0, color)),
             shadow: Stateful::new(Some(theme.shadow_sm()[0])),
             sharp: false,
             path: Stateful::new(Path::rect([4.0; 4])),
@@ -163,12 +163,8 @@ impl Checkbox {
             .style
             .clone()
             .unwrap_or_else(|| CheckboxStyle::from_theme(theme));
-        self.overrides.apply(
-            &mut style.fill,
-            &mut style.border_color,
-            &mut style.border_width,
-            &mut style.shadow,
-        );
+        self.overrides
+            .apply(&mut style.fill, &mut style.border, &mut style.shadow);
         style
     }
 
@@ -272,8 +268,7 @@ fn draw_stroke(a: [f32; 2], b: [f32; 2], width: f32, color: Color, ui: &mut Ui) 
     ui.draw_shape(
         MeasurablePath::rect(position, [length, width], [width / 2.0; 4]),
         Fill::Solid(color),
-        0.0,
-        Color::TRANSPARENT,
+        Border::NONE,
         0.0,
         false,
         angle,
@@ -373,8 +368,7 @@ impl Measurable for Checkbox {
         ui.draw_shape(
             path(draw_pos, draw_size),
             style.fill.resolve(weights),
-            style.border_width.resolve(weights),
-            style.border_color.resolve(weights),
+            style.border.resolve(weights),
             0.0,
             style.sharp,
             0.0,

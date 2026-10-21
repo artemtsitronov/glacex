@@ -77,10 +77,10 @@ fn button_style(attrs: &HashMap<String, String>) -> ButtonStyle {
         style.fill.pressed = Some(Fill::Solid(c));
     }
     if let Some(c) = attr_color(attrs, "border_color") {
-        style.border_color.idle = c;
+        style.border.idle.color = c;
     }
     if let Some(w) = attr_f32(attrs, "border_width") {
-        style.border_width.idle = w;
+        style.border.idle.width = w;
     }
     if let Some(r) = attr_f32(attrs, "corner_radius") {
         style.path = Path::rect([r; 4]).into();
@@ -104,10 +104,10 @@ fn checkbox_style(attrs: &HashMap<String, String>) -> CheckboxStyle {
         style.fill.selected = Some(Fill::Solid(c));
     }
     if let Some(c) = attr_color(attrs, "border_color") {
-        style.border_color.idle = c;
+        style.border.idle.color = c;
     }
     if let Some(w) = attr_f32(attrs, "border_width") {
-        style.border_width.idle = w;
+        style.border.idle.width = w;
     }
     if let Some(r) = attr_f32(attrs, "corner_radius") {
         style.path = Path::rect([r; 4]).into();
@@ -125,16 +125,16 @@ fn text_input_style(attrs: &HashMap<String, String>) -> TextInputStyle {
         style.fill.idle = Fill::Solid(c);
     }
     if let Some(c) = attr_color(attrs, "border_color") {
-        style.border_color.idle = c;
+        style.border.idle.color = c;
     }
     if let Some(w) = attr_f32(attrs, "border_width") {
-        style.border_width.idle = w;
+        style.border.idle.width = w;
     }
     if let Some(r) = attr_f32(attrs, "corner_radius") {
         style.path = Path::rect([r; 4]).into();
     }
     if let Some(c) = attr_color(attrs, "focus_border_color") {
-        style.border_color.focused = Some(c);
+        style.border.focused.get_or_insert(style.border.idle).color = c;
     }
     if let Some(c) = attr_color(attrs, "selection_color") {
         style.selection_color.idle = c;
@@ -155,16 +155,16 @@ fn text_area_style(attrs: &HashMap<String, String>) -> TextAreaStyle {
         style.fill.idle = Fill::Solid(c);
     }
     if let Some(c) = attr_color(attrs, "border_color") {
-        style.border_color.idle = c;
+        style.border.idle.color = c;
     }
     if let Some(w) = attr_f32(attrs, "border_width") {
-        style.border_width.idle = w;
+        style.border.idle.width = w;
     }
     if let Some(r) = attr_f32(attrs, "corner_radius") {
         style.path = Path::rect([r; 4]).into();
     }
     if let Some(c) = attr_color(attrs, "focus_border_color") {
-        style.border_color.focused = Some(c);
+        style.border.focused.get_or_insert(style.border.idle).color = c;
     }
     if let Some(c) = attr_color(attrs, "selection_color") {
         style.selection_color.idle = c;

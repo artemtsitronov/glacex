@@ -1,4 +1,5 @@
 use crate::animation::{Motion, animate_towards};
+use crate::border::Border;
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::generate_uuid;
@@ -26,10 +27,8 @@ fn default_track_path() -> Path {
 pub struct ProgressBarStyle {
     pub track_fill: Stateful<Fill>,
     pub progress_fill: Stateful<Fill>,
-    pub border_width: Stateful<f32>,
-    pub border_color: Stateful<Color>,
-    pub progress_border_width: Stateful<f32>,
-    pub progress_border_color: Stateful<Color>,
+    pub border: Stateful<Border>,
+    pub progress_border: Stateful<Border>,
     pub progress_inset: Stateful<f32>,
     pub min_progress_width: Stateful<f32>,
     pub size: Stateful<[f32; 2]>,
@@ -46,10 +45,8 @@ impl ProgressBarStyle {
         ProgressBarStyle {
             track_fill: Stateful::new(Fill::Solid(theme.surface_subtle)),
             progress_fill: Stateful::new(Fill::Solid(theme.active)),
-            border_width: Stateful::new(1.0),
-            border_color: Stateful::new(theme.border),
-            progress_border_width: Stateful::new(0.0),
-            progress_border_color: Stateful::new(Color::TRANSPARENT),
+            border: Stateful::new(Border::new(1.0, theme.border)),
+            progress_border: Stateful::new(Border::NONE),
             progress_inset: Stateful::new(0.0),
             min_progress_width: Stateful::new(0.0),
             size: Stateful::new([ProgressBar::DEFAULT_WIDTH, ProgressBar::DEFAULT_HEIGHT]),
@@ -160,12 +157,8 @@ impl ProgressBar {
             ProgressBarVariant::Warning => ProgressBarStyle::warning(theme),
             ProgressBarVariant::Error => ProgressBarStyle::error(theme),
         });
-        self.overrides.apply(
-            &mut style.track_fill,
-            &mut style.border_color,
-            &mut style.border_width,
-            &mut style.shadow,
-        );
+        self.overrides
+            .apply(&mut style.track_fill, &mut style.border, &mut style.shadow);
         style
     }
 
@@ -257,8 +250,7 @@ impl Measurable for ProgressBar {
         ui.draw_shape(
             path(position, size),
             style.track_fill.resolve(weights),
-            style.border_width.resolve(weights),
-            style.border_color.resolve(weights),
+            style.border.resolve(weights),
             0.0,
             style.sharp,
             0.0,
@@ -285,8 +277,7 @@ impl Measurable for ProgressBar {
                     [filled_width, inner_size[1]],
                 ),
                 style.progress_fill.resolve(weights),
-                style.progress_border_width.resolve(weights),
-                style.progress_border_color.resolve(weights),
+                style.progress_border.resolve(weights),
                 0.0,
                 style.sharp,
                 0.0,

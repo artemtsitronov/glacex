@@ -1,4 +1,5 @@
 use crate::animation::{Motion, Spring, animate_towards};
+use crate::border::Border;
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::generate_uuid;
@@ -19,8 +20,7 @@ pub struct SelectBoxStyle {
     pub fill: Stateful<Fill>,
     pub text_style: Stateful<TextStyle>,
     pub placeholder_color: Stateful<Color>,
-    pub border_width: Stateful<f32>,
-    pub border_color: Stateful<Color>,
+    pub border: Stateful<Border>,
     pub shadow: Stateful<Option<ShadowStyle>>,
     pub height: Stateful<f32>,
     pub padding_x: Stateful<f32>,
@@ -29,8 +29,7 @@ pub struct SelectBoxStyle {
     pub chevron: ChevronStyle,
 
     pub dropdown_fill: Stateful<Fill>,
-    pub dropdown_border_width: Stateful<f32>,
-    pub dropdown_border_color: Stateful<Color>,
+    pub dropdown_border: Stateful<Border>,
     pub dropdown_padding: Stateful<f32>,
     pub dropdown_max_height: Stateful<f32>,
     pub dropdown_screen_margin: Stateful<f32>,
@@ -51,8 +50,7 @@ pub struct SelectBoxStyle {
     pub search_gap: Stateful<f32>,
     pub search_padding_x: Stateful<f32>,
     pub search_fill: Stateful<Color>,
-    pub search_border_width: Stateful<f32>,
-    pub search_border_color: Stateful<Color>,
+    pub search_border: Stateful<Border>,
     pub search_corner_radius: Stateful<f32>,
     pub search_text_style: Stateful<TextStyle>,
     pub search_placeholder: &'static str,
@@ -75,8 +73,9 @@ impl SelectBoxStyle {
                 .focused(Fill::Solid(theme.surface)),
             text_style: Stateful::new(TextStyle::new().color(theme.text_primary)),
             placeholder_color: Stateful::new(theme.text_muted),
-            border_width: Stateful::new(1.0),
-            border_color: Stateful::new(theme.border_strong).focused(theme.focus_border),
+            border: Stateful::new(theme.border_strong)
+                .focused(theme.focus_border)
+                .map(|&color| Border::new(1.0, color)),
             shadow: Stateful::new(None),
             height: Stateful::new(36.0),
             padding_x: Stateful::new(12.0),
@@ -85,8 +84,7 @@ impl SelectBoxStyle {
             chevron: ChevronStyle::default(),
 
             dropdown_fill: Stateful::new(Fill::Solid(theme.surface_elevated)),
-            dropdown_border_width: Stateful::new(1.0),
-            dropdown_border_color: Stateful::new(theme.border_strong),
+            dropdown_border: Stateful::new(Border::new(1.0, theme.border_strong)),
             dropdown_padding: Stateful::new(6.0),
             dropdown_max_height: Stateful::new(280.0),
             dropdown_screen_margin: Stateful::new(8.0),
@@ -120,8 +118,7 @@ impl SelectBoxStyle {
             search_gap: Stateful::new(4.0),
             search_padding_x: Stateful::new(10.0),
             search_fill: Stateful::new(theme.surface_subtle),
-            search_border_width: Stateful::new(1.0),
-            search_border_color: Stateful::new(theme.border_strong.with_alpha(0.5)),
+            search_border: Stateful::new(Border::new(1.0, theme.border_strong.with_alpha(0.5))),
             search_corner_radius: Stateful::new(theme.metrics.radius_sm),
             search_text_style: Stateful::new(TextStyle::new().size(13.0, 20.0)),
             search_placeholder: "Search…",
@@ -142,7 +139,8 @@ impl SelectBoxStyle {
             fill: Stateful::new(Fill::Solid(theme.surface_subtle))
                 .hovered(Fill::Solid(theme.hovered))
                 .focused(Fill::Solid(theme.surface)),
-            border_color: Stateful::new(Color::TRANSPARENT).focused(theme.focus_border),
+            border: Stateful::new(Border::new(1.0, Color::TRANSPARENT))
+                .focused(Border::new(1.0, theme.focus_border)),
             ..Self::from_theme(theme)
         }
     }
@@ -292,12 +290,8 @@ impl SelectBox {
             s.text_style = s.text_style.map(|t| custom.inherit(*t));
             s.item_text_style = s.item_text_style.map(|t| custom.inherit(*t));
         }
-        self.overrides.apply(
-            &mut s.fill,
-            &mut s.border_color,
-            &mut s.border_width,
-            &mut s.shadow,
-        );
+        self.overrides
+            .apply(&mut s.fill, &mut s.border, &mut s.shadow);
         s
     }
 
@@ -558,8 +552,7 @@ impl Measurable for SelectBox {
             .hovered(state.hover_t)
             .focused(state.focus_t);
         let trigger_fill = style.fill.resolve(weights);
-        let trigger_border = style.border_color.resolve(weights);
-        let trigger_border_width = style.border_width.resolve(weights);
+        let trigger_border = style.border.resolve(weights);
         let trigger_shadow = style.shadow.resolve(weights);
         let base_text_style = style.text_style.resolve(weights);
         let placeholder_color = style.placeholder_color.resolve(weights);
@@ -615,7 +608,6 @@ impl Measurable for SelectBox {
             ui.draw_shape(
                 trigger_path(position, size),
                 trigger_fill.clone(),
-                trigger_border_width,
                 trigger_border,
                 0.0,
                 style.sharp,
@@ -702,8 +694,7 @@ impl Measurable for SelectBox {
                         ],
                     ),
                     Fill::Solid(shadow_color),
-                    0.0,
-                    Color::TRANSPARENT,
+                    Border::NONE,
                     shadow.blur_radius,
                     false,
                     full_clip,
@@ -714,18 +705,12 @@ impl Measurable for SelectBox {
             // one background, cross fades trigger look into dropdown look as it grows
             let merged_fill =
                 trigger_fill.lerp(&style.dropdown_fill.resolve(dropdown_weights), open_ease);
-            let merged_border = trigger_border.lerp(
-                style.dropdown_border_color.resolve(dropdown_weights),
-                open_ease,
-            );
-            let dropdown_border_width = style.dropdown_border_width.resolve(dropdown_weights);
-            let merged_border_width =
-                trigger_border_width + (dropdown_border_width - trigger_border_width) * open_ease;
+            let merged_border =
+                trigger_border.lerp(style.dropdown_border.resolve(dropdown_weights), open_ease);
 
             ui.draw_overlay_shape(
                 trigger_path(container_pos, container_size),
                 merged_fill,
-                merged_border_width,
                 merged_border,
                 0.0,
                 style.sharp,
@@ -749,7 +734,7 @@ impl Measurable for SelectBox {
             if style.searchable {
                 let search_pos = [dropdown_pos[0] + inner_padding, content_y];
                 let search_size = [dropdown_size[0] - inner_padding * 2.0, search_height];
-                let search_border_color = style.search_border_color.resolve(dropdown_weights);
+                let search_border = style.search_border.resolve(dropdown_weights);
                 let search_padding_x = style.search_padding_x.resolve(dropdown_weights);
 
                 ui.draw_overlay_shape(
@@ -759,8 +744,11 @@ impl Measurable for SelectBox {
                         [style.search_corner_radius.resolve(dropdown_weights); 4],
                     ),
                     Fill::Solid(style.search_fill.resolve(dropdown_weights)),
-                    style.search_border_width.resolve(dropdown_weights),
-                    search_border_color.with_alpha(search_border_color.a * open_ease),
+                    search_border.with_color(
+                        search_border
+                            .color
+                            .with_alpha(search_border.color.a * open_ease),
+                    ),
                     0.0,
                     false,
                     dropdown_clip,
@@ -885,8 +873,7 @@ impl Measurable for SelectBox {
                             [style.item_corner_radius.resolve(item_weights); 4],
                         ),
                         Fill::Solid(item_bg),
-                        0.0,
-                        Color::TRANSPARENT,
+                        Border::NONE,
                         0.0,
                         false,
                         items_clip,

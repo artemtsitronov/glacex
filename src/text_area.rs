@@ -1,4 +1,5 @@
 use crate::animation::{Motion, animate_towards};
+use crate::border::Border;
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::generate_uuid;
@@ -33,8 +34,7 @@ pub struct TextAreaStyle {
     pub fill: Stateful<Fill>,
     pub text_style: Stateful<TextStyle>,
     pub syntax: SyntaxColors,
-    pub border_width: Stateful<f32>,
-    pub border_color: Stateful<Color>,
+    pub border: Stateful<Border>,
     pub padding: Stateful<[f32; 2]>,
     pub selection_color: Stateful<Color>,
     pub selection_radius: Stateful<f32>,
@@ -61,10 +61,9 @@ impl TextAreaStyle {
             fill: Stateful::new(Fill::Solid(theme.surface)),
             text_style: Stateful::new(TextStyle::new().color(theme.text_primary)),
             syntax: SyntaxColors::from_theme(theme),
-            border_width: Stateful::new(1.0).focused(1.5),
-            border_color: Stateful::new(theme.border)
-                .hovered(theme.border_strong)
-                .focused(theme.focus_border),
+            border: Stateful::new(Border::new(1.0, theme.border))
+                .hovered(Border::new(1.0, theme.border_strong))
+                .focused(Border::new(1.5, theme.focus_border)),
             padding: Stateful::new([10.0, 10.0]),
             selection_color: Stateful::new(theme.selection),
             selection_radius: Stateful::new(0.0),
@@ -220,12 +219,8 @@ impl TextArea {
         if let Some(custom) = self.text_style {
             style.text_style = style.text_style.map(|t| custom.inherit(*t));
         }
-        self.overrides.apply(
-            &mut style.fill,
-            &mut style.border_color,
-            &mut style.border_width,
-            &mut style.shadow,
-        );
+        self.overrides
+            .apply(&mut style.fill, &mut style.border, &mut style.shadow);
         style
     }
 
@@ -631,8 +626,7 @@ impl Measurable for TextArea {
         ui.draw_shape(
             path(position, size),
             style.fill.resolve(weights),
-            style.border_width.resolve(weights),
-            style.border_color.resolve(weights),
+            style.border.resolve(weights),
             0.0,
             style.sharp,
             0.0,
@@ -663,8 +657,7 @@ impl Measurable for TextArea {
                     [0.0; 4],
                 ),
                 line_fill.clone(),
-                0.0,
-                Color::TRANSPARENT,
+                Border::NONE,
                 0.0,
                 true,
                 0.0,
@@ -702,8 +695,7 @@ impl Measurable for TextArea {
                             [style.selection_radius.resolve(weights); 4],
                         ),
                         Fill::Solid(style.selection_color.resolve(weights)),
-                        0.0,
-                        Color::TRANSPARENT,
+                        Border::NONE,
                         0.0,
                         false,
                         0.0,
@@ -767,8 +759,7 @@ impl Measurable for TextArea {
                         [0.0; 4],
                     ),
                     Fill::Solid(style.cursor_color.resolve(weights)),
-                    0.0,
-                    Color::TRANSPARENT,
+                    Border::NONE,
                     0.0,
                     true,
                     0.0,
@@ -792,8 +783,7 @@ impl Measurable for TextArea {
                     [config.thickness, geometry_final.thumb_size],
                 ),
                 thumb_fill,
-                0.0,
-                Color::TRANSPARENT,
+                Border::NONE,
                 0.0,
                 style.sharp,
                 0.0,

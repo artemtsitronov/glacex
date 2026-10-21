@@ -1,4 +1,4 @@
-use crate::{Color, Fill, Path, Theme, Ui};
+use crate::{Border, Color, Fill, Path, Theme, Ui};
 
 // single shadow layer
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -95,8 +95,7 @@ pub fn draw_shadow(
     ui.draw_shape(
         path(shadow_position, shadow_size),
         Fill::Solid(style.color),
-        0.0,
-        Color::TRANSPARENT,
+        Border::NONE,
         style.blur_radius,
         false,
         0.0,

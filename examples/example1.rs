@@ -1,6 +1,7 @@
 use glacex::{
-    Alignment, App, Badge, BadgeVariant, Button, ButtonStyle, Card, CardStyle, Color, Divider,
-    FontWeight, Label, ShadowStyle, Stateful, TextInput, TextStyle, Ui, Widget, column, row,
+    Alignment, App, Badge, BadgeVariant, Border, Button, ButtonStyle, Card, CardStyle, Color,
+    Divider, FontWeight, Label, ShadowStyle, Stateful, TextInput, TextStyle, Ui, Widget, column,
+    row,
 };
 
 struct ColorDemo {
@@ -53,8 +54,7 @@ impl Widget for ColorDemo {
                     .hovered(parsed_color.lighten(0.15))
                     .pressed(parsed_color.darken(0.2)),
             )
-            .border_width(1.0)
-            .border_color(Color::WHITE.with_alpha(0.2))
+            .border(Border::new(1.0, Color::WHITE.with_alpha(0.2)))
             .shadow(ShadowStyle {
                 color: parsed_color.with_alpha(0.35),
                 blur_radius: 16.0,

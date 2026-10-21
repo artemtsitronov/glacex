@@ -1,5 +1,5 @@
 use crate::animation::Motion;
-use crate::color::Color;
+use crate::border::Border;
 use crate::fill::Fill;
 use crate::generate_uuid;
 use crate::geometry::{MeasurablePath, Path};
@@ -250,8 +250,7 @@ impl Measurable for Divider {
         ui.draw_shape(
             (style.path.resolve(weights))(line_position, line_size),
             style.fill.resolve(weights),
-            0.0,
-            Color::TRANSPARENT,
+            Border::NONE,
             0.0,
             style.sharp,
             0.0,

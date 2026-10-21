@@ -1,3 +1,4 @@
+use crate::border::Border;
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::geometry::Path;
@@ -39,6 +40,15 @@ impl Blend for Color {
             *other
         };
         from.lerp(to, t)
+    }
+}
+
+impl Blend for Border {
+    fn blend(&self, other: &Self, t: f32) -> Self {
+        Border {
+            color: self.color.blend(&other.color, t),
+            width: self.width.blend(&other.width, t),
+        }
     }
 }
 
@@ -232,6 +242,29 @@ impl<T> Stateful<T> {
         }
     }
 
+    pub fn zip<U, V>(&self, other: &Stateful<U>, f: impl Fn(&T, &U) -> V) -> Stateful<V> {
+        let pick = |a: &Option<T>, b: &Option<U>, a_base: &T, b_base: &U| match (a, b) {
+            (None, None) => None,
+            _ => Some(f(
+                a.as_ref().unwrap_or(a_base),
+                b.as_ref().unwrap_or(b_base),
+            )),
+        };
+        Stateful {
+            idle: f(&self.idle, &other.idle),
+            hovered: pick(&self.hovered, &other.hovered, &self.idle, &other.idle),
+            pressed: pick(&self.pressed, &other.pressed, &self.idle, &other.idle),
+            focused: pick(&self.focused, &other.focused, &self.idle, &other.idle),
+            selected: pick(&self.selected, &other.selected, &self.idle, &other.idle),
+            selected_hovered: pick(
+                &self.selected_hovered,
+                &other.selected_hovered,
+                self.selected.as_ref().unwrap_or(&self.idle),
+                other.selected.as_ref().unwrap_or(&other.idle),
+            ),
+        }
+    }
+
     pub fn values(&self) -> impl Iterator<Item = &T> {
         std::iter::once(&self.idle).chain(
             [
@@ -356,27 +389,30 @@ impl From<Stateful<ShadowStyle>> for Stateful<Option<ShadowStyle>> {
 #[derive(Clone, Default)]
 pub struct StyleOverrides {
     pub fill: Option<Stateful<Fill>>,
-    pub border_color: Option<Stateful<Color>>,
-    pub border_width: Option<Stateful<f32>>,
+    pub border: Option<Stateful<Border>>,
     pub shadow: Option<Stateful<Option<ShadowStyle>>>,
+    pub(crate) border_color: Option<Stateful<Color>>,
+    pub(crate) border_width: Option<Stateful<f32>>,
 }
 
 impl StyleOverrides {
     pub fn apply(
         &self,
         fill: &mut Stateful<Fill>,
-        border_color: &mut Stateful<Color>,
-        border_width: &mut Stateful<f32>,
+        border: &mut Stateful<Border>,
         shadow: &mut Stateful<Option<ShadowStyle>>,
     ) {
         if let Some(v) = &self.fill {
             *fill = v.clone();
         }
+        if let Some(v) = &self.border {
+            *border = v.clone();
+        }
         if let Some(v) = &self.border_color {
-            *border_color = v.clone();
+            *border = border.with_color(v);
         }
         if let Some(v) = &self.border_width {
-            *border_width = v.clone();
+            *border = border.with_width(v);
         }
         if let Some(v) = &self.shadow {
             *shadow = v.clone();
@@ -395,6 +431,17 @@ macro_rules! style_overrides {
                 self
             }
 
+            pub fn border(
+                mut self,
+                border: impl Into<$crate::stateful::Stateful<$crate::border::Border>>,
+            ) -> Self {
+                self.overrides.border = Some(border.into());
+                self.overrides.border_color = None;
+                self.overrides.border_width = None;
+                self
+            }
+
+            #[deprecated(since = "0.2.3", note = "use `.border(..)` instead")]
             pub fn border_color(
                 mut self,
                 color: impl Into<$crate::stateful::Stateful<$crate::color::Color>>,
@@ -403,6 +450,7 @@ macro_rules! style_overrides {
                 self
             }
 
+            #[deprecated(since = "0.2.3", note = "use `.border(..)` instead")]
             pub fn border_width(
                 mut self,
                 width: impl Into<$crate::stateful::Stateful<f32>>,
@@ -459,6 +507,16 @@ mod tests {
     fn color_converts_into_stateful_fill() {
         let fill: Stateful<Fill> = Stateful::new(Color::RED).hovered(Color::BLUE).into();
         assert!(matches!(fill.hovered, Some(Fill::Solid(c)) if c == Color::BLUE));
+    }
+
+    #[test]
+    fn border_color_override_keeps_width() {
+        let border =
+            Stateful::new(Border::new(1.0, Color::RED)).focused(Border::new(2.0, Color::RED));
+        let merged = border.with_color(&Stateful::new(Color::BLUE).hovered(Color::WHITE));
+        assert_eq!(merged.idle, Border::new(1.0, Color::BLUE));
+        assert_eq!(merged.hovered, Some(Border::new(1.0, Color::WHITE)));
+        assert_eq!(merged.focused, Some(Border::new(2.0, Color::BLUE)));
     }
 
     #[test]

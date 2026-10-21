@@ -1,5 +1,5 @@
 use glacex::{
-    App, Card, CardStyle, Fill, MeasurablePath, Motion, Path, ScrollConfig, ScrollView,
+    App, Border, Card, CardStyle, Fill, MeasurablePath, Motion, Path, ScrollConfig, ScrollView,
     ScrollViewStyle, TabItem, Tabs, TabsStyle, Theme, Ui, Widget, column, row,
 };
 use kurbo::BezPath;
@@ -73,8 +73,7 @@ impl Widget for CustomizationExample {
         let mut card = Card::new(&mut scroll_view).style(CardStyle {
             padding: [0.0; 2].into(),
             clip_content: true,
-            border_color: ui.theme().surface.into(),
-            border_width: 2.0.into(),
+            border: Border::new(2.0, ui.theme().surface).into(),
             path: Path::rect([2.0; 4]).into(),
             ..CardStyle::from_theme(ui.theme())
         });

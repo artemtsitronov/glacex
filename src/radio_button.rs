@@ -1,4 +1,5 @@
 use crate::animation::{Motion, animate_towards};
+use crate::border::Border;
 use crate::color::Color;
 use crate::fill::Fill;
 use crate::generate_uuid;
@@ -22,8 +23,7 @@ pub struct RadioButtonResponse {
 #[derive(Clone)]
 pub struct RadioButtonStyle {
     pub fill: Stateful<Fill>,
-    pub border_width: Stateful<f32>,
-    pub border_color: Stateful<Color>,
+    pub border: Stateful<Border>,
     pub shadow: Stateful<Option<ShadowStyle>>,
     pub sharp: bool,
     // sits on selected fill so it should contrast with it
@@ -43,10 +43,10 @@ impl RadioButtonStyle {
             fill: Stateful::new(Fill::Solid(theme.idle))
                 .hovered(Fill::Solid(theme.hovered))
                 .selected(Fill::Solid(theme.active)),
-            border_width: Stateful::new(1.0),
-            border_color: Stateful::new(theme.border)
+            border: Stateful::new(theme.border)
                 .hovered(theme.border_strong)
-                .selected(theme.border.lerp(theme.active, 0.4)),
+                .selected(theme.border.lerp(theme.active, 0.4))
+                .map(|&color| Border::new(1.0, color)),
             shadow: Stateful::new(Some(theme.shadow_sm()[0])),
             sharp: false,
             dot_color: Stateful::new(theme.on_active()),
@@ -68,8 +68,10 @@ impl RadioButtonStyle {
                 .clone()
                 .selected(Fill::Solid(theme.surface))
                 .selected_hovered(Fill::Solid(theme.surface_subtle)),
-            border_color: base.border_color.clone().selected(theme.active),
-            border_width: Stateful::new(1.5),
+            border: base
+                .border
+                .map(|border| border.with_width(1.5))
+                .selected(Border::new(1.5, theme.active)),
             dot_color: Stateful::new(theme.active),
             ..base
         }
@@ -154,12 +156,8 @@ impl RadioButton {
             .style
             .clone()
             .unwrap_or_else(|| RadioButtonStyle::from_theme(theme));
-        self.overrides.apply(
-            &mut style.fill,
-            &mut style.border_color,
-            &mut style.border_width,
-            &mut style.shadow,
-        );
+        self.overrides
+            .apply(&mut style.fill, &mut style.border, &mut style.shadow);
         style
     }
 
@@ -270,8 +268,7 @@ impl Measurable for RadioButton {
         ui.draw_shape(
             path(position, size),
             style.fill.resolve(weights),
-            style.border_width.resolve(weights),
-            style.border_color.resolve(weights),
+            style.border.resolve(weights),
             0.0,
             style.sharp,
             0.0,
@@ -290,8 +287,7 @@ impl Measurable for RadioButton {
             ui.draw_shape(
                 (style.dot_path.resolve(weights))(dot_pos, [dot_size, dot_size]),
                 Fill::Solid(dot_color),
-                0.0,
-                Color::TRANSPARENT,
+                Border::NONE,
                 0.0,
                 false,
                 0.0,
