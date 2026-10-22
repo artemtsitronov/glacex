@@ -803,6 +803,10 @@ impl Ui {
         self.painter.present();
     }
 
+    pub fn set_scale_factor(&mut self, scale: f64) {
+        self.painter.set_scale_factor(scale);
+    }
+
     pub fn resize(&mut self, width: u32, height: u32) {
         self.painter.resize(width, height);
     }

@@ -1,6 +1,8 @@
 struct WindowSize {
     width: f32,
     height: f32,
+    scale: f32,
+    _pad: f32,
 }
 
 @group(0) @binding(0)
@@ -194,17 +196,19 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         );
     }
 
-    let fill_alpha = 1.0 - smoothstep(-AA_FADE_WIDTH * 0.5, AA_FADE_WIDTH * 0.5, inner_dist);
+    let aa = AA_FADE_WIDTH / window_size.scale;
+
+    let fill_alpha = 1.0 - smoothstep(-aa * 0.5, aa * 0.5, inner_dist);
     let color = mix(select(in.border_color, fill_color, border_width <= 0.0), fill_color, fill_alpha);
 
     let alpha = select(
-        1.0 - smoothstep(-AA_FADE_WIDTH * 0.5, AA_FADE_WIDTH * 0.5, outer_dist),
+        1.0 - smoothstep(-aa * 0.5, aa * 0.5, outer_dist),
         select(1.0, 0.0, outer_dist > 0.0),
         sharp > 0.5
     );
 
     let reveal = in.path_params.x;
-    let reveal_epsilon = AA_FADE_WIDTH / in.path_params.y;
+    let reveal_epsilon = aa / in.path_params.y;
     let reveal_alpha = 1.0 - smoothstep(reveal - reveal_epsilon, reveal + reveal_epsilon, length_param);
 
     return vec4<f32>(color.rgb, color.a * alpha * reveal_alpha);

@@ -77,7 +77,7 @@ pub use select_box::*;
 pub use shadow::*;
 pub use shapes::*;
 pub use slider::*;
-pub use stateful::{Blend, StateWeights, Stateful, StyleOverrides};
+pub use stateful::*;
 pub use switch::*;
 pub use tabs::*;
 pub use tessellate::*;
@@ -88,6 +88,7 @@ pub use text_input::*;
 pub use theme::*;
 pub use ui::*;
 pub use widget::*;
+use winit::dpi::LogicalPosition;
 pub use winit::window::CursorIcon;
 // ...and that's the Harry Potter plot
 
@@ -267,7 +268,9 @@ impl<W: Widget> ApplicationHandler for App<W> {
             }
 
             WindowEvent::CursorMoved { position, .. } => {
-                ui.update_mouse_position(position.x, position.y);
+                let logical: LogicalPosition<f64> =
+                    position.to_logical(self.window.as_ref().unwrap().scale_factor());
+                ui.update_mouse_position(logical.x, logical.y);
             }
 
             WindowEvent::MouseInput { state, button, .. } => match button {
@@ -289,7 +292,11 @@ impl<W: Widget> ApplicationHandler for App<W> {
             WindowEvent::MouseWheel { delta, .. } => {
                 let (dx, dy) = match delta {
                     winit::event::MouseScrollDelta::LineDelta(x, y) => (x * 20.0, y * 20.0),
-                    winit::event::MouseScrollDelta::PixelDelta(pos) => (pos.x as f32, pos.y as f32),
+                    winit::event::MouseScrollDelta::PixelDelta(pos) => {
+                        let logical: LogicalPosition<f32> =
+                            pos.to_logical(self.window.as_ref().unwrap().scale_factor());
+                        (logical.x, logical.y)
+                    }
                 };
                 ui.set_scroll_delta_x(dx);
                 ui.set_scroll_delta_y(dy);
@@ -311,6 +318,10 @@ impl<W: Widget> ApplicationHandler for App<W> {
                 let state = modifiers.state();
                 ui.set_shift_held(state.shift_key());
                 ui.set_ctrl_held(modifiers.state().control_key());
+            }
+
+            WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
+                ui.set_scale_factor(scale_factor);
             }
 
             _ => {}

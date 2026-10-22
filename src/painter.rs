@@ -30,6 +30,7 @@ use wgpu::{
     RenderPipelineDescriptor, RequestAdapterOptions, ShaderModuleDescriptor, ShaderSource,
     ShaderStages, StoreOp, Surface, SurfaceConfiguration, TextureViewDescriptor, VertexState,
 };
+use winit::dpi::LogicalSize;
 use winit::window::Window;
 
 struct CachedText {
@@ -217,6 +218,8 @@ impl GradientAtlas {
 struct WindowSize {
     width: f32,
     height: f32,
+    scale: f32,
+    _pad: f32,
 }
 
 macro_rules! load_font {
@@ -355,6 +358,7 @@ pub struct Painter {
 
     window_size_buffer: Buffer,
     bind_group: BindGroup,
+    scale_factor: f32,
 
     quad_vertex_buffer: Buffer,
     shape_instance_buffer: Buffer,
@@ -404,17 +408,22 @@ impl Painter {
             .await
             .unwrap();
 
-        let size = window.inner_size();
+        let scale = window.scale_factor();
+        let physical = window.inner_size();
+        let logical: LogicalSize<f32> = physical.to_logical(scale);
+
         let surface_config = surface
-            .get_default_config(&adapter, size.width, size.height)
+            .get_default_config(&adapter, physical.width, physical.height)
             .unwrap();
         surface.configure(&device, &surface_config);
 
         let window_size_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: None,
             contents: bytemuck::cast_slice(&[WindowSize {
-                width: size.width as f32,
-                height: size.height as f32,
+                width: logical.width,
+                height: logical.height,
+                scale: scale as f32,
+                _pad: 0.0,
             }]),
             usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         });
@@ -423,7 +432,7 @@ impl Painter {
             label: None,
             entries: &[BindGroupLayoutEntry {
                 binding: 0,
-                visibility: ShaderStages::VERTEX,
+                visibility: ShaderStages::VERTEX_FRAGMENT,
                 count: None,
                 ty: BindingType::Buffer {
                     ty: BufferBindingType::Uniform,
@@ -645,6 +654,7 @@ impl Painter {
             render_pipeline,
             window_size_buffer,
             bind_group,
+            scale_factor: scale as f32,
             quad_vertex_buffer,
             shape_instance_buffer,
             shape_instance_capacity,
@@ -735,8 +745,8 @@ impl Painter {
 
     pub fn window_size(&self) -> [f32; 2] {
         [
-            self.surface_config.width as f32,
-            self.surface_config.height as f32,
+            self.surface_config.width as f32 / self.scale_factor,
+            self.surface_config.height as f32 / self.scale_factor,
         ]
     }
 
@@ -1015,20 +1025,21 @@ impl Painter {
         );
 
         let cache = &self.text_shape_cache;
+        let s = self.scale_factor;
 
         let text_areas = self
             .pending_labels
             .iter()
             .map(|(key, position, bounds, color)| TextArea {
                 buffer: &cache[key].buffer,
-                left: position[0],
-                top: position[1],
-                scale: 1.0,
+                left: position[0] * s,
+                top: position[1] * s,
+                scale: s,
                 bounds: TextBounds {
-                    left: bounds[0] as i32,
-                    top: bounds[1] as i32,
-                    right: bounds[2] as i32,
-                    bottom: bounds[3] as i32,
+                    left: (bounds[0] * s) as i32,
+                    top: (bounds[1] * s) as i32,
+                    right: (bounds[2] * s) as i32,
+                    bottom: (bounds[3] * s) as i32,
                 },
                 default_color: glyphon::Color::rgba(
                     (color.r * 255.0).round().clamp(0.0, 255.0) as u8,
@@ -1056,14 +1067,14 @@ impl Painter {
                 .iter()
                 .map(|(key, position, bounds, color)| TextArea {
                     buffer: &cache[key].buffer,
-                    left: position[0],
-                    top: position[1],
-                    scale: 1.0,
+                    left: position[0] * s,
+                    top: position[1] * s,
+                    scale: s,
                     bounds: TextBounds {
-                        left: bounds[0] as i32,
-                        top: bounds[1] as i32,
-                        right: bounds[2] as i32,
-                        bottom: bounds[3] as i32,
+                        left: (bounds[0] * s) as i32,
+                        top: (bounds[1] * s) as i32,
+                        right: (bounds[2] * s) as i32,
+                        bottom: (bounds[3] * s) as i32,
                     },
                     default_color: glyphon::Color::rgba(
                         (color.r * 255.0).round().clamp(0.0, 255.0) as u8,
@@ -1127,10 +1138,10 @@ impl Painter {
                 }
 
                 // clamped, wgpu panics on a scissor rect past the target or with zero size
-                let x = clip[0].max(0.0) as u32;
-                let y = clip[1].max(0.0) as u32;
-                let right = (clip[2].max(0.0) as u32).min(surface_w);
-                let bottom = (clip[3].max(0.0) as u32).min(surface_h);
+                let x = (clip[0] * s).max(0.0) as u32;
+                let y = (clip[1] * s).max(0.0) as u32;
+                let right = ((clip[2] * s).max(0.0) as u32).min(surface_w);
+                let bottom = ((clip[3] * s).max(0.0) as u32).min(surface_h);
 
                 if right > x && bottom > y {
                     render_pass.set_scissor_rect(x, y, right - x, bottom - y);
@@ -1168,10 +1179,10 @@ impl Painter {
                         range_end += 1;
                     }
 
-                    let x = clip[0].max(0.0) as u32;
-                    let y = clip[1].max(0.0) as u32;
-                    let right = (clip[2].max(0.0) as u32).min(surface_w);
-                    let bottom = (clip[3].max(0.0) as u32).min(surface_h);
+                    let x = (clip[0] * s).max(0.0) as u32;
+                    let y = (clip[1] * s).max(0.0) as u32;
+                    let right = ((clip[2] * s).max(0.0) as u32).min(surface_w);
+                    let bottom = ((clip[3] * s).max(0.0) as u32).min(surface_h);
 
                     if right > x && bottom > y {
                         render_pass.set_scissor_rect(x, y, right - x, bottom - y);
@@ -1196,19 +1207,29 @@ impl Painter {
         self.queue.present(surface_texture);
     }
 
-    pub fn resize(&mut self, width: u32, height: u32) {
-        self.surface_config.width = width;
-        self.surface_config.height = height;
-        self.surface.configure(&self.device, &self.surface_config);
-
+    fn write_window_uniform(&self) {
         self.queue.write_buffer(
             &self.window_size_buffer,
             0,
             bytemuck::cast_slice(&[WindowSize {
-                width: width as f32,
-                height: height as f32,
+                width: self.surface_config.width as f32 / self.scale_factor,
+                height: self.surface_config.height as f32 / self.scale_factor,
+                scale: self.scale_factor,
+                _pad: 0.0,
             }]),
         );
+    }
+
+    pub fn set_scale_factor(&mut self, scale: f64) {
+        self.scale_factor = scale as f32;
+        self.write_window_uniform();
+    }
+
+    pub fn resize(&mut self, width: u32, height: u32) {
+        self.surface_config.width = width;
+        self.surface_config.height = height;
+        self.surface.configure(&self.device, &self.surface_config);
+        self.write_window_uniform();
     }
 }
 

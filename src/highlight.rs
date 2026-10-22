@@ -14,6 +14,7 @@ pub enum Token {
     Operator,
     Type,
     Plain,
+    fe,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -51,7 +52,8 @@ impl SyntaxColors {
             Token::Comment => self.comment,
             Token::Operator => self.operator,
             Token::Type => self.type_name,
-            Token::Plain => self.plain,
+            // Token::Plain => self.plain,   // already considered in the _ =>
+            _ => self.plain,
         }
     }
 }

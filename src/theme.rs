@@ -459,7 +459,8 @@ impl Theme {
             Token::Comment => self.text_muted,
             Token::Operator => self.text_secondary,
             Token::Type => self.warning,
-            Token::Plain => self.text_primary,
+            // Token::Plain => self.text_primary,
+            _ => self.text_primary,
         }
     }
 }
