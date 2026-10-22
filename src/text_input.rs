@@ -34,13 +34,6 @@ pub struct TextInputStyle {
     pub cursor: Stateful<CursorIcon>,
 }
 
-pub(crate) fn focus_ring(shadow: Option<ShadowStyle>, focus_color: Color) -> Option<ShadowStyle> {
-    shadow.map(|s| {
-        s.color(focus_color.with_alpha(0.25))
-            .blur(s.blur_radius + 6.0)
-    })
-}
-
 pub(crate) fn caret_visible(idle_seconds: f32, period: f32) -> bool {
     period <= 0.0 || idle_seconds < 0.3 || (idle_seconds % period) < period * 0.5
 }
@@ -60,11 +53,11 @@ impl TextInputStyle {
             cursor_color: Stateful::new(theme.active),
             cursor_width: Stateful::new(2.0),
             cursor_blink_period: 1.0,
-            shadow: Stateful::new(shadow).focused(focus_ring(shadow, theme.focus_border)),
+            shadow: Stateful::new(shadow),
             sharp: false,
             path: Stateful::new(Path::rect([6.0; 4])),
             hover_motion: Motion::SNAPPY,
-            focus_motion: Motion::GENTLE,
+            focus_motion: Motion::SNAPPY,
             cursor: Stateful::new(CursorIcon::Text),
         }
     }
@@ -77,8 +70,7 @@ impl TextInputStyle {
                 .focused(Fill::Solid(theme.surface)),
             border: Stateful::new(Border::new(1.0, Color::TRANSPARENT))
                 .focused(Border::new(1.5, theme.focus_border)),
-            shadow: Stateful::new(None)
-                .focused(focus_ring(Some(theme.shadow_sm()[0]), theme.focus_border)),
+            shadow: Stateful::new(None),
             ..base
         }
     }

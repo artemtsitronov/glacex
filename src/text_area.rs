@@ -11,7 +11,7 @@ use crate::shadow::{ShadowStyle, draw_shadow};
 use crate::stateful::{StateWeights, Stateful, StyleOverrides, style_overrides};
 use crate::text::TextStyle;
 use crate::text_edit::TextEditState;
-use crate::text_input::{caret_visible, focus_ring};
+use crate::text_input::caret_visible;
 use crate::theme::Theme;
 use crate::ui::Ui;
 use crate::widget::{Accessible, FocusId, Measurable, StatefulWidget, Widget, hash_id};
@@ -76,11 +76,11 @@ impl TextAreaStyle {
             thumb_path: Stateful::new(pill_path()),
             scrollbar: Stateful::new(ScrollConfig::default()),
             scroll_speed: 1.0,
-            shadow: Stateful::new(shadow).focused(focus_ring(shadow, theme.focus_border)),
+            shadow: Stateful::new(shadow),
             sharp: false,
             path: Stateful::new(Path::rect([theme.metrics.radius_md; 4])),
             hover_motion: Motion::SNAPPY,
-            focus_motion: Motion::GENTLE,
+            focus_motion: Motion::SNAPPY,
             cursor: Stateful::new(CursorIcon::Text),
         }
     }
