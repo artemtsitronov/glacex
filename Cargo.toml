@@ -21,7 +21,7 @@ include = [
 ]
 
 [dependencies]
-accesskit = "0.24"
+accesskit = "0.25"
 accesskit_winit = "0.32"
 arboard = { version = "3.6.1", features = ["wayland-data-control"] }
 bytemuck = { version = "1.25.2", features = ["derive"] }
