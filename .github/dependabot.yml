@@ -4,7 +4,19 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 3
+    groups:
+      gui-stack:
+        patterns:
+          - "accesskit*"
+          - "wgpu"
+          - "winit"
+          - "taffy"
+          - "arboard"
+      everything-else:
+        patterns: ["*"]
+        update-types: ["patch", "minor"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly

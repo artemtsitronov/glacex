@@ -21,16 +21,16 @@ include = [
 ]
 
 [dependencies]
-accesskit = "0.24"
-accesskit_winit = "0.32"
-arboard = { version = "3.6.1", features = ["wayland-data-control"] }
+accesskit = "0.25"
+accesskit_winit = "0.34"
+arboard = { version = "3.7.0", features = ["wayland-data-control"] }
 bytemuck = { version = "1.25.2", features = ["derive"] }
 env_logger = "0.11.11"
 glyphon = "0.12.0"
 log = "0.4"
 pollster = "1.0.1"
-taffy = "0.13.0"
-wgpu = "30.0.0"
+taffy = "0.15.0"
+wgpu = "30.0.1"
 winit = "0.30.13"
 image = "0.25.10"
 kurbo = "0.13.1"

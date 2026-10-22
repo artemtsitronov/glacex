@@ -83,7 +83,7 @@ fn arrange_children(
                     height: length(inner_size[1]),
                 },
                 flex_direction: direction,
-                align_items: Some(to_taffy_align(align)),
+                align_items: to_taffy_align(align),
                 gap,
                 ..Default::default()
             },

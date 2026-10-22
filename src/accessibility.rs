@@ -1,6 +1,6 @@
 use accesskit::{
-    ActionHandler, ActionRequest, ActivationHandler, DeactivationHandler, Node, NodeId, Tree,
-    TreeId, TreeUpdate,
+    ActionHandler, ActionRequest, ActivationHandler, DeactivationHandler, Node, NodeId, TreeId,
+    TreeInfo, TreeUpdate,
 };
 use std::sync::{Arc, Mutex};
 
@@ -22,7 +22,7 @@ impl SharedTree {
 
         TreeUpdate {
             nodes,
-            tree: Some(Tree::new(ROOT_ID)),
+            tree: Some(TreeInfo::new(ROOT_ID)),
             tree_id: TreeId::ROOT,
             focus: focus.unwrap_or(ROOT_ID),
         }
