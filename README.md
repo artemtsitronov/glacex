@@ -23,8 +23,6 @@ If you have any questions or problems, just email me at <artemtsitronov@gmail.co
 > **Status**: 0.2.0 is a lot more stable than before and I'm not planning any big API changes.
 If something big does change, I'll let you know first.
 
-> **Warning**: In the next version, a `BorderStyle` struct is planned, to replace `border_width` and `border_color`, as well as adding stroke types. In 0.2.3 `border_width` and `border_color` will become deprecated, and will be removed by 0.2.5.
-
 ## Table of Contents
 
 - [What is glacex?](#what-is-glacex)
