@@ -68,7 +68,7 @@ impl SliderStyle {
             filled_fill: Stateful::new(Fill::Solid(theme.active)),
             thumb_fill: Stateful::new(Fill::Solid(Color::WHITE)),
             thumb_border: Stateful::new(Border::new(1.0, theme.border)),
-            border: Stateful::new(Border::new(1.5, theme.border_strong)),
+            border: Stateful::new(Border::new(1.0, theme.border)),
             track_height: Stateful::new(4.0),
             thumb_size: Stateful::new(16.0).pressed(18.5),
             vertical_padding: Stateful::new(8.0),
