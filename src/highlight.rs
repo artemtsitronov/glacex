@@ -14,7 +14,7 @@ pub enum Token {
     Operator,
     Type,
     Plain,
-    fe,
+    Fe,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

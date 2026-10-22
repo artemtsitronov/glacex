@@ -151,18 +151,10 @@ impl AccordionItemState {
     }
 }
 
+#[derive(Default)]
 pub struct AccordionState {
     pub items: HashMap<String, AccordionItemState>,
     pub initialized: bool,
-}
-
-impl Default for AccordionState {
-    fn default() -> Self {
-        AccordionState {
-            items: HashMap::new(),
-            initialized: false,
-        }
-    }
 }
 
 struct HeaderNode<'a> {
