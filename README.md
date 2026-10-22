@@ -15,7 +15,7 @@
 
 An immediate mode UI library for Rust that runs on the GPU. Written from scratch on top of `wgpu`, `winit` and `taffy`.
 
-Made by **Artem Tsitronov** and **Soumalya Das**.
+Develpped primarly by **Artem Tsitronov**(author) and **Soumalya Das**(contributor).
 If you have any questions or problems, just email me at <artemtsitronov@gmail.com>
 
 </div>
@@ -112,7 +112,7 @@ Or put it in your `Cargo.toml`
 
 ```toml
 [dependencies]
-glacex = "0.2.2"
+glacex = "0.2.3"
 ```
 
 ### From GitHub (main branch)
