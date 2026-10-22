@@ -1,14 +1,17 @@
 use crate::sdf::{bake_open_sdf, bake_sdf};
 use kurbo::{BezPath, Rect, Shape};
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    hash::{DefaultHasher, Hash, Hasher},
+};
 use wgpu::{Device, Queue};
 
 const ATLAS_SIZE: u32 = 2048;
 const BAKE_MARGIN: f64 = 24.0;
 
-fn resolution_for_bounds(bounds: Rect) -> (u32, u32) {
-    let w = (bounds.width() as u32).clamp(32, 256);
-    let h = (bounds.height() as u32).clamp(32, 256);
+fn resolution_for_bounds(bounds: Rect, scale: f32) -> (u32, u32) {
+    let w = ((bounds.width() * scale as f64).ceil() as u32).clamp(32, 512);
+    let h = ((bounds.height() * scale as f64).ceil() as u32).clamp(32, 512);
     (w, h)
 }
 
@@ -193,13 +196,32 @@ impl PathSdfAtlas {
         handle
     }
 
-    pub fn bake_cached(&mut self, queue: &Queue, path: &BezPath, key: u64) -> PathSdfHandle {
+    fn key_with_res(&self, key: u64, width: u32, height: u32) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        key.hash(&mut hasher);
+        width.hash(&mut hasher);
+        height.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    pub fn bake_cached(
+        &mut self,
+        queue: &Queue,
+        path: &BezPath,
+        key: u64,
+        scale: f32,
+    ) -> PathSdfHandle {
         if let Some(&handle) = self.cache.get(&key) {
             return handle;
         }
 
         let bounds = path.bounding_box().inset(BAKE_MARGIN);
-        let (w, h) = resolution_for_bounds(bounds);
+        let (w, h) = resolution_for_bounds(bounds, scale);
+        let key = self.key_with_res(key, w, h);
+        if let Some(&handle) = self.cache.get(&key) {
+            return handle;
+        }
+
         let field: Vec<[f32; 2]> = bake_sdf(path, bounds, w as usize, h as usize)
             .into_iter()
             .map(|d| [d, 0.0])
@@ -215,12 +237,18 @@ impl PathSdfAtlas {
         thickness: f32,
         bounds: Rect,
         key: u64,
+        scale: f32,
     ) -> PathSdfHandle {
         if let Some(&handle) = self.cache.get(&key) {
             return handle;
         }
 
-        let (w, h) = resolution_for_bounds(bounds);
+        let (w, h) = resolution_for_bounds(bounds, scale);
+        let key = self.key_with_res(key, w, h);
+        if let Some(&handle) = self.cache.get(&key) {
+            return handle;
+        }
+
         let (field, total_length) =
             bake_open_sdf(centerline, thickness, bounds, w as usize, h as usize);
 

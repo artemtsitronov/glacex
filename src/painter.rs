@@ -790,10 +790,20 @@ impl Painter {
         rotation: f32,
         reveal: f32,
     ) -> ShapeInstance {
+        let s = self.scale_factor;
+        let border_width = if border.width > 0.0 {
+            (border.width * s).round().max(1.0) / s
+        } else {
+            0.0
+        };
+
         let path_sdf_handle = match &shape.path {
             MeasurablePath::Free(bez_path) => {
                 let key = hash_bezpath(bez_path);
-                Some(self.path_sdf_atlas.bake_cached(&self.queue, bez_path, key))
+                Some(
+                    self.path_sdf_atlas
+                        .bake_cached(&self.queue, bez_path, key, self.scale_factor),
+                )
             }
             MeasurablePath::Open {
                 centerline,
@@ -810,6 +820,7 @@ impl Painter {
                     *thickness,
                     bounds,
                     key,
+                    self.scale_factor,
                 ))
             }
             _ => None,
@@ -877,7 +888,7 @@ impl Painter {
             color,
             corner_radius,
             border_color: border.color,
-            render_params: [border.width, blur_radius, sharp, fill_kind],
+            render_params: [border_width, blur_radius, sharp, fill_kind],
             shape_params: [shape_kind, gradient_angle, gradient_row, rotation],
             gradient_center,
             image_uv,
