@@ -277,6 +277,7 @@ impl TextEditState {
         let ctrl_a = ui.physical_key_pressed(PhysicalKey::Code(KeyCode::KeyA));
         let ctrl_c = ui.physical_key_pressed(PhysicalKey::Code(KeyCode::KeyC));
         let ctrl_v = ui.physical_key_pressed(PhysicalKey::Code(KeyCode::KeyV));
+        let ctrl_x = ui.physical_key_pressed(PhysicalKey::Code(KeyCode::KeyX));
 
         let typed: String = ui
             .typed_text()
@@ -294,7 +295,8 @@ impl TextEditState {
             || home
             || end
             || (ui.ctrl_held() && ctrl_a)
-            || (ui.ctrl_held() && ctrl_v);
+            || (ui.ctrl_held() && ctrl_v)
+            || (ui.ctrl_held() && ctrl_x);
 
         if any_activity {
             self.mark_activity();
@@ -398,6 +400,19 @@ impl TextEditState {
             let end_byte = self.byte_index_for(end);
             let selected = &self.text[start_byte..end_byte];
             ui.copy_to_clipboard(selected);
+        }
+
+        if ui.ctrl_held()
+            && ctrl_x
+            && !self.secure
+            && let Some((start, end)) = self.selection_range()
+        {
+            let start_byte = self.byte_index_for(start);
+            let end_byte = self.byte_index_for(end);
+            let selected = &self.text[start_byte..end_byte];
+
+            ui.copy_to_clipboard(selected);
+            self.delete_range(start, end);
         }
 
         if ui.ctrl_held()
