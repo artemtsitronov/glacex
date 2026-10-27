@@ -412,9 +412,20 @@ impl Painter {
         let physical = window.inner_size();
         let logical: LogicalSize<f32> = physical.to_logical(scale);
 
-        let surface_config = surface
+        let caps = surface.get_capabilities(&adapter);
+        let mut surface_config = surface
             .get_default_config(&adapter, physical.width, physical.height)
             .unwrap();
+        if let Some(f) = [
+            wgpu::TextureFormat::Bgra8Unorm,
+            wgpu::TextureFormat::Rgba8Unorm,
+        ]
+        .into_iter()
+        .find(|f| caps.formats.contains(f))
+        {
+            surface_config.format = f;
+        }
+        eprintln!("surface format: {:?}", surface_config.format);
         surface.configure(&device, &surface_config);
 
         let window_size_buffer = device.create_buffer_init(&BufferInitDescriptor {
@@ -635,7 +646,13 @@ impl Painter {
         let swash_cache = SwashCache::new();
         let cache = Cache::new(&device);
         let viewport = Viewport::new(&device, &cache);
-        let mut text_atlas = TextAtlas::new(&device, &queue, &cache, surface_config.format);
+        let mut text_atlas = TextAtlas::with_color_mode(
+            &device,
+            &queue,
+            &cache,
+            surface_config.format,
+            glyphon::ColorMode::Web,
+        );
         let text_renderer =
             TextRenderer::new(&mut text_atlas, &device, MultisampleState::default(), None);
         let overlay_text_renderer =

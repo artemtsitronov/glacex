@@ -73,7 +73,7 @@ impl SelectBoxStyle {
                 .focused(Fill::Solid(theme.surface)),
             text_style: Stateful::new(TextStyle::new().color(theme.text_primary)),
             placeholder_color: Stateful::new(theme.text_muted),
-            border: Stateful::new(theme.border_strong)
+            border: Stateful::new(theme.border)
                 .focused(theme.focus_border)
                 .map(|&color| Border::new(1.0, color)),
             shadow: Stateful::new(None),
@@ -84,7 +84,7 @@ impl SelectBoxStyle {
             chevron: ChevronStyle::default(),
 
             dropdown_fill: Stateful::new(Fill::Solid(theme.surface_elevated)),
-            dropdown_border: Stateful::new(Border::new(1.0, theme.border_strong)),
+            dropdown_border: Stateful::new(Border::new(1.0, theme.border)),
             dropdown_padding: Stateful::new(6.0),
             dropdown_max_height: Stateful::new(280.0),
             dropdown_screen_margin: Stateful::new(8.0),

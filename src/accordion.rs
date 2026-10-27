@@ -20,6 +20,9 @@ use winit::window::CursorIcon;
 
 #[derive(Clone)]
 pub struct AccordionStyle {
+    pub fill: Stateful<Fill>,
+    pub border: Stateful<Border>,
+    pub path: Stateful<Path>,
     pub header_height: f32,
     pub header_padding_x: f32,
     pub header_fill: Stateful<Fill>,
@@ -30,6 +33,7 @@ pub struct AccordionStyle {
     pub content_padding: [f32; 2],
     pub show_dividers: bool,
     pub divider_color: Color,
+    pub divider_width: f32,
     pub sharp: bool,
     pub hover_motion: f32,
     pub focus_motion: f32,
@@ -41,6 +45,9 @@ pub struct AccordionStyle {
 impl AccordionStyle {
     pub fn from_theme(theme: &Theme) -> Self {
         AccordionStyle {
+            fill: Stateful::new(Fill::Solid(theme.surface)),
+            border: Stateful::new(Border::new(1.0, theme.border)),
+            path: Stateful::new(Path::rect([theme.metrics.radius_sm; 4])),
             header_height: 44.0,
             header_padding_x: 12.0,
             header_fill: Stateful::new(Fill::Solid(Color::TRANSPARENT))
@@ -57,6 +64,7 @@ impl AccordionStyle {
             content_padding: [12.0, 8.0],
             show_dividers: true,
             divider_color: theme.border,
+            divider_width: 1.0,
             sharp: false,
             hover_motion: Motion::SNAPPY,
             focus_motion: Motion::GENTLE,
@@ -404,6 +412,28 @@ impl<'a> Measurable for Accordion<'a> {
         let mut toggle: Option<usize> = None;
         let mut hovered_index: Option<usize> = None;
 
+        let any_focus = state.items.values().map(|s| s.focus_t).fold(0.0, f32::max);
+        let any_open = state.items.values().map(|s| s.open_t()).fold(0.0, f32::max);
+        let outer_weights = StateWeights::IDLE.focused(any_focus).selected(any_open);
+
+        let outer_path = style.path.resolve(outer_weights);
+        let outer_mpath = outer_path(position, size);
+
+        let outer_fill = style.fill.resolve(outer_weights);
+        let outer_border = style.border.resolve(outer_weights);
+
+        if !matches!(outer_fill, Fill::Solid(c) if c.a < 0.003) {
+            ui.draw_shape(
+                // background, bgbg
+                outer_mpath.clone(),
+                outer_fill,
+                Border::NONE,
+                0.0,
+                style.sharp,
+                0.0,
+            );
+        }
+
         for (i, item) in self.items.iter_mut().enumerate() {
             let focus_id = FocusId::new(&header_ids[i]);
             let item_state = state.items.get_mut(&keys[i]).unwrap();
@@ -447,7 +477,7 @@ impl<'a> Measurable for Accordion<'a> {
                 ui.draw_shape(
                     path(header_pos, header_size),
                     fill,
-                    border,
+                    border, //temporary
                     0.0,
                     style.sharp,
                     0.0,
@@ -499,7 +529,7 @@ impl<'a> Measurable for Accordion<'a> {
 
             if style.show_dividers && i + 1 < keys.len() {
                 ui.draw_shape(
-                    MeasurablePath::rect([x, y], [w, 1.0], [0.0; 4]),
+                    MeasurablePath::rect([x, y], [w, style.divider_width], [0.0; 4]),
                     Fill::Solid(style.divider_color),
                     Border::NONE,
                     0.0,
@@ -508,6 +538,18 @@ impl<'a> Measurable for Accordion<'a> {
                 );
                 y += 1.0;
             }
+        }
+
+        if outer_border.color.a >= 0.003 && outer_border.width > 0.0 {
+            ui.draw_shape(
+                // border
+                outer_mpath.clone(),
+                Fill::Solid(Color::TRANSPARENT),
+                outer_border,
+                0.0,
+                style.sharp,
+                0.0,
+            );
         }
 
         if let Some(fi) = focused_index {

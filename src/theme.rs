@@ -12,15 +12,30 @@ pub struct Theme {
     pub surface_subtle: Color,
     pub surface_elevated: Color,
 
+    // secondary controls
     pub idle: Color,
     pub hovered: Color,
     pub pressed: Color,
+
+    // primary controls
     pub active: Color,
     pub active_hover: Color,
+    pub active_pressed: Color,
+
+    // accent controls, used sparingly
+    pub accent: Color,
+    pub accent_hover: Color,
+    pub accent_pressed: Color,
+
+    pub disabled_bg: Color,
+    pub disabled_border: Color,
+    pub disabled_text: Color,
 
     pub border_faint: Color,
     pub border: Color,
     pub border_strong: Color,
+    pub border_strong_hover: Color,
+    // the focus ring: 1px, offset 2px, in the text color
     pub focus_border: Color,
 
     pub text_primary: Color,
@@ -59,19 +74,66 @@ pub struct Metrics {
     pub space_4: f32,
     pub space_6: f32,
     pub space_8: f32,
+
+    pub border_width: f32,
+    pub focus_ring_width: f32,
+    pub focus_ring_offset: f32,
+
+    pub font_size_md: f32,
+    pub font_size_sm: f32,
+    pub font_size_xs: f32,
+
+    pub control_min_width: f32,
+    pub field_pad_x: f32,
+    pub icon_size: f32,
+    pub icon_stroke: f32,
+    pub icon_gap: f32,
+
+    pub checkbox_size: f32,
+    pub radio_size: f32,
+    pub radio_dot: f32,
+
+    pub switch_width: f32,
+    pub switch_height: f32,
+    pub switch_thumb_inset: f32,
+
+    pub slider_track: f32,
+    pub slider_thumb: f32,
+    pub progress_height: f32,
+
+    pub badge_height: f32,
+    pub badge_pad_x: f32,
+
+    pub tab_height: f32,
+    pub tab_underline: f32,
+
+    pub accordion_row_height: f32,
+    pub accordion_pad_x: f32,
+
+    pub card_pad: f32,
+
+    pub scrollbar_thumb: f32,
+    pub scrollbar_inset: f32,
+
+    pub textarea_min_height: f32,
+    pub textarea_line_height: f32,
+
+    pub select_option_height: f32,
 }
 
 impl Metrics {
+    // sharp and dense: 32px controls, 4px corners, 2px for small parts
+    // (checkbox, badge, scrollbar thumb), 1px borders, 1px focus ring
     pub const DEFAULT: Metrics = Metrics {
-        control_height_sm: 28.0,
-        control_height_md: 36.0,
-        control_height_lg: 44.0,
+        control_height_sm: 24.0,
+        control_height_md: 32.0,
+        control_height_lg: 40.0,
         control_pad_x: 14.0,
-        control_pad_y: 9.0,
-        radius_xs: 3.0,
-        radius_sm: 5.0,
-        radius_md: 7.0,
-        radius_lg: 12.0,
+        control_pad_y: 8.0,
+        radius_xs: 2.0,
+        radius_sm: 4.0,
+        radius_md: 4.0,
+        radius_lg: 6.0,
         radius_full: 9999.0,
         space_1: 4.0,
         space_2: 8.0,
@@ -79,6 +141,51 @@ impl Metrics {
         space_4: 16.0,
         space_6: 24.0,
         space_8: 32.0,
+
+        border_width: 1.0,
+        focus_ring_width: 1.0,
+        focus_ring_offset: 2.0,
+
+        font_size_md: 13.0,
+        font_size_sm: 12.0,
+        font_size_xs: 11.0,
+
+        control_min_width: 80.0,
+        field_pad_x: 10.0,
+        icon_size: 14.0,
+        icon_stroke: 1.5,
+        icon_gap: 8.0,
+
+        checkbox_size: 16.0,
+        radio_size: 16.0,
+        radio_dot: 6.0,
+
+        switch_width: 36.0,
+        switch_height: 20.0,
+        switch_thumb_inset: 3.0,
+
+        slider_track: 4.0,
+        slider_thumb: 14.0,
+        progress_height: 4.0,
+
+        badge_height: 20.0,
+        badge_pad_x: 6.0,
+
+        tab_height: 32.0,
+        tab_underline: 2.0,
+
+        accordion_row_height: 40.0,
+        accordion_pad_x: 12.0,
+
+        card_pad: 16.0,
+
+        scrollbar_thumb: 6.0,
+        scrollbar_inset: 3.0,
+
+        textarea_min_height: 80.0,
+        textarea_line_height: 20.0,
+
+        select_option_height: 28.0,
     };
 }
 
@@ -100,252 +207,80 @@ impl Theme {
     pub const LIGHT: Theme = Theme {
         name: "light",
         is_dark: false,
-        bg_canvas: Color::rgb(246, 247, 250),
-        surface: Color::rgb(255, 255, 255),
-        surface_subtle: Color::rgb(235, 237, 242),
-        surface_elevated: Color::rgb(255, 255, 255),
-        idle: Color::rgb(235, 237, 242),
-        hovered: Color::rgb(222, 225, 233),
-        pressed: Color::rgb(206, 210, 222),
-        active: Color::rgb(65, 68, 196),
-        active_hover: Color::rgb(89, 92, 214),
-        border_faint: Color::rgba(30, 33, 54, 0.05),
-        border: Color::rgba(30, 33, 54, 0.10),
-        border_strong: Color::rgba(30, 33, 54, 0.18),
-        focus_border: Color::rgba(65, 68, 196, 0.85),
-        text_primary: Color::rgb(23, 25, 38),
-        text_secondary: Color::rgb(83, 88, 107),
-        text_muted: Color::rgb(137, 142, 158),
-        success: Color::rgb(34, 139, 101),
-        warning: Color::rgb(180, 120, 20),
-        error: Color::rgb(196, 48, 66),
-        shadow_ambient: Color::rgba(30, 33, 54, 0.04),
-        shadow_key: Color::rgba(30, 33, 54, 0.08),
-        selection: Color::rgba(65, 68, 196, 0.16),
+        bg_canvas: Color::rgb(241, 246, 247),
+        surface: Color::rgb(251, 254, 254),
+        surface_subtle: Color::rgb(232, 240, 241),
+        surface_elevated: Color::rgb(251, 254, 254),
+        idle: Color::rgb(220, 232, 233),
+        hovered: Color::rgb(207, 224, 224),
+        pressed: Color::rgb(195, 215, 216),
+        active: Color::rgb(0, 113, 119),
+        active_hover: Color::rgb(3, 94, 99),
+        active_pressed: Color::rgb(1, 79, 83),
+        accent: Color::rgb(179, 2, 103),
+        accent_hover: Color::rgb(151, 0, 86),
+        accent_pressed: Color::rgb(128, 0, 72),
+        disabled_bg: Color::rgb(226, 234, 235),
+        disabled_border: Color::rgb(211, 223, 224),
+        disabled_text: Color::rgb(138, 160, 162),
+        border_faint: Color::rgb(219, 229, 230),
+        border: Color::rgb(195, 209, 209),
+        border_strong: Color::rgb(117, 143, 145),
+        border_strong_hover: Color::rgb(52, 120, 125),
+        focus_border: Color::rgb(10, 30, 32),
+        text_primary: Color::rgb(10, 30, 32),
+        text_secondary: Color::rgb(66, 90, 93),
+        text_muted: Color::rgb(90, 114, 117),
+        success: Color::rgb(40, 124, 66),
+        warning: Color::rgb(173, 115, 0),
+        error: Color::rgb(190, 34, 42),
+        shadow_ambient: Color::rgba(10, 30, 32, 0.04),
+        shadow_key: Color::rgba(10, 30, 32, 0.08),
+        selection: Color::rgba(0, 113, 119, 0.25),
         metrics: Metrics::DEFAULT,
     };
 
     pub const DARK: Theme = Theme {
         name: "dark",
         is_dark: true,
-        bg_canvas: Color::rgb(10, 11, 16),
-        surface: Color::rgb(17, 19, 26),
-        surface_subtle: Color::rgb(24, 27, 36),
-        surface_elevated: Color::rgb(32, 36, 48),
-        idle: Color::rgb(24, 27, 36),
-        hovered: Color::rgb(34, 38, 50),
-        pressed: Color::rgb(44, 49, 64),
-        active: Color::rgb(13, 148, 136),
-        active_hover: Color::rgb(45, 212, 191),
-        border_faint: Color::rgba(203, 213, 225, 0.06),
-        border: Color::rgba(203, 213, 225, 0.12),
-        border_strong: Color::rgba(203, 213, 225, 0.22),
-        focus_border: Color::rgb(45, 212, 191),
-        text_primary: Color::rgb(230, 234, 240),
-        text_secondary: Color::rgb(163, 171, 184),
-        text_muted: Color::rgb(105, 113, 128),
-        success: Color::rgb(74, 222, 128),
-        warning: Color::rgb(250, 204, 21),
-        error: Color::rgb(248, 113, 113),
+        // the five Realtime Colors values, untouched:
+        //   text #ddf1f3  background #050a0a  primary #6bc2c7
+        //   secondary #446d6f  accent #ee77af
+        // everything else is a mix of those five
+        bg_canvas: Color::rgb(5, 10, 10),
+        surface: Color::rgb(15, 20, 20),
+        surface_subtle: Color::rgb(20, 26, 26),
+        surface_elevated: Color::rgb(24, 31, 31),
+        // text mixed into the background: 10% / 14% / 18%
+        // (neutral on purpose, mixing in the teal secondary reads as green)
+        idle: Color::rgb(27, 33, 33),
+        hovered: Color::rgb(35, 42, 43),
+        pressed: Color::rgb(44, 52, 52),
+        active: Color::rgb(107, 194, 199),
+        active_hover: Color::rgb(132, 204, 209),
+        active_pressed: Color::rgb(91, 165, 169),
+        accent: Color::rgb(238, 119, 175),
+        accent_hover: Color::rgb(235, 143, 189),
+        accent_pressed: Color::rgb(205, 104, 152),
+        disabled_bg: Color::rgb(24, 31, 31),
+        disabled_border: Color::rgb(20, 26, 26),
+        disabled_text: Color::rgb(87, 98, 99),
+        border_faint: Color::rgb(18, 24, 24),
+        border: Color::rgb(31, 38, 38),
+        border_strong: Color::rgb(68, 109, 111),
+        // hover border is teal (secondary pulled toward primary);
+        // caption text is neutral grey, so the two never read as one color
+        border_strong_hover: Color::rgb(89, 156, 159),
+        focus_border: Color::rgb(221, 241, 243),
+        text_primary: Color::rgb(221, 241, 243),
+        text_secondary: Color::rgb(161, 176, 178),
+        text_muted: Color::rgb(122, 135, 136),
+        success: Color::rgb(101, 198, 125),
+        warning: Color::rgb(233, 180, 82),
+        error: Color::rgb(246, 109, 103),
         shadow_ambient: Color::rgba(0, 0, 0, 0.35),
         shadow_key: Color::rgba(0, 0, 0, 0.55),
-        selection: Color::rgba(45, 212, 191, 0.22),
-        metrics: Metrics::DEFAULT,
-    };
-
-    pub const CATPPUCCIN_MOCHA: Theme = Theme {
-        name: "catppuccin-mocha",
-        is_dark: true,
-        bg_canvas: Color::rgb(30, 30, 46),
-        surface: Color::rgb(24, 24, 37),
-        surface_subtle: Color::rgb(49, 50, 68),
-        surface_elevated: Color::rgb(69, 71, 90),
-        idle: Color::rgb(49, 50, 68),
-        hovered: Color::rgb(69, 71, 90),
-        pressed: Color::rgb(88, 91, 112),
-        active: Color::rgb(203, 166, 247),
-        active_hover: Color::rgb(180, 190, 254),
-        border_faint: Color::rgba(205, 214, 244, 0.06),
-        border: Color::rgba(205, 214, 244, 0.10),
-        border_strong: Color::rgba(205, 214, 244, 0.20),
-        focus_border: Color::rgb(203, 166, 247),
-        text_primary: Color::rgb(205, 214, 244),
-        text_secondary: Color::rgb(166, 173, 200),
-        text_muted: Color::rgb(108, 112, 134),
-        success: Color::rgb(166, 227, 161),
-        warning: Color::rgb(249, 226, 175),
-        error: Color::rgb(243, 139, 168),
-        shadow_ambient: Color::rgba(17, 17, 27, 0.35),
-        shadow_key: Color::rgba(17, 17, 27, 0.55),
-        selection: Color::rgba(203, 166, 247, 0.25),
-        metrics: Metrics::DEFAULT,
-    };
-
-    pub const CATPPUCCIN_LATTE: Theme = Theme {
-        name: "catppuccin-latte",
-        is_dark: false,
-        bg_canvas: Color::rgb(239, 241, 245),
-        surface: Color::rgb(255, 255, 255),
-        surface_subtle: Color::rgb(230, 233, 239),
-        surface_elevated: Color::rgb(255, 255, 255),
-        idle: Color::rgb(230, 233, 239),
-        hovered: Color::rgb(204, 208, 218),
-        pressed: Color::rgb(188, 192, 204),
-        active: Color::rgb(136, 57, 239),
-        active_hover: Color::rgb(114, 135, 253),
-        border_faint: Color::rgba(76, 79, 105, 0.05),
-        border: Color::rgba(76, 79, 105, 0.10),
-        border_strong: Color::rgba(76, 79, 105, 0.20),
-        focus_border: Color::rgba(136, 57, 239, 0.90),
-        text_primary: Color::rgb(76, 79, 105),
-        text_secondary: Color::rgb(108, 111, 133),
-        text_muted: Color::rgb(156, 160, 176),
-        success: Color::rgb(64, 160, 43),
-        warning: Color::rgb(223, 142, 29),
-        error: Color::rgb(210, 15, 57),
-        shadow_ambient: Color::rgba(76, 79, 105, 0.04),
-        shadow_key: Color::rgba(76, 79, 105, 0.08),
-        selection: Color::rgba(136, 57, 239, 0.15),
-        metrics: Metrics::DEFAULT,
-    };
-
-    pub const TOKYO_NIGHT: Theme = Theme {
-        name: "tokyo-night",
-        is_dark: true,
-        bg_canvas: Color::rgb(26, 27, 38),
-        surface: Color::rgb(36, 40, 59),
-        surface_subtle: Color::rgb(31, 35, 53),
-        surface_elevated: Color::rgb(41, 46, 66),
-        idle: Color::rgb(36, 40, 59),
-        hovered: Color::rgb(47, 53, 77),
-        pressed: Color::rgb(59, 66, 97),
-        active: Color::rgb(122, 162, 247),
-        active_hover: Color::rgb(187, 154, 247),
-        border_faint: Color::rgba(192, 202, 245, 0.06),
-        border: Color::rgba(192, 202, 245, 0.10),
-        border_strong: Color::rgba(192, 202, 245, 0.20),
-        focus_border: Color::rgb(122, 162, 247),
-        text_primary: Color::rgb(192, 202, 245),
-        text_secondary: Color::rgb(169, 177, 214),
-        text_muted: Color::rgb(86, 95, 137),
-        success: Color::rgb(158, 206, 106),
-        warning: Color::rgb(224, 175, 104),
-        error: Color::rgb(247, 118, 142),
-        shadow_ambient: Color::rgba(15, 15, 23, 0.35),
-        shadow_key: Color::rgba(15, 15, 23, 0.55),
-        selection: Color::rgba(122, 162, 247, 0.25),
-        metrics: Metrics::DEFAULT,
-    };
-
-    pub const GRUVBOX_DARK: Theme = Theme {
-        name: "gruvbox-dark",
-        is_dark: true,
-        bg_canvas: Color::rgb(40, 40, 40),
-        surface: Color::rgb(50, 48, 47),
-        surface_subtle: Color::rgb(60, 56, 54),
-        surface_elevated: Color::rgb(80, 73, 69),
-        idle: Color::rgb(60, 56, 54),
-        hovered: Color::rgb(80, 73, 69),
-        pressed: Color::rgb(102, 92, 84),
-        active: Color::rgb(254, 128, 25),
-        active_hover: Color::rgb(250, 189, 47),
-        border_faint: Color::rgba(251, 241, 199, 0.06),
-        border: Color::rgba(251, 241, 199, 0.10),
-        border_strong: Color::rgba(251, 241, 199, 0.20),
-        focus_border: Color::rgb(254, 128, 25),
-        text_primary: Color::rgb(251, 241, 199),
-        text_secondary: Color::rgb(235, 219, 178),
-        text_muted: Color::rgb(146, 131, 116),
-        success: Color::rgb(184, 187, 38),
-        warning: Color::rgb(250, 189, 47),
-        error: Color::rgb(251, 73, 52),
-        shadow_ambient: Color::rgba(29, 32, 33, 0.35),
-        shadow_key: Color::rgba(29, 32, 33, 0.55),
-        selection: Color::rgba(254, 128, 25, 0.25),
-        metrics: Metrics::DEFAULT,
-    };
-
-    pub const GRUVBOX_LIGHT: Theme = Theme {
-        name: "gruvbox-light",
-        is_dark: false,
-        bg_canvas: Color::rgb(251, 241, 199),
-        surface: Color::rgb(249, 245, 215),
-        surface_subtle: Color::rgb(235, 219, 178),
-        surface_elevated: Color::rgb(249, 245, 215),
-        idle: Color::rgb(235, 219, 178),
-        hovered: Color::rgb(213, 196, 161),
-        pressed: Color::rgb(189, 174, 147),
-        active: Color::rgb(175, 58, 3),
-        active_hover: Color::rgb(214, 93, 14),
-        border_faint: Color::rgba(40, 40, 40, 0.06),
-        border: Color::rgba(40, 40, 40, 0.12),
-        border_strong: Color::rgba(40, 40, 40, 0.22),
-        focus_border: Color::rgba(175, 58, 3, 0.90),
-        text_primary: Color::rgb(40, 40, 40),
-        text_secondary: Color::rgb(60, 56, 54),
-        text_muted: Color::rgb(124, 111, 100),
-        success: Color::rgb(121, 116, 14),
-        warning: Color::rgb(181, 118, 20),
-        error: Color::rgb(157, 0, 6),
-        shadow_ambient: Color::rgba(40, 40, 40, 0.04),
-        shadow_key: Color::rgba(40, 40, 40, 0.08),
-        selection: Color::rgba(175, 58, 3, 0.15),
-        metrics: Metrics::DEFAULT,
-    };
-
-    pub const NORD: Theme = Theme {
-        name: "nord",
-        is_dark: true,
-        bg_canvas: Color::rgb(46, 52, 64),
-        surface: Color::rgb(59, 66, 82),
-        surface_subtle: Color::rgb(67, 76, 94),
-        surface_elevated: Color::rgb(76, 86, 106),
-        idle: Color::rgb(59, 66, 82),
-        hovered: Color::rgb(67, 76, 94),
-        pressed: Color::rgb(76, 86, 106),
-        active: Color::rgb(136, 192, 208),
-        active_hover: Color::rgb(129, 161, 193),
-        border_faint: Color::rgba(216, 222, 233, 0.12),
-        border: Color::rgba(216, 222, 233, 0.22),
-        border_strong: Color::rgba(216, 222, 233, 0.38),
-        focus_border: Color::rgb(136, 192, 208),
-        text_primary: Color::rgb(236, 239, 244),
-        text_secondary: Color::rgb(216, 222, 233),
-        text_muted: Color::rgb(165, 178, 202),
-        success: Color::rgb(163, 190, 140),
-        warning: Color::rgb(235, 203, 139),
-        error: Color::rgb(191, 97, 106),
-        shadow_ambient: Color::rgba(36, 41, 51, 0.35),
-        shadow_key: Color::rgba(36, 41, 51, 0.55),
-        selection: Color::rgba(136, 192, 208, 0.25),
-        metrics: Metrics::DEFAULT,
-    };
-
-    pub const ROSE_PINE: Theme = Theme {
-        name: "rose-pine",
-        is_dark: true,
-        bg_canvas: Color::rgb(25, 23, 36),
-        surface: Color::rgb(31, 29, 46),
-        surface_subtle: Color::rgb(38, 35, 58),
-        surface_elevated: Color::rgb(42, 40, 62),
-        idle: Color::rgb(38, 35, 58),
-        hovered: Color::rgb(49, 47, 72),
-        pressed: Color::rgb(57, 53, 82),
-        active: Color::rgb(235, 111, 146),
-        active_hover: Color::rgb(196, 167, 231),
-        border_faint: Color::rgba(224, 222, 244, 0.06),
-        border: Color::rgba(224, 222, 244, 0.10),
-        border_strong: Color::rgba(224, 222, 244, 0.20),
-        focus_border: Color::rgb(235, 111, 146),
-        text_primary: Color::rgb(224, 222, 244),
-        text_secondary: Color::rgb(144, 140, 170),
-        text_muted: Color::rgb(110, 106, 134),
-        success: Color::rgb(156, 207, 216),
-        warning: Color::rgb(246, 193, 119),
-        error: Color::rgb(235, 111, 146),
-        shadow_ambient: Color::rgba(20, 18, 30, 0.35),
-        shadow_key: Color::rgba(20, 18, 30, 0.55),
-        selection: Color::rgba(235, 111, 146, 0.25),
+        selection: Color::rgba(107, 194, 199, 0.28),
         metrics: Metrics::DEFAULT,
     };
 
@@ -357,46 +292,8 @@ impl Theme {
         Self::DARK
     }
 
-    pub fn catppuccin_mocha() -> Self {
-        Self::CATPPUCCIN_MOCHA
-    }
-
-    pub fn catppuccin_latte() -> Self {
-        Self::CATPPUCCIN_LATTE
-    }
-
-    pub fn tokyo_night() -> Self {
-        Self::TOKYO_NIGHT
-    }
-
-    pub fn gruvbox_dark() -> Self {
-        Self::GRUVBOX_DARK
-    }
-
-    pub fn gruvbox_light() -> Self {
-        Self::GRUVBOX_LIGHT
-    }
-
-    pub fn nord() -> Self {
-        Self::NORD
-    }
-
-    pub fn rose_pine() -> Self {
-        Self::ROSE_PINE
-    }
-
     pub fn all() -> &'static [Theme] {
-        &[
-            Self::LIGHT,
-            Self::DARK,
-            Self::CATPPUCCIN_MOCHA,
-            Self::CATPPUCCIN_LATTE,
-            Self::TOKYO_NIGHT,
-            Self::GRUVBOX_DARK,
-            Self::GRUVBOX_LIGHT,
-            Self::NORD,
-            Self::ROSE_PINE,
-        ]
+        &[Self::LIGHT, Self::DARK]
     }
 
     pub fn from_name(name: &str) -> Option<Theme> {
@@ -404,13 +301,6 @@ impl Theme {
         match slug.as_str() {
             "light" | "white" => Some(Self::LIGHT),
             "dark" | "linear" => Some(Self::DARK),
-            "catppuccin" | "catppuccin-mocha" | "mocha" => Some(Self::CATPPUCCIN_MOCHA),
-            "catppuccin-latte" | "latte" => Some(Self::CATPPUCCIN_LATTE),
-            "tokyo-night" | "tokyonight" => Some(Self::TOKYO_NIGHT),
-            "gruvbox" | "gruvbox-dark" => Some(Self::GRUVBOX_DARK),
-            "gruvbox-light" => Some(Self::GRUVBOX_LIGHT),
-            "nord" => Some(Self::NORD),
-            "rose-pine" | "rosepine" => Some(Self::ROSE_PINE),
             _ => None,
         }
     }
@@ -441,12 +331,13 @@ impl Theme {
         ]
     }
 
-    // some dark themes have a near white active, white text would vanish on it
+    // text on `active` and `accent` fills: near-white on the dark light-theme
+    // teal and berry, near-black on the bright dark-theme ones
     pub fn on_active(&self) -> Color {
-        if self.is_dark && self.active.r > 0.8 && self.active.g > 0.8 {
-            Color::BLACK
+        if self.is_dark {
+            Color::rgb(5, 10, 10)
         } else {
-            Color::WHITE
+            Color::rgb(245, 249, 250)
         }
     }
 

@@ -45,8 +45,8 @@ impl TextInputStyle {
             fill: Stateful::new(Fill::Solid(theme.surface)),
             text_style: Stateful::new(TextStyle::new().color(theme.text_primary)),
             placeholder_color: Stateful::new(theme.text_muted),
-            border: Stateful::new(Border::new(1.0, theme.border_strong))
-                .focused(Border::new(1.5, theme.focus_border)),
+            border: Stateful::new(Border::new(1.0, theme.border))
+                .focused(Border::new(1.0, theme.focus_border)),
             padding: Stateful::new([10.0, 10.0]),
             selection_color: Stateful::new(theme.selection),
             selection_radius: Stateful::new(0.0),
@@ -69,7 +69,7 @@ impl TextInputStyle {
                 .hovered(Fill::Solid(theme.hovered))
                 .focused(Fill::Solid(theme.surface)),
             border: Stateful::new(Border::new(1.0, Color::TRANSPARENT))
-                .focused(Border::new(1.5, theme.focus_border)),
+                .focused(Border::new(1.0, theme.focus_border)),
             shadow: Stateful::new(None),
             ..base
         }

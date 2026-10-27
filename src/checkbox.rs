@@ -76,8 +76,8 @@ impl CheckboxStyle {
             check_color: Stateful::new(theme.on_active()),
             check_thickness: Stateful::new(2.0),
             check_scale: Stateful::new(1.0),
-            border: Stateful::new(theme.border_strong)
-                .selected(theme.border_strong.lerp(theme.active, 0.5))
+            border: Stateful::new(theme.border)
+                .selected(theme.border.lerp(theme.active, 0.5))
                 .map(|&color| Border::new(1.0, color)),
             shadow: Stateful::new(Some(theme.shadow_sm()[0])),
             sharp: false,

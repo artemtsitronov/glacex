@@ -63,7 +63,7 @@ impl TextAreaStyle {
             syntax: SyntaxColors::from_theme(theme),
             border: Stateful::new(Border::new(1.0, theme.border))
                 .hovered(Border::new(1.0, theme.border_strong))
-                .focused(Border::new(1.5, theme.focus_border)),
+                .focused(Border::new(1.0, theme.focus_border)),
             padding: Stateful::new([10.0, 10.0]),
             selection_color: Stateful::new(theme.selection),
             selection_radius: Stateful::new(0.0),

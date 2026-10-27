@@ -98,9 +98,8 @@ impl Widget for DemoApp {
             glacex::column![&mut radio_button_yes, &mut radio_button_no].align(Alignment::End);
 
         let mut joke_label = Label::new({
-            // I know, I know, I'm hilarious.
             format!(
-                "{}, I'm gay",
+                "You selected - {}",
                 match ui.selected_option("radio_group") {
                     Some("yes") => "Yes",
                     Some("no") => "No",
