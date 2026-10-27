@@ -58,17 +58,17 @@ impl TextAreaStyle {
     pub fn from_theme(theme: &Theme) -> Self {
         let shadow = Some(ShadowStyle::new(theme.shadow_ambient, 8.0, [0.0, 1.0]));
         TextAreaStyle {
-            fill: Stateful::new(Fill::Solid(theme.surface)),
+            fill: Stateful::new(Fill::Solid(theme.surface))
+                .hovered(Fill::Solid(theme.surface_subtle)),
             text_style: Stateful::new(TextStyle::new().color(theme.text_primary)),
             syntax: SyntaxColors::from_theme(theme),
             border: Stateful::new(Border::new(1.0, theme.border))
-                .hovered(Border::new(1.0, theme.border_strong))
                 .focused(Border::new(1.0, theme.focus_border)),
             padding: Stateful::new([10.0, 10.0]),
             selection_color: Stateful::new(theme.selection),
             selection_radius: Stateful::new(0.0),
             current_line_fill: Stateful::new(None),
-            cursor_color: Stateful::new(theme.active),
+            cursor_color: Stateful::new(theme.focus_border),
             cursor_width: Stateful::new(2.0),
             cursor_blink_period: 1.0,
             thumb_fill: Stateful::new(Fill::Solid(Color::rgb(113, 113, 122).with_alpha(0.45)))

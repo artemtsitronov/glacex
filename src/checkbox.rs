@@ -64,13 +64,8 @@ pub struct CheckboxStyle {
 
 impl CheckboxStyle {
     pub fn from_theme(theme: &Theme) -> Self {
-        let idle_fill = if theme.is_dark {
-            theme.surface
-        } else {
-            Color::WHITE
-        };
         CheckboxStyle {
-            fill: Stateful::new(Fill::Solid(idle_fill))
+            fill: Stateful::new(Fill::Solid(theme.surface))
                 .hovered(Fill::Solid(theme.surface_subtle))
                 .selected(Fill::Solid(theme.active)),
             check_color: Stateful::new(theme.on_active()),

@@ -42,7 +42,8 @@ impl TextInputStyle {
     pub fn from_theme(theme: &Theme) -> Self {
         let shadow = Some(theme.shadow_sm()[0]);
         TextInputStyle {
-            fill: Stateful::new(Fill::Solid(theme.surface)),
+            fill: Stateful::new(Fill::Solid(theme.surface))
+                .hovered(Fill::Solid(theme.surface_subtle)),
             text_style: Stateful::new(TextStyle::new().color(theme.text_primary)),
             placeholder_color: Stateful::new(theme.text_muted),
             border: Stateful::new(Border::new(1.0, theme.border))
@@ -50,7 +51,7 @@ impl TextInputStyle {
             padding: Stateful::new([10.0, 10.0]),
             selection_color: Stateful::new(theme.selection),
             selection_radius: Stateful::new(0.0),
-            cursor_color: Stateful::new(theme.active),
+            cursor_color: Stateful::new(theme.focus_border),
             cursor_width: Stateful::new(2.0),
             cursor_blink_period: 1.0,
             shadow: Stateful::new(shadow),
