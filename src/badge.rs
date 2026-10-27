@@ -45,7 +45,7 @@ impl BadgeStyle {
     pub fn from_theme(theme: &Theme) -> Self {
         Self::build(
             theme,
-            Fill::Solid(theme.active),
+            Fill::Solid(theme.accent),
             Color::TRANSPARENT,
             theme.on_active(),
         )
@@ -93,13 +93,13 @@ impl BadgeStyle {
     fn build(theme: &Theme, fill: Fill, border_color: Color, text_color: Color) -> Self {
         BadgeStyle {
             fill: Stateful::new(fill),
-            border: Stateful::new(Border::new(1.0, border_color)),
-            padding: Stateful::new([8.0, 2.0]),
-            height: Stateful::new(20.0),
+            border: Stateful::new(Border::new(theme.metrics.border_width, border_color)),
+            padding: Stateful::new([theme.metrics.badge_pad_x, 2.0]),
+            height: Stateful::new(theme.metrics.badge_height),
             min_width: Stateful::new(0.0),
             text_style: Stateful::new(
                 TextStyle::new()
-                    .size(12.0, 16.0)
+                    .size(theme.metrics.font_size_sm, 16.0)
                     .weight(FontWeight::Medium)
                     .color(text_color),
             ),

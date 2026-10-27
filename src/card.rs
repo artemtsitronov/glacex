@@ -30,19 +30,19 @@ pub struct CardStyle {
 impl CardStyle {
     pub fn from_theme(theme: &Theme) -> Self {
         Self::build(
+            theme,
             Fill::Solid(theme.surface),
             theme.border,
-            [20.0, 20.0],
-            Some(theme.shadow_sm()[0]),
+            None,
             theme.metrics.radius_sm,
         )
     }
 
     pub fn subtle(theme: &Theme) -> Self {
         Self::build(
+            theme,
             Fill::Solid(theme.surface_subtle),
             theme.border_faint,
-            [16.0, 16.0],
             None,
             theme.metrics.radius_xs,
         )
@@ -50,10 +50,10 @@ impl CardStyle {
 
     pub fn elevated(theme: &Theme) -> Self {
         Self::build(
+            theme,
             Fill::Solid(theme.surface_elevated),
             theme.border_strong,
-            [20.0, 20.0],
-            Some(theme.shadow_md()[0]),
+            Some(theme.shadow_sm()[0]),
             theme.metrics.radius_md,
         )
     }
@@ -65,27 +65,22 @@ impl CardStyle {
                 .fill
                 .clone()
                 .hovered(Fill::Solid(theme.surface_elevated)),
-            border: base
-                .border
-                .clone()
-                .hovered(base.border.idle.with_color(theme.border_strong)),
-            shadow: base.shadow.clone().hovered(Some(theme.shadow_md()[0])),
             cursor: CursorIcon::Pointer.into(),
             ..base
         }
     }
 
     fn build(
+        theme: &Theme,
         fill: Fill,
         border_color: Color,
-        padding: [f32; 2],
         shadow: Option<ShadowStyle>,
         radius: f32,
     ) -> Self {
         CardStyle {
             fill: Stateful::new(fill),
-            border: Stateful::new(Border::new(1.0, border_color)),
-            padding: Stateful::new(padding),
+            border: Stateful::new(Border::new(theme.metrics.border_width, border_color)),
+            padding: Stateful::new([theme.metrics.card_pad; 2]),
             min_size: Stateful::new([0.0, 0.0]),
             shadow: Stateful::new(shadow),
             sharp: false,

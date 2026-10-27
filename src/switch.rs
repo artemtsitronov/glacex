@@ -61,30 +61,25 @@ impl SwitchStyle {
     pub fn from_theme(theme: &Theme) -> Self {
         SwitchStyle {
             track_fill: Stateful::new(Fill::Solid(theme.hovered))
-                .selected(Fill::Solid(theme.active)),
-            // blends toward a contrasting color near on, avoids white on white on near white themes
-            thumb_fill: Stateful::new(Fill::Solid(Color::WHITE))
-                .selected(Fill::Solid(theme.on_active())),
+                .hovered(Fill::Solid(theme.pressed))
+                .selected(Fill::Solid(theme.accent))
+                .selected_hovered(Fill::Solid(theme.accent_hover)),
+            thumb_fill: Stateful::new(Fill::Solid(Color::WHITE)),
             thumb_border: Stateful::new(Border::NONE),
-            thumb_padding: Stateful::new(2.0),
+            thumb_padding: Stateful::new(theme.metrics.switch_thumb_inset),
             thumb_size: Stateful::new(None),
-            thumb_shadow: Stateful::new(Some(ShadowStyle::new(
-                Color::rgba(0, 0, 0, 0.28),
-                3.0,
-                [0.0, 1.0],
-            ))),
+            thumb_shadow: Stateful::new(Some(theme.shadow_xs())),
             thumb_path: Stateful::new(pill_path()),
             trail_color: Stateful::new(Color::WHITE.with_alpha(0.22)),
             trail_stretch: Stateful::new(0.010),
             trail_max: Stateful::new(10.0),
             border: Stateful::new(theme.border)
-                .hovered(theme.border_strong)
-                .selected(theme.border.lerp(theme.active, 0.5))
-                .map(|&color| Border::new(1.0, color)),
-            shadow: Stateful::new(Some(theme.shadow_sm()[0])),
+                .selected(theme.border.lerp(theme.accent, 0.5))
+                .map(|&color| Border::new(theme.metrics.border_width, color)),
+            shadow: Stateful::new(None),
             sharp: false,
-            path: Stateful::new(Path::rect([11.0; 4])),
-            size: Stateful::new([40.0, 22.0]),
+            path: Stateful::new(Path::rect([theme.metrics.switch_height * 0.5; 4])),
+            size: Stateful::new([theme.metrics.switch_width, theme.metrics.switch_height]),
             toggle_motion: Motion::SNAPPY,
             hover_motion: Motion::SNAPPY,
             cursor: Stateful::new(CursorIcon::Pointer),

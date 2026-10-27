@@ -68,7 +68,7 @@ pub struct TabsStyle {
 
 fn tab_text_style(theme: &Theme, active_color: Option<Color>) -> Stateful<TextStyle> {
     let base = TextStyle::new()
-        .size(14.0, 20.0)
+        .size(theme.metrics.font_size_md, 20.0)
         .weight(FontWeight::Medium)
         .color(theme.text_secondary);
     Stateful::new(base)
@@ -88,21 +88,21 @@ fn tab_fill(hovered: Color) -> Stateful<Fill> {
 impl TabsStyle {
     pub fn from_theme(theme: &Theme) -> Self {
         TabsStyle {
-            height: Stateful::new(40.0),
-            tab_padding_x: Stateful::new(16.0),
+            height: Stateful::new(theme.metrics.tab_height),
+            tab_padding_x: Stateful::new(theme.metrics.space_4),
             tab_min_width: Stateful::new(0.0),
-            gap: Stateful::new(4.0),
+            gap: Stateful::new(theme.metrics.space_1),
             padding_x: Stateful::new(0.0),
             fill: Stateful::new(Fill::Solid(Color::TRANSPARENT)),
             border: Stateful::new(Border::NONE),
             shadow: Stateful::new(None),
             text_style: tab_text_style(theme, None),
             tab_fill: tab_fill(Color::TRANSPARENT),
-            indicator_fill: Stateful::new(Fill::Solid(theme.active)),
+            indicator_fill: Stateful::new(Fill::Solid(theme.accent)),
             indicator: TabsIndicator::Pill,
             indicator_border: Stateful::new(Border::NONE),
             indicator_shadow: Stateful::new(None),
-            pill_inset_y: Stateful::new(4.0),
+            pill_inset_y: Stateful::new(theme.metrics.space_1),
             sharp: false,
             path: Stateful::new(Path::rect([theme.metrics.radius_md; 4])),
             indicator_path: Stateful::new(Path::rect([theme.metrics.radius_md; 4])),
@@ -118,11 +118,11 @@ impl TabsStyle {
             gap: Stateful::new(2.0),
             padding_x: Stateful::new(4.0),
             fill: Stateful::new(Fill::Solid(theme.surface_subtle)),
-            border: Stateful::new(Border::new(1.0, theme.border_faint)),
+            border: Stateful::new(Border::new(theme.metrics.border_width, theme.border_faint)),
             indicator_fill: Stateful::new(Fill::Solid(theme.surface_elevated)),
             text_style: tab_text_style(theme, Some(theme.text_primary)),
-            indicator_border: Stateful::new(Border::new(1.0, theme.border)),
-            indicator_shadow: Stateful::new(Some(theme.shadow_sm()[0])),
+            indicator_border: Stateful::new(Border::new(theme.metrics.border_width, theme.border)),
+            indicator_shadow: Stateful::new(Some(theme.shadow_xs())),
             path: Stateful::new(Path::rect([theme.metrics.radius_lg; 4])),
             ..Self::from_theme(theme)
         }
@@ -131,7 +131,9 @@ impl TabsStyle {
     pub fn underline(theme: &Theme) -> Self {
         TabsStyle {
             gap: Stateful::new(0.0),
-            indicator: TabsIndicator::Underline { thickness: 2.0 },
+            indicator: TabsIndicator::Underline {
+                thickness: theme.metrics.tab_underline,
+            },
             text_style: tab_text_style(theme, Some(theme.text_primary)),
             tab_fill: tab_fill(theme.surface_subtle),
             indicator_path: Stateful::new(Path::rect([1.0; 4])),

@@ -56,27 +56,37 @@ pub struct TextAreaStyle {
 
 impl TextAreaStyle {
     pub fn from_theme(theme: &Theme) -> Self {
-        let shadow = Some(ShadowStyle::new(theme.shadow_ambient, 8.0, [0.0, 1.0]));
         TextAreaStyle {
             fill: Stateful::new(Fill::Solid(theme.surface))
                 .hovered(Fill::Solid(theme.surface_subtle)),
-            text_style: Stateful::new(TextStyle::new().color(theme.text_primary)),
+            text_style: Stateful::new(
+                TextStyle::new()
+                    .size(
+                        theme.metrics.font_size_md,
+                        theme.metrics.textarea_line_height,
+                    )
+                    .color(theme.text_primary),
+            ),
             syntax: SyntaxColors::from_theme(theme),
-            border: Stateful::new(Border::new(1.0, theme.border))
-                .focused(Border::new(1.0, theme.focus_border)),
-            padding: Stateful::new([10.0, 10.0]),
+            border: Stateful::new(Border::new(theme.metrics.border_width, theme.border))
+                .focused(Border::new(theme.metrics.border_width, theme.focus_border)),
+            padding: Stateful::new([theme.metrics.field_pad_x; 2]),
             selection_color: Stateful::new(theme.selection),
             selection_radius: Stateful::new(0.0),
             current_line_fill: Stateful::new(None),
             cursor_color: Stateful::new(theme.focus_border),
             cursor_width: Stateful::new(2.0),
             cursor_blink_period: 1.0,
-            thumb_fill: Stateful::new(Fill::Solid(Color::rgb(113, 113, 122).with_alpha(0.45)))
-                .pressed(Fill::Solid(Color::rgb(82, 82, 91).with_alpha(0.75))),
+            thumb_fill: Stateful::new(Fill::Solid(theme.text_muted.with_alpha(0.45)))
+                .pressed(Fill::Solid(theme.text_secondary.with_alpha(0.75))),
             thumb_path: Stateful::new(pill_path()),
-            scrollbar: Stateful::new(ScrollConfig::default()),
+            scrollbar: Stateful::new(ScrollConfig {
+                padding: theme.metrics.scrollbar_inset,
+                thickness: theme.metrics.scrollbar_thumb,
+                ..ScrollConfig::default()
+            }),
             scroll_speed: 1.0,
-            shadow: Stateful::new(shadow),
+            shadow: Stateful::new(None),
             sharp: false,
             path: Stateful::new(Path::rect([theme.metrics.radius_md; 4])),
             hover_motion: Motion::SNAPPY,
@@ -91,7 +101,10 @@ impl TextAreaStyle {
             text_style: Stateful::new(
                 TextStyle::new()
                     .mono()
-                    .size(13.0, 20.0)
+                    .size(
+                        theme.metrics.font_size_md,
+                        theme.metrics.textarea_line_height,
+                    )
                     .color(theme.text_primary),
             ),
             current_line_fill: Fill::Solid(theme.text_primary.with_alpha(0.04)).into(),

@@ -69,58 +69,68 @@ impl SelectBoxStyle {
     pub fn from_theme(theme: &Theme) -> Self {
         SelectBoxStyle {
             fill: Stateful::new(Fill::Solid(theme.surface))
-                .hovered(Fill::Solid(theme.hovered))
+                .hovered(Fill::Solid(theme.surface_subtle))
                 .focused(Fill::Solid(theme.surface)),
-            text_style: Stateful::new(TextStyle::new().color(theme.text_primary)),
+            text_style: Stateful::new(
+                TextStyle::new()
+                    .size(theme.metrics.font_size_md, 20.0)
+                    .color(theme.text_primary),
+            ),
             placeholder_color: Stateful::new(theme.text_muted),
             border: Stateful::new(theme.border)
                 .focused(theme.focus_border)
-                .map(|&color| Border::new(1.0, color)),
+                .map(|&color| Border::new(theme.metrics.border_width, color)),
             shadow: Stateful::new(None),
-            height: Stateful::new(36.0),
-            padding_x: Stateful::new(12.0),
+            height: Stateful::new(theme.metrics.control_height_md),
+            padding_x: Stateful::new(theme.metrics.field_pad_x),
 
             show_chevron: true,
             chevron: ChevronStyle::default(),
 
             dropdown_fill: Stateful::new(Fill::Solid(theme.surface_elevated)),
-            dropdown_border: Stateful::new(Border::new(1.0, theme.border)),
+            dropdown_border: Stateful::new(Border::new(theme.metrics.border_width, theme.border)),
             dropdown_padding: Stateful::new(6.0),
             dropdown_max_height: Stateful::new(280.0),
             dropdown_screen_margin: Stateful::new(8.0),
             dropdown_shadow: Stateful::new(Some(
-                ShadowStyle::new(
-                    Color::BLACK.with_alpha(if theme.is_dark { 0.55 } else { 0.14 }),
-                    20.0,
-                    [0.0, 6.0],
-                )
-                .spread(5.0),
+                ShadowStyle::new(theme.shadow_key, 20.0, [0.0, 6.0]).spread(5.0),
             )),
 
-            item_height: Stateful::new(32.0),
+            item_height: Stateful::new(theme.metrics.select_option_height),
             item_inset_x: Stateful::new(4.0),
             item_padding_x: Stateful::new(8.0),
             item_fill: Stateful::new(Color::TRANSPARENT)
                 .hovered(theme.surface_subtle)
                 .selected(theme.surface_subtle),
-            item_text_style: Stateful::new(TextStyle::new().color(theme.text_primary)).selected(
+            item_text_style: Stateful::new(
                 TextStyle::new()
+                    .size(theme.metrics.font_size_md, 20.0)
+                    .color(theme.text_primary),
+            )
+            .selected(
+                TextStyle::new()
+                    .size(theme.metrics.font_size_md, 20.0)
                     .color(theme.text_primary)
                     .weight(FontWeight::Medium),
             ),
             item_corner_radius: Stateful::new(theme.metrics.radius_sm),
             show_check: true,
-            check_color: Stateful::new(None),
+            check_color: Stateful::new(Some(theme.accent)),
             check_thickness: Stateful::new(1.8),
 
             searchable: false,
-            search_height: Stateful::new(36.0),
+            search_height: Stateful::new(theme.metrics.control_height_md),
             search_gap: Stateful::new(4.0),
-            search_padding_x: Stateful::new(10.0),
+            search_padding_x: Stateful::new(theme.metrics.field_pad_x),
             search_fill: Stateful::new(theme.surface_subtle),
-            search_border: Stateful::new(Border::new(1.0, theme.border_strong.with_alpha(0.5))),
+            search_border: Stateful::new(Border::new(
+                theme.metrics.border_width,
+                theme.border_strong.with_alpha(0.5),
+            )),
             search_corner_radius: Stateful::new(theme.metrics.radius_sm),
-            search_text_style: Stateful::new(TextStyle::new().size(13.0, 20.0)),
+            search_text_style: Stateful::new(
+                TextStyle::new().size(theme.metrics.font_size_md, 20.0),
+            ),
             search_placeholder: "Search…",
 
             sharp: false,
@@ -139,8 +149,8 @@ impl SelectBoxStyle {
             fill: Stateful::new(Fill::Solid(theme.surface_subtle))
                 .hovered(Fill::Solid(theme.hovered))
                 .focused(Fill::Solid(theme.surface)),
-            border: Stateful::new(Border::new(1.0, Color::TRANSPARENT))
-                .focused(Border::new(1.0, theme.focus_border)),
+            border: Stateful::new(Border::new(theme.metrics.border_width, Color::TRANSPARENT))
+                .focused(Border::new(theme.metrics.border_width, theme.focus_border)),
             ..Self::from_theme(theme)
         }
     }

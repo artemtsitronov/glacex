@@ -31,7 +31,7 @@ impl DividerStyle {
     pub fn from_theme(theme: &Theme) -> Self {
         DividerStyle {
             fill: Stateful::new(Fill::Solid(theme.border)),
-            thickness: Stateful::new(1.0),
+            thickness: Stateful::new(theme.metrics.border_width),
             margin: Stateful::new(0.0),
             inset: Stateful::new([0.0, 0.0]),
             sharp: true,

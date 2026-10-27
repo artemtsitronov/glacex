@@ -49,30 +49,21 @@ impl ButtonStyle {
             Stateful::new(Fill::Solid(theme.surface_subtle))
                 .hovered(Fill::Solid(theme.hovered))
                 .pressed(Fill::Solid(theme.pressed)),
-            Border::new(1.0, theme.border),
+            Border::new(theme.metrics.border_width, theme.border),
             theme.text_primary,
-            Some(theme.shadow_sm()[0]),
+            None,
         )
     }
 
     pub fn primary(theme: &Theme) -> Self {
-        let text_color = if theme.is_dark && theme.active.r > 0.7 && theme.active.g > 0.7 {
-            Color::BLACK
-        } else {
-            Color::WHITE
-        };
         Self::build(
             theme,
-            Stateful::new(Fill::Solid(theme.active))
-                .hovered(Fill::Solid(theme.active_hover))
-                .pressed(Fill::Solid(theme.active.darken(0.12))),
-            Border::new(1.0, Color::WHITE.with_alpha(0.15)),
-            text_color,
-            Some(ShadowStyle::new(
-                theme.active.with_alpha(0.20),
-                4.0,
-                [0.0, 1.5],
-            )),
+            Stateful::new(Fill::Solid(theme.accent))
+                .hovered(Fill::Solid(theme.accent_hover))
+                .pressed(Fill::Solid(theme.accent_pressed)),
+            Border::new(theme.metrics.border_width, theme.accent_pressed),
+            theme.on_active(),
+            None,
         )
     }
 
@@ -82,9 +73,9 @@ impl ButtonStyle {
             Stateful::new(Fill::Solid(Color::TRANSPARENT))
                 .hovered(Fill::Solid(theme.surface_subtle))
                 .pressed(Fill::Solid(theme.hovered)),
-            Border::new(1.0, theme.border_strong),
+            Border::new(theme.metrics.border_width, theme.border_strong),
             theme.text_primary,
-            Some(theme.shadow_sm()[0]),
+            None,
         )
     }
 
@@ -106,13 +97,9 @@ impl ButtonStyle {
             Stateful::new(Fill::Solid(theme.error))
                 .hovered(Fill::Solid(theme.error.lighten(0.08)))
                 .pressed(Fill::Solid(theme.error.darken(0.12))),
-            Border::new(1.0, theme.error.darken(0.15)),
+            Border::new(theme.metrics.border_width, theme.error.darken(0.15)),
             Color::WHITE,
-            Some(ShadowStyle::new(
-                theme.error.with_alpha(0.25),
-                4.0,
-                [0.0, 1.5],
-            )),
+            None,
         )
     }
 
@@ -126,21 +113,19 @@ impl ButtonStyle {
         let press_offset = [0.0, 2.0];
         ButtonStyle {
             fill,
-            border: Stateful::new(border)
-                .hovered(border.with_color(theme.border_strong))
-                .pressed(border.with_color(theme.border_strong)),
-            padding: Stateful::new([14.0, 8.0]),
+            border: Stateful::new(border),
+            padding: Stateful::new([theme.metrics.control_pad_x, theme.metrics.control_pad_y]),
             min_size: Stateful::new([0.0, 0.0]),
             text_style: Stateful::new(
                 TextStyle::new()
-                    .size(14.0, 20.0)
+                    .size(theme.metrics.font_size_md, 20.0)
                     .weight(FontWeight::Medium)
                     .color(text_color),
             ),
             text_align: Alignment::Center,
             shadow: Stateful::new(shadow).pressed(pressed_variant(shadow, press_offset)),
             sharp: false,
-            path: Stateful::new(Path::rect([6.0; 4])),
+            path: Stateful::new(Path::rect([theme.metrics.radius_md; 4])),
             scale: Stateful::new(1.0),
             offset: Stateful::new([0.0, 0.0]).pressed(press_offset),
             hover_motion: Motion::SNAPPY,

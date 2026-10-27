@@ -46,25 +46,28 @@ impl AccordionStyle {
     pub fn from_theme(theme: &Theme) -> Self {
         AccordionStyle {
             fill: Stateful::new(Fill::Solid(theme.surface)),
-            border: Stateful::new(Border::new(1.0, theme.border)),
+            border: Stateful::new(Border::new(theme.metrics.border_width, theme.border)),
             path: Stateful::new(Path::rect([theme.metrics.radius_sm; 4])),
-            header_height: 44.0,
-            header_padding_x: 12.0,
+            header_height: theme.metrics.accordion_row_height,
+            header_padding_x: theme.metrics.accordion_pad_x,
             header_fill: Stateful::new(Fill::Solid(Color::TRANSPARENT))
                 .hovered(Fill::Solid(theme.surface_subtle)),
-            header_border: Stateful::new(Border::new(1.0, Color::TRANSPARENT)),
+            header_border: Stateful::new(Border::new(
+                theme.metrics.border_width,
+                Color::TRANSPARENT,
+            )),
             header_path: Stateful::new(Path::rect([theme.metrics.radius_sm; 4])),
             header_text_style: Stateful::new(
                 TextStyle::new()
-                    .size(14.0, 20.0)
+                    .size(theme.metrics.font_size_md, 20.0)
                     .weight(FontWeight::Medium)
                     .color(theme.text_primary),
             ),
             chevron: ChevronStyle::default(),
-            content_padding: [12.0, 8.0],
+            content_padding: [theme.metrics.accordion_pad_x, theme.metrics.space_2],
             show_dividers: true,
             divider_color: theme.border,
-            divider_width: 1.0,
+            divider_width: theme.metrics.border_width,
             sharp: false,
             hover_motion: Motion::SNAPPY,
             focus_motion: Motion::GENTLE,

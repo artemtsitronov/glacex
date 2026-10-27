@@ -40,21 +40,24 @@ pub(crate) fn caret_visible(idle_seconds: f32, period: f32) -> bool {
 
 impl TextInputStyle {
     pub fn from_theme(theme: &Theme) -> Self {
-        let shadow = Some(theme.shadow_sm()[0]);
         TextInputStyle {
             fill: Stateful::new(Fill::Solid(theme.surface))
                 .hovered(Fill::Solid(theme.surface_subtle)),
-            text_style: Stateful::new(TextStyle::new().color(theme.text_primary)),
+            text_style: Stateful::new(
+                TextStyle::new()
+                    .size(theme.metrics.font_size_md, 20.0)
+                    .color(theme.text_primary),
+            ),
             placeholder_color: Stateful::new(theme.text_muted),
-            border: Stateful::new(Border::new(1.0, theme.border))
-                .focused(Border::new(1.0, theme.focus_border)),
-            padding: Stateful::new([10.0, 10.0]),
+            border: Stateful::new(Border::new(theme.metrics.border_width, theme.border))
+                .focused(Border::new(theme.metrics.border_width, theme.focus_border)),
+            padding: Stateful::new([theme.metrics.field_pad_x; 2]),
             selection_color: Stateful::new(theme.selection),
             selection_radius: Stateful::new(0.0),
             cursor_color: Stateful::new(theme.focus_border),
             cursor_width: Stateful::new(2.0),
             cursor_blink_period: 1.0,
-            shadow: Stateful::new(shadow),
+            shadow: Stateful::new(None),
             sharp: false,
             path: Stateful::new(Path::rect([theme.metrics.radius_md; 4])),
             hover_motion: Motion::SNAPPY,
@@ -69,9 +72,8 @@ impl TextInputStyle {
             fill: Stateful::new(Fill::Solid(theme.surface_subtle))
                 .hovered(Fill::Solid(theme.hovered))
                 .focused(Fill::Solid(theme.surface)),
-            border: Stateful::new(Border::new(1.0, Color::TRANSPARENT))
-                .focused(Border::new(1.0, theme.focus_border)),
-            shadow: Stateful::new(None),
+            border: Stateful::new(Border::new(theme.metrics.border_width, Color::TRANSPARENT))
+                .focused(Border::new(theme.metrics.border_width, theme.focus_border)),
             ..base
         }
     }

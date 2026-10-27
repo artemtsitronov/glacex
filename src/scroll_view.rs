@@ -46,7 +46,10 @@ pub fn pill_path() -> Path {
 impl ScrollViewStyle {
     pub fn from_theme(theme: &Theme) -> Self {
         let (thumb, active) = if theme.is_dark {
-            (Color::WHITE.with_alpha(0.35), Color::WHITE.with_alpha(0.65))
+            (
+                theme.text_primary.with_alpha(0.35),
+                theme.text_primary.with_alpha(0.65),
+            )
         } else {
             (
                 theme.text_secondary.with_alpha(0.60),
@@ -61,7 +64,11 @@ impl ScrollViewStyle {
             thumb_fill: Stateful::new(Fill::Solid(thumb))
                 .hovered(Fill::Solid(active))
                 .pressed(Fill::Solid(active)),
-            scrollbar: Stateful::new(ScrollConfig::default()),
+            scrollbar: Stateful::new(ScrollConfig {
+                padding: theme.metrics.scrollbar_inset,
+                thickness: theme.metrics.scrollbar_thumb,
+                ..ScrollConfig::default()
+            }),
             always_show_scrollbars: false,
             scroll_speed: 1.0,
             clip_content: true,
@@ -76,7 +83,7 @@ impl ScrollViewStyle {
     pub fn panel(theme: &Theme) -> Self {
         ScrollViewStyle {
             fill: Stateful::new(Some(Fill::Solid(theme.surface))),
-            border: Stateful::new(Border::new(1.0, theme.border)),
+            border: Stateful::new(Border::new(theme.metrics.border_width, theme.border)),
             background_path: Stateful::new(Path::rect([theme.metrics.radius_md; 4])),
             track_fill: Stateful::new(Fill::Solid(theme.surface_subtle)),
             ..Self::from_theme(theme)

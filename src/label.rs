@@ -58,7 +58,7 @@ impl LabelStyle {
         LabelStyle {
             padding: Stateful::new([6.0, 2.0]),
             fill: Stateful::new(Some(Fill::Solid(theme.surface_subtle))),
-            border: Stateful::new(Border::new(1.0, theme.border_faint)),
+            border: Stateful::new(Border::new(theme.metrics.border_width, theme.border_faint)),
             path: Stateful::new(Path::rect([theme.metrics.radius_sm; 4])),
             ..Self::from_theme(theme)
         }
@@ -335,7 +335,7 @@ impl Measurable for Label {
             LabelVariant::Primary => theme.text_primary,
             LabelVariant::Secondary => theme.text_secondary,
             LabelVariant::Muted => theme.text_muted,
-            LabelVariant::Accent => theme.active,
+            LabelVariant::Accent => theme.accent,
             LabelVariant::Success => theme.success,
             LabelVariant::Warning => theme.warning,
             LabelVariant::Error => theme.error,

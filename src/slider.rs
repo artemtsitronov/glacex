@@ -62,21 +62,19 @@ fn default_track_path() -> Path {
 
 impl SliderStyle {
     pub fn from_theme(theme: &Theme) -> Self {
-        let shadow = Some(theme.shadow_sm()[0]);
+        let shadow = Some(theme.shadow_xs());
         SliderStyle {
             track_fill: Stateful::new(Fill::Solid(theme.hovered)),
-            filled_fill: Stateful::new(Fill::Solid(theme.active)),
+            filled_fill: Stateful::new(Fill::Solid(theme.accent)),
             thumb_fill: Stateful::new(Fill::Solid(Color::WHITE)),
-            thumb_border: Stateful::new(Border::new(1.0, theme.border)),
-            border: Stateful::new(Border::new(1.0, theme.border)),
-            track_height: Stateful::new(4.0),
-            thumb_size: Stateful::new(16.0).pressed(18.5),
+            thumb_border: Stateful::new(Border::new(theme.metrics.border_width, theme.border)),
+            border: Stateful::new(Border::new(theme.metrics.border_width, theme.border)),
+            track_height: Stateful::new(theme.metrics.slider_track),
+            thumb_size: Stateful::new(theme.metrics.slider_thumb)
+                .pressed(theme.metrics.slider_thumb + 2.5),
             vertical_padding: Stateful::new(8.0),
-            shadow: Stateful::new(shadow).pressed(shadow.map(|s| {
-                s.blur(s.blur_radius + 4.0)
-                    .offset([s.offset[0], s.offset[1] + 1.5])
-            })),
-            trail_color: Stateful::new(theme.active.with_alpha(0.18)),
+            shadow: Stateful::new(shadow).pressed(Some(theme.shadow_sm()[0])),
+            trail_color: Stateful::new(theme.accent.with_alpha(0.18)),
             trail_stretch: Stateful::new(0.012),
             trail_max: Stateful::new(18.0),
             sharp: false,

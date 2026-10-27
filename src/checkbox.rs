@@ -65,19 +65,20 @@ pub struct CheckboxStyle {
 impl CheckboxStyle {
     pub fn from_theme(theme: &Theme) -> Self {
         CheckboxStyle {
-            fill: Stateful::new(Fill::Solid(theme.surface))
-                .hovered(Fill::Solid(theme.surface_subtle))
-                .selected(Fill::Solid(theme.active)),
-            check_color: Stateful::new(theme.on_active()),
+            fill: Stateful::new(Fill::Solid(theme.idle))
+                .hovered(Fill::Solid(theme.hovered))
+                .selected(Fill::Solid(theme.accent))
+                .selected_hovered(Fill::Solid(theme.accent_hover)),
+            check_color: Stateful::new(Color::WHITE),
             check_thickness: Stateful::new(2.0),
             check_scale: Stateful::new(1.0),
             border: Stateful::new(theme.border)
-                .selected(theme.border.lerp(theme.active, 0.5))
-                .map(|&color| Border::new(1.0, color)),
-            shadow: Stateful::new(Some(theme.shadow_sm()[0])),
+                .selected(theme.border.lerp(theme.accent, 0.5))
+                .map(|&color| Border::new(theme.metrics.border_width, color)),
+            shadow: Stateful::new(None),
             sharp: false,
             path: Stateful::new(Path::rect([theme.metrics.radius_xs; 4])),
-            size: Stateful::new([18.0, 18.0]),
+            size: Stateful::new([theme.metrics.checkbox_size; 2]),
             pop_scale: Stateful::new(0.08),
             check_motion: Motion::FLUID,
             hover_motion: Motion::SNAPPY,

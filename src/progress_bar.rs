@@ -44,12 +44,12 @@ impl ProgressBarStyle {
     pub fn from_theme(theme: &Theme) -> Self {
         ProgressBarStyle {
             track_fill: Stateful::new(Fill::Solid(theme.surface_subtle)),
-            progress_fill: Stateful::new(Fill::Solid(theme.active)),
-            border: Stateful::new(Border::new(1.0, theme.border)),
+            progress_fill: Stateful::new(Fill::Solid(theme.accent)),
+            border: Stateful::new(Border::new(theme.metrics.border_width, theme.border)),
             progress_border: Stateful::new(Border::NONE),
             progress_inset: Stateful::new(0.0),
             min_progress_width: Stateful::new(0.0),
-            size: Stateful::new([ProgressBar::DEFAULT_WIDTH, ProgressBar::DEFAULT_HEIGHT]),
+            size: Stateful::new([ProgressBar::DEFAULT_WIDTH, theme.metrics.progress_height]),
             shadow: Stateful::new(None),
             sharp: false,
             path: Stateful::new(default_track_path()),

@@ -215,9 +215,9 @@ impl Theme {
         active: Color::rgb(136, 192, 208),
         active_hover: Color::rgb(150, 205, 219),
         active_pressed: Color::rgb(118, 168, 184),
-        accent: Color::rgb(180, 142, 173),
-        accent_hover: Color::rgb(193, 160, 186),
-        accent_pressed: Color::rgb(160, 125, 153),
+        accent: Color::rgb(136, 192, 208),
+        accent_hover: Color::rgb(154, 201, 215),
+        accent_pressed: Color::rgb(116, 163, 177),
         disabled_bg: Color::rgb(52, 59, 72),
         disabled_border: Color::rgb(59, 66, 82),
         disabled_text: Color::rgb(98, 108, 128),
@@ -251,9 +251,9 @@ impl Theme {
         active: Color::rgb(189, 147, 249),
         active_hover: Color::rgb(204, 170, 251),
         active_pressed: Color::rgb(160, 120, 225),
-        accent: Color::rgb(255, 121, 198),
-        accent_hover: Color::rgb(255, 146, 208),
-        accent_pressed: Color::rgb(225, 100, 175),
+        accent: Color::rgb(189, 147, 249),
+        accent_hover: Color::rgb(199, 163, 250),
+        accent_pressed: Color::rgb(161, 125, 212),
         disabled_bg: Color::rgb(46, 48, 63),
         disabled_border: Color::rgb(52, 55, 70),
         disabled_text: Color::rgb(98, 102, 130),
@@ -287,9 +287,9 @@ impl Theme {
         active: Color::rgb(53, 152, 222),
         active_hover: Color::rgb(82, 174, 240),
         active_pressed: Color::rgb(38, 130, 198),
-        accent: Color::rgb(230, 80, 155),
-        accent_hover: Color::rgb(240, 105, 175),
-        accent_pressed: Color::rgb(205, 60, 135),
+        accent: Color::rgb(38, 139, 210),
+        accent_hover: Color::rgb(71, 156, 217),
+        accent_pressed: Color::rgb(32, 118, 178),
         disabled_bg: Color::rgb(7, 54, 66),
         disabled_border: Color::rgb(12, 62, 76),
         disabled_text: Color::rgb(88, 110, 117),
@@ -301,12 +301,12 @@ impl Theme {
         text_primary: Color::rgb(238, 232, 213),
         text_secondary: Color::rgb(147, 161, 161),
         text_muted: Color::rgb(112, 132, 138),
-        success: Color::rgb(152, 173, 20),
-        warning: Color::rgb(203, 160, 20),
-        error: Color::rgb(235, 80, 75),
+        success: Color::rgb(133, 153, 0),
+        warning: Color::rgb(181, 137, 0),
+        error: Color::rgb(220, 50, 47),
         shadow_ambient: Color::rgba(0, 0, 0, 0.35),
         shadow_key: Color::rgba(0, 0, 0, 0.55),
-        selection: Color::rgba(53, 152, 222, 0.28),
+        selection: Color::rgba(38, 139, 210, 0.28),
         metrics: Metrics::DEFAULT,
     };
 
@@ -323,9 +323,9 @@ impl Theme {
         active: Color::rgb(250, 189, 47),
         active_hover: Color::rgb(255, 205, 85),
         active_pressed: Color::rgb(215, 153, 33),
-        accent: Color::rgb(211, 134, 155),
-        accent_hover: Color::rgb(225, 155, 175),
-        accent_pressed: Color::rgb(177, 98, 134),
+        accent: Color::rgb(254, 128, 25),
+        accent_hover: Color::rgb(254, 147, 60),
+        accent_pressed: Color::rgb(216, 109, 21),
         disabled_bg: Color::rgb(50, 48, 47),
         disabled_border: Color::rgb(60, 56, 54),
         disabled_text: Color::rgb(124, 111, 100),
@@ -338,11 +338,11 @@ impl Theme {
         text_secondary: Color::rgb(189, 174, 147),
         text_muted: Color::rgb(146, 131, 116),
         success: Color::rgb(184, 187, 38),
-        warning: Color::rgb(254, 128, 25),
+        warning: Color::rgb(250, 189, 47),
         error: Color::rgb(251, 73, 52),
         shadow_ambient: Color::rgba(0, 0, 0, 0.35),
         shadow_key: Color::rgba(0, 0, 0, 0.55),
-        selection: Color::rgba(250, 189, 47, 0.25),
+        selection: Color::rgba(254, 128, 25, 0.25),
         metrics: Metrics::DEFAULT,
     };
 
@@ -359,9 +359,9 @@ impl Theme {
         active: Color::rgb(122, 162, 247),
         active_hover: Color::rgb(145, 180, 255),
         active_pressed: Color::rgb(98, 138, 222),
-        accent: Color::rgb(187, 154, 247),
-        accent_hover: Color::rgb(202, 174, 250),
-        accent_pressed: Color::rgb(160, 125, 225),
+        accent: Color::rgb(122, 162, 247),
+        accent_hover: Color::rgb(142, 176, 248),
+        accent_pressed: Color::rgb(104, 138, 210),
         disabled_bg: Color::rgb(31, 35, 53),
         disabled_border: Color::rgb(41, 46, 66),
         disabled_text: Color::rgb(86, 95, 137),
@@ -395,9 +395,9 @@ impl Theme {
         active: Color::rgb(137, 180, 250),
         active_hover: Color::rgb(160, 198, 255),
         active_pressed: Color::rgb(110, 155, 225),
-        accent: Color::rgb(245, 194, 231),
-        accent_hover: Color::rgb(248, 212, 238),
-        accent_pressed: Color::rgb(215, 165, 205),
+        accent: Color::rgb(203, 166, 247),
+        accent_hover: Color::rgb(211, 179, 248),
+        accent_pressed: Color::rgb(173, 141, 210),
         disabled_bg: Color::rgb(36, 36, 54),
         disabled_border: Color::rgb(49, 50, 68),
         disabled_text: Color::rgb(108, 112, 134),
@@ -414,7 +414,7 @@ impl Theme {
         error: Color::rgb(243, 139, 168),
         shadow_ambient: Color::rgba(0, 0, 0, 0.35),
         shadow_key: Color::rgba(0, 0, 0, 0.55),
-        selection: Color::rgba(137, 180, 250, 0.28),
+        selection: Color::rgba(203, 166, 247, 0.28),
         metrics: Metrics::DEFAULT,
     };
 
@@ -431,9 +431,9 @@ impl Theme {
         active: Color::rgb(196, 167, 231),
         active_hover: Color::rgb(210, 186, 240),
         active_pressed: Color::rgb(170, 140, 210),
-        accent: Color::rgb(235, 111, 146),
-        accent_hover: Color::rgb(240, 140, 168),
-        accent_pressed: Color::rgb(205, 90, 125),
+        accent: Color::rgb(196, 167, 231),
+        accent_hover: Color::rgb(205, 180, 235),
+        accent_pressed: Color::rgb(167, 142, 196),
         disabled_bg: Color::rgb(38, 35, 58),
         disabled_border: Color::rgb(49, 46, 70),
         disabled_text: Color::rgb(110, 106, 134),
@@ -447,7 +447,7 @@ impl Theme {
         text_muted: Color::rgb(124, 120, 148),
         success: Color::rgb(156, 207, 216),
         warning: Color::rgb(246, 193, 119),
-        error: Color::rgb(225, 90, 110),
+        error: Color::rgb(235, 111, 146),
         shadow_ambient: Color::rgba(0, 0, 0, 0.35),
         shadow_key: Color::rgba(0, 0, 0, 0.55),
         selection: Color::rgba(196, 167, 231, 0.28),
@@ -467,9 +467,9 @@ impl Theme {
         active: Color::rgb(64, 214, 176),
         active_hover: Color::rgb(100, 230, 195),
         active_pressed: Color::rgb(45, 180, 148),
-        accent: Color::rgb(255, 140, 66),
-        accent_hover: Color::rgb(255, 165, 105),
-        accent_pressed: Color::rgb(225, 115, 45),
+        accent: Color::rgb(64, 214, 176),
+        accent_hover: Color::rgb(93, 220, 188),
+        accent_pressed: Color::rgb(54, 182, 150),
         disabled_bg: Color::rgb(14, 14, 17),
         disabled_border: Color::rgb(20, 20, 24),
         disabled_text: Color::rgb(70, 70, 80),
@@ -503,9 +503,9 @@ impl Theme {
         active: Color::rgb(30, 115, 176),
         active_hover: Color::rgb(22, 98, 150),
         active_pressed: Color::rgb(15, 82, 128),
-        accent: Color::rgb(211, 54, 130),
-        accent_hover: Color::rgb(186, 40, 112),
-        accent_pressed: Color::rgb(160, 30, 96),
+        accent: Color::rgb(38, 139, 210),
+        accent_hover: Color::rgb(33, 122, 185),
+        accent_pressed: Color::rgb(29, 106, 160),
         disabled_bg: Color::rgb(238, 232, 213),
         disabled_border: Color::rgb(225, 218, 196),
         disabled_text: Color::rgb(147, 161, 161),
@@ -517,12 +517,12 @@ impl Theme {
         text_primary: Color::rgb(0, 43, 54),
         text_secondary: Color::rgb(88, 110, 117),
         text_muted: Color::rgb(101, 123, 131),
-        success: Color::rgb(110, 130, 0),
+        success: Color::rgb(133, 153, 0),
         warning: Color::rgb(181, 137, 0),
         error: Color::rgb(220, 50, 47),
         shadow_ambient: Color::rgba(0, 43, 54, 0.05),
         shadow_key: Color::rgba(0, 43, 54, 0.10),
-        selection: Color::rgba(30, 115, 176, 0.25),
+        selection: Color::rgba(38, 139, 210, 0.25),
         metrics: Metrics::DEFAULT,
     };
 
@@ -539,9 +539,9 @@ impl Theme {
         active: Color::rgb(7, 102, 120),
         active_hover: Color::rgb(5, 84, 100),
         active_pressed: Color::rgb(3, 70, 84),
-        accent: Color::rgb(143, 63, 113),
-        accent_hover: Color::rgb(120, 50, 95),
-        accent_pressed: Color::rgb(100, 40, 80),
+        accent: Color::rgb(175, 58, 3),
+        accent_hover: Color::rgb(154, 51, 3),
+        accent_pressed: Color::rgb(133, 44, 2),
         disabled_bg: Color::rgb(235, 219, 178),
         disabled_border: Color::rgb(213, 196, 161),
         disabled_text: Color::rgb(168, 153, 132),
@@ -558,7 +558,7 @@ impl Theme {
         error: Color::rgb(157, 0, 6),
         shadow_ambient: Color::rgba(60, 56, 54, 0.05),
         shadow_key: Color::rgba(60, 56, 54, 0.10),
-        selection: Color::rgba(7, 102, 120, 0.25),
+        selection: Color::rgba(175, 58, 3, 0.25),
         metrics: Metrics::DEFAULT,
     };
 
@@ -575,9 +575,9 @@ impl Theme {
         active: Color::rgb(30, 102, 245),
         active_hover: Color::rgb(20, 84, 215),
         active_pressed: Color::rgb(14, 68, 180),
-        accent: Color::rgb(203, 80, 172),
-        accent_hover: Color::rgb(180, 62, 150),
-        accent_pressed: Color::rgb(155, 48, 128),
+        accent: Color::rgb(136, 57, 239),
+        accent_hover: Color::rgb(120, 50, 210),
+        accent_pressed: Color::rgb(103, 43, 182),
         disabled_bg: Color::rgb(230, 233, 239),
         disabled_border: Color::rgb(204, 208, 218),
         disabled_text: Color::rgb(156, 160, 176),
@@ -594,7 +594,7 @@ impl Theme {
         error: Color::rgb(210, 15, 57),
         shadow_ambient: Color::rgba(76, 79, 105, 0.05),
         shadow_key: Color::rgba(76, 79, 105, 0.10),
-        selection: Color::rgba(30, 102, 245, 0.22),
+        selection: Color::rgba(136, 57, 239, 0.22),
         metrics: Metrics::DEFAULT,
     };
 
@@ -615,26 +615,17 @@ impl Theme {
     }
 
     pub fn from_name(name: &str) -> Option<Theme> {
-        let slug = name.trim().to_lowercase().replace(' ', "-");
-        match slug.as_str() {
-            "nord" => Some(Self::DRACULA),
-            "dracula" => Some(Self::DRACULA),
-            "solarized_dark" => Some(Self::SOLARIZED_DARK),
-            "gruvbox_dark" => Some(Self::GRUVBOX_DARK),
-            "tokyo_night" => Some(Self::TOKYO_NIGHT),
-            "catpuccin_mocha" => Some(Self::CATPPUCCIN_MOCHA),
-            "rose_pine" => Some(Self::ROSE_PINE),
-            "midnight" => Some(Self::MIDNIGHT),
-            "solarized_light" => Some(Self::SOLARIZED_LIGHT),
-            "gruvbox_light" => Some(Self::GRUVBOX_LIGHT),
-            "catpuccin_latte" => Some(Self::CATPPUCCIN_LATTE),
-            _ => None,
-        }
+        let slug = name.trim().to_lowercase().replace([' ', '_'], "-");
+        Self::all().iter().find(|theme| theme.name == slug).copied()
     }
 
     pub fn with_metrics(mut self, metrics: Metrics) -> Self {
         self.metrics = metrics;
         self
+    }
+
+    pub fn shadow_xs(&self) -> ShadowStyle {
+        ShadowStyle::new(self.shadow_ambient, 2.0, [0.0, 1.0])
     }
 
     pub fn shadow_sm(&self) -> [ShadowStyle; 2] {

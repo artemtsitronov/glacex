@@ -42,18 +42,18 @@ impl RadioButtonStyle {
         RadioButtonStyle {
             fill: Stateful::new(Fill::Solid(theme.idle))
                 .hovered(Fill::Solid(theme.hovered))
-                .selected(Fill::Solid(theme.active)),
+                .selected(Fill::Solid(theme.accent))
+                .selected_hovered(Fill::Solid(theme.accent_hover)),
             border: Stateful::new(theme.border)
-                .hovered(theme.border_strong)
-                .selected(theme.border.lerp(theme.active, 0.4))
-                .map(|&color| Border::new(1.0, color)),
-            shadow: Stateful::new(Some(theme.shadow_sm()[0])),
+                .selected(theme.border.lerp(theme.accent, 0.4))
+                .map(|&color| Border::new(theme.metrics.border_width, color)),
+            shadow: Stateful::new(None),
             sharp: false,
-            dot_color: Stateful::new(theme.on_active()),
-            dot_inset: Stateful::new(5.0),
+            dot_color: Stateful::new(Color::WHITE),
+            dot_inset: Stateful::new((theme.metrics.radio_size - theme.metrics.radio_dot) * 0.5),
             dot_path: Stateful::new(Path::ellipse(0.0)),
             path: Stateful::new(Path::ellipse(0.0)),
-            size: Stateful::new([18.0, 18.0]),
+            size: Stateful::new([theme.metrics.radio_size; 2]),
             dot_motion: Motion::FLUID,
             hover_motion: Motion::SNAPPY,
             cursor: Stateful::new(CursorIcon::Pointer),
@@ -71,8 +71,8 @@ impl RadioButtonStyle {
             border: base
                 .border
                 .map(|border| border.with_width(1.5))
-                .selected(Border::new(1.5, theme.active)),
-            dot_color: Stateful::new(theme.active),
+                .selected(Border::new(1.5, theme.accent)),
+            dot_color: Stateful::new(theme.accent),
             ..base
         }
     }
