@@ -92,7 +92,7 @@ impl Ui {
         Ui {
             painter,
             window,
-            theme: Theme::LIGHT,
+            theme: Theme::default(),
             persistent_state: HashMap::new(),
             anonymous_last_used: HashMap::new(),
             frame_index: 0,
