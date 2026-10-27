@@ -81,7 +81,7 @@ impl CheckboxStyle {
                 .map(|&color| Border::new(1.0, color)),
             shadow: Stateful::new(Some(theme.shadow_sm()[0])),
             sharp: false,
-            path: Stateful::new(Path::rect([4.0; 4])),
+            path: Stateful::new(Path::rect([theme.metrics.radius_xs; 4])),
             size: Stateful::new([18.0, 18.0]),
             pop_scale: Stateful::new(0.08),
             check_motion: Motion::FLUID,

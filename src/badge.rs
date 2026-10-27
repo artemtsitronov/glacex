@@ -43,16 +43,11 @@ pub struct BadgeStyle {
 
 impl BadgeStyle {
     pub fn from_theme(theme: &Theme) -> Self {
-        let text_color = if theme.is_dark {
-            Color::BLACK
-        } else {
-            Color::WHITE
-        };
         Self::build(
             theme,
             Fill::Solid(theme.active),
             Color::TRANSPARENT,
-            text_color,
+            theme.on_active(),
         )
     }
 

@@ -34,7 +34,7 @@ impl CardStyle {
             theme.border,
             [20.0, 20.0],
             Some(theme.shadow_sm()[0]),
-            10.0,
+            theme.metrics.radius_sm,
         )
     }
 
@@ -44,7 +44,7 @@ impl CardStyle {
             theme.border_faint,
             [16.0, 16.0],
             None,
-            8.0,
+            theme.metrics.radius_xs,
         )
     }
 
@@ -54,7 +54,7 @@ impl CardStyle {
             theme.border_strong,
             [20.0, 20.0],
             Some(theme.shadow_md()[0]),
-            12.0,
+            theme.metrics.radius_md,
         )
     }
 

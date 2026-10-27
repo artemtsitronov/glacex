@@ -11,7 +11,7 @@ pub enum GradientKind {
     Linear { angle: f32 },
     Radial { center: [f32; 2], radius: f32 },
     Conic { center: [f32; 2] },
-    Mesh { corners: [Color; 4] }, // order top right top left bottom left bottom right
+    Mesh { corners: [Color; 4] }, // order: [top right] [top left] [bottom left] [bottom right]
 }
 
 #[derive(Debug, Clone, Copy)]

@@ -55,7 +55,7 @@ impl TextInputStyle {
             cursor_blink_period: 1.0,
             shadow: Stateful::new(shadow),
             sharp: false,
-            path: Stateful::new(Path::rect([6.0; 4])),
+            path: Stateful::new(Path::rect([theme.metrics.radius_md; 4])),
             hover_motion: Motion::SNAPPY,
             focus_motion: Motion::SNAPPY,
             cursor: Stateful::new(CursorIcon::Text),

@@ -1,6 +1,6 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Ease {
-    // Take it easy :)
+    // Take it easey  (get it, ease -> easey? haha)
     Linear,
     EaseOutQuad,
     EaseInOutQuad,
