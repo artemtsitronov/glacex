@@ -15,7 +15,7 @@
 
 An immediate mode UI library for Rust that runs on the GPU. Written from scratch on top of `wgpu`, `winit` and `taffy`.
 
-Develpped primarly by **Artem Tsitronov**(author) and **Soumalya Das**(contributor).
+Developed by **Artem Tsitronov**(author) and Glacex **contributors**(thank you so much <3).
 If you have any questions or problems, just email me at <artemtsitronov@gmail.com>
 
 </div>
