@@ -285,7 +285,7 @@ impl TextEditState {
             .filter(|c| !c.is_control())
             .collect();
 
-        let editing = (!typed.is_empty() && !ui.ctrl_held()) || left || right;
+        let editing = left || right;
 
         let any_activity = !typed.is_empty()
             || backspace
@@ -315,6 +315,7 @@ impl TextEditState {
                 self.text.insert(idx, ch);
                 self.cursor += 1;
             }
+            self.selection_anchor = None;
         }
 
         if backspace {

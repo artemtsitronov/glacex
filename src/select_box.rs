@@ -28,12 +28,12 @@ pub struct SelectBoxStyle {
     pub show_chevron: bool,
     pub chevron: ChevronStyle,
 
-    pub dropdown_fill: Stateful<Fill>,
-    pub dropdown_border: Stateful<Border>,
-    pub dropdown_padding: Stateful<f32>,
-    pub dropdown_max_height: Stateful<f32>,
-    pub dropdown_screen_margin: Stateful<f32>,
-    pub dropdown_shadow: Stateful<Option<ShadowStyle>>,
+    pub sbox_fill: Stateful<Fill>,
+    pub sbox_border: Stateful<Border>,
+    pub sbox_padding: Stateful<f32>,
+    pub sbox_max_height: Stateful<f32>,
+    pub sbox_screen_margin: Stateful<f32>,
+    pub sbox_shadow: Stateful<Option<ShadowStyle>>,
 
     pub item_height: Stateful<f32>,
     pub item_inset_x: Stateful<f32>,
@@ -87,12 +87,12 @@ impl SelectBoxStyle {
             show_chevron: true,
             chevron: ChevronStyle::default(),
 
-            dropdown_fill: Stateful::new(Fill::Solid(theme.surface_elevated)),
-            dropdown_border: Stateful::new(Border::new(theme.metrics.border_width, theme.border)),
-            dropdown_padding: Stateful::new(6.0),
-            dropdown_max_height: Stateful::new(280.0),
-            dropdown_screen_margin: Stateful::new(8.0),
-            dropdown_shadow: Stateful::new(Some(
+            sbox_fill: Stateful::new(Fill::Solid(theme.surface_elevated)),
+            sbox_border: Stateful::new(Border::new(theme.metrics.border_width, theme.border)),
+            sbox_padding: Stateful::new(6.0),
+            sbox_max_height: Stateful::new(280.0),
+            sbox_screen_margin: Stateful::new(8.0),
+            sbox_shadow: Stateful::new(Some(
                 ShadowStyle::new(theme.shadow_key, 20.0, [0.0, 6.0]).spread(5.0),
             )),
 
@@ -193,7 +193,7 @@ pub struct SelectBoxState {
 
     pub search_text: String,
     pub search_focus_t: f32,
-    pub dropdown_hover_t: f32,
+    pub sbox_hover_t: f32,
 
     pub scroll_offset: f32,
 }
@@ -212,7 +212,7 @@ impl Default for SelectBoxState {
             keyboard_index: -1,
             search_text: String::new(),
             search_focus_t: 0.0,
-            dropdown_hover_t: 0.0,
+            sbox_hover_t: 0.0,
             scroll_offset: 0.0,
         }
     }
@@ -227,6 +227,7 @@ pub struct SelectBox {
     width: f32,
     tooltip: Option<String>,
     searchable: bool,
+    default_option: Option<String>,
     overrides: StyleOverrides,
 }
 
@@ -241,6 +242,7 @@ impl SelectBox {
             width: 220.0,
             tooltip: None,
             searchable: false,
+            default_option: None,
             overrides: StyleOverrides::default(),
         }
     }
@@ -262,6 +264,11 @@ impl SelectBox {
 
     pub fn searchable(mut self) -> Self {
         self.searchable = true;
+        self
+    }
+
+    pub fn default_option(mut self, value: impl Into<String>) -> Self {
+        self.default_option = Some(value.into());
         self
     }
 
@@ -335,7 +342,7 @@ impl Measurable for SelectBox {
     fn measure(&mut self, ui: &mut Ui) -> [f32; 2] {
         let theme = *ui.theme();
         let style = self.resolved_style(&theme);
-        let state = ui.widget_state_or::<SelectBoxState>(&self.id, SelectBoxState::default());
+        let state = ui.widget_state_or::<SelectBoxState>(&self.id, self.initial_state());
         let weights = StateWeights::IDLE
             .hovered(state.hover_t)
             .focused(state.focus_t);
@@ -352,8 +359,7 @@ impl Measurable for SelectBox {
         let mouse_pressed_frame = ui.mouse_pressed_this_frame();
         let window_size = ui.window_size();
 
-        let mut state =
-            ui.take_widget_state_or::<SelectBoxState>(&self.id, SelectBoxState::default());
+        let mut state = ui.take_widget_state_or::<SelectBoxState>(&self.id, self.initial_state());
 
         let num_options = self.options.len();
         while state.item_hover_ts.len() < num_options {
@@ -363,7 +369,7 @@ impl Measurable for SelectBox {
         let trigger_previous = StateWeights::IDLE
             .hovered(state.hover_t)
             .focused(state.focus_t);
-        let dropdown_previous = StateWeights::IDLE.hovered(state.dropdown_hover_t);
+        let sbox_previous = StateWeights::IDLE.hovered(state.sbox_hover_t);
         let trigger_path = style.path.resolve(trigger_previous);
         let trigger_blocked = ui.is_input_blocked(mouse_pos) && !state.open;
         let in_clip = ui.point_in_current_clip(mouse_pos);
@@ -381,8 +387,8 @@ impl Measurable for SelectBox {
             ],
         );
 
-        let search_height = style.search_height.resolve(dropdown_previous);
-        let search_gap = style.search_gap.resolve(dropdown_previous);
+        let search_height = style.search_height.resolve(sbox_previous);
+        let search_gap = style.search_gap.resolve(sbox_previous);
         let search_bar_h = if style.searchable {
             search_height + search_gap * 2.0
         } else {
@@ -422,26 +428,26 @@ impl Measurable for SelectBox {
             })
             .collect();
         let item_list_h: f32 = item_heights.iter().sum();
-        let inner_padding = style.dropdown_padding.resolve(dropdown_previous);
+        let inner_padding = style.sbox_padding.resolve(sbox_previous);
         let content_h = search_bar_h + item_list_h + inner_padding * 2.0;
-        let dropdown_h = content_h.min(style.dropdown_max_height.resolve(dropdown_previous));
+        let sbox_h = content_h.min(style.sbox_max_height.resolve(sbox_previous));
 
         // items band stays flush against the trigger, one continuous surface
         let below_y = position[1] + size[1];
-        let above_y = position[1] - dropdown_h;
-        let margin = style.dropdown_screen_margin.resolve(dropdown_previous);
-        let opens_upward = below_y + dropdown_h > window_size[1] - margin && above_y > margin;
-        let dropdown_y = if opens_upward { above_y } else { below_y };
-        let dropdown_pos = [position[0], dropdown_y];
-        let dropdown_size = [size[0], dropdown_h];
+        let above_y = position[1] - sbox_h;
+        let margin = style.sbox_screen_margin.resolve(sbox_previous);
+        let opens_upward = below_y + sbox_h > window_size[1] - margin && above_y > margin;
+        let sbox_y = if opens_upward { above_y } else { below_y };
+        let sbox_pos = [position[0], sbox_y];
+        let sbox_size = [size[0], sbox_h];
 
         if state.open && mouse_pressed_frame {
             let in_trigger = trigger_path(position, size).contains(mouse_pos);
-            let in_dropdown = mouse_pos[0] >= dropdown_pos[0]
-                && mouse_pos[0] <= dropdown_pos[0] + dropdown_size[0]
-                && mouse_pos[1] >= dropdown_pos[1]
-                && mouse_pos[1] <= dropdown_pos[1] + dropdown_size[1];
-            if !in_trigger && !in_dropdown {
+            let in_sbox = mouse_pos[0] >= sbox_pos[0]
+                && mouse_pos[0] <= sbox_pos[0] + sbox_size[0]
+                && mouse_pos[1] >= sbox_pos[1]
+                && mouse_pos[1] <= sbox_pos[1] + sbox_size[1];
+            if !in_trigger && !in_sbox {
                 state.open = false;
                 state.keyboard_index = -1;
                 state.search_text.clear();
@@ -515,8 +521,8 @@ impl Measurable for SelectBox {
             if let Some(ki) = keyboard_item {
                 let item_top = search_bar_h + inner_padding + item_tops[ki];
                 let item_bot = item_top + item_heights[ki];
-                let visible_h = dropdown_h - search_bar_h;
-                let scroll_max = (content_h - dropdown_h).max(0.0);
+                let visible_h = sbox_h - search_bar_h;
+                let scroll_max = (content_h - sbox_h).max(0.0);
                 if item_top < state.scroll_offset {
                     state.scroll_offset = item_top;
                 } else if item_bot > state.scroll_offset + visible_h {
@@ -569,18 +575,18 @@ impl Measurable for SelectBox {
         let trigger_path = style.path.resolve(weights);
         let padding_x = style.padding_x.resolve(weights);
 
-        let dropdown_hovered = state.open
-            && mouse_pos[0] >= dropdown_pos[0]
-            && mouse_pos[0] <= dropdown_pos[0] + dropdown_size[0]
-            && mouse_pos[1] >= dropdown_pos[1]
-            && mouse_pos[1] <= dropdown_pos[1] + dropdown_size[1];
-        state.dropdown_hover_t = animate_towards(
-            state.dropdown_hover_t,
-            StateWeights::when(dropdown_hovered),
+        let sbox_hovered = state.open
+            && mouse_pos[0] >= sbox_pos[0]
+            && mouse_pos[0] <= sbox_pos[0] + sbox_size[0]
+            && mouse_pos[1] >= sbox_pos[1]
+            && mouse_pos[1] <= sbox_pos[1] + sbox_size[1];
+        state.sbox_hover_t = animate_towards(
+            state.sbox_hover_t,
+            StateWeights::when(sbox_hovered),
             dt,
             style.hover_motion,
         );
-        let dropdown_weights = StateWeights::IDLE.hovered(state.dropdown_hover_t);
+        let sbox_weights = StateWeights::IDLE.hovered(state.sbox_hover_t);
 
         let label_text = state
             .selected
@@ -653,7 +659,7 @@ impl Measurable for SelectBox {
             let mouse_blocked_by_others = ui.is_input_blocked(mouse_pos);
 
             // resized as one surface, not clipped, so corners stay rounded mid animation
-            let grown_h = open_ease * dropdown_h;
+            let grown_h = open_ease * sbox_h;
             let container_pos = if opens_upward {
                 [position[0], position[1] - grown_h]
             } else {
@@ -670,26 +676,26 @@ impl Measurable for SelectBox {
 
             let full_clip = [0.0, 0.0, window_size[0], window_size[1]];
 
-            let visible_h = dropdown_size[1] * open_ease;
+            let visible_h = sbox_size[1] * open_ease;
             let clip_top = if opens_upward {
-                dropdown_pos[1] + dropdown_size[1] - visible_h
+                sbox_pos[1] + sbox_size[1] - visible_h
             } else {
-                dropdown_pos[1]
+                sbox_pos[1]
             };
-            let dropdown_clip = [
-                dropdown_pos[0] - 2.0,
+            let sbox_clip = [
+                sbox_pos[0] - 2.0,
                 clip_top,
-                dropdown_pos[0] + dropdown_size[0] + 2.0,
-                dropdown_pos[1] + dropdown_size[1] + 2.0,
+                sbox_pos[0] + sbox_size[0] + 2.0,
+                sbox_pos[1] + sbox_size[1] + 2.0,
             ];
-            let dropdown_clip = [
-                dropdown_clip[0].max(0.0),
-                dropdown_clip[1].max(0.0),
-                dropdown_clip[2].min(window_size[0]),
-                dropdown_clip[3].min(window_size[1]),
+            let sbox_clip = [
+                sbox_clip[0].max(0.0),
+                sbox_clip[1].max(0.0),
+                sbox_clip[2].min(window_size[0]),
+                sbox_clip[3].min(window_size[1]),
             ];
 
-            if let Some(shadow) = &style.dropdown_shadow.resolve(dropdown_weights) {
+            if let Some(shadow) = &style.sbox_shadow.resolve(sbox_weights) {
                 let shadow_opacity = shadow.color.a * open_ease;
                 let shadow_color = shadow.color.with_alpha(shadow_opacity);
                 ui.draw_overlay_shape(
@@ -712,11 +718,10 @@ impl Measurable for SelectBox {
                 );
             }
 
-            // one background, cross fades trigger look into dropdown look as it grows
-            let merged_fill =
-                trigger_fill.lerp(&style.dropdown_fill.resolve(dropdown_weights), open_ease);
+            // one background, cross fades trigger look into sbox look as it grows
+            let merged_fill = trigger_fill.lerp(&style.sbox_fill.resolve(sbox_weights), open_ease);
             let merged_border =
-                trigger_border.lerp(style.dropdown_border.resolve(dropdown_weights), open_ease);
+                trigger_border.lerp(style.sbox_border.resolve(sbox_weights), open_ease);
 
             ui.draw_overlay_shape(
                 trigger_path(container_pos, container_size),
@@ -739,21 +744,21 @@ impl Measurable for SelectBox {
                 draw_chevron_overlay(ui, position, size, state.chevron_angle, &chevron, full_clip);
             }
 
-            let mut content_y = dropdown_pos[1] + inner_padding;
+            let mut content_y = sbox_pos[1] + inner_padding;
 
             if style.searchable {
-                let search_pos = [dropdown_pos[0] + inner_padding, content_y];
-                let search_size = [dropdown_size[0] - inner_padding * 2.0, search_height];
-                let search_border = style.search_border.resolve(dropdown_weights);
-                let search_padding_x = style.search_padding_x.resolve(dropdown_weights);
+                let search_pos = [sbox_pos[0] + inner_padding, content_y];
+                let search_size = [sbox_size[0] - inner_padding * 2.0, search_height];
+                let search_border = style.search_border.resolve(sbox_weights);
+                let search_padding_x = style.search_padding_x.resolve(sbox_weights);
 
                 ui.draw_overlay_shape(
                     MeasurablePath::rect(
                         search_pos,
                         search_size,
-                        [style.search_corner_radius.resolve(dropdown_weights); 4],
+                        [style.search_corner_radius.resolve(sbox_weights); 4],
                     ),
-                    Fill::Solid(style.search_fill.resolve(dropdown_weights)),
+                    Fill::Solid(style.search_fill.resolve(sbox_weights)),
                     search_border.with_color(
                         search_border
                             .color
@@ -761,7 +766,7 @@ impl Measurable for SelectBox {
                     ),
                     0.0,
                     false,
-                    dropdown_clip,
+                    sbox_clip,
                     0.0,
                 );
 
@@ -780,7 +785,7 @@ impl Measurable for SelectBox {
                 };
                 let search_style = style
                     .search_text_style
-                    .resolve(dropdown_weights)
+                    .resolve(sbox_weights)
                     .color(search_color);
                 let search_text_y =
                     search_pos[1] + (search_height - search_style.line_height) / 2.0;
@@ -801,22 +806,21 @@ impl Measurable for SelectBox {
 
             let items_area_top = content_y;
             let items_clip = [
-                dropdown_pos[0],
-                items_area_top.max(dropdown_clip[1]),
-                dropdown_pos[0] + dropdown_size[0],
-                (dropdown_pos[1] + dropdown_size[1]).min(dropdown_clip[3]),
+                sbox_pos[0],
+                items_area_top.max(sbox_clip[1]),
+                sbox_pos[0] + sbox_size[0],
+                (sbox_pos[1] + sbox_size[1]).min(sbox_clip[3]),
             ];
 
-            let scroll_max =
-                (item_list_h + search_bar_h + inner_padding * 2.0 - dropdown_h).max(0.0);
+            let scroll_max = (item_list_h + search_bar_h + inner_padding * 2.0 - sbox_h).max(0.0);
             state.scroll_offset = state.scroll_offset.clamp(0.0, scroll_max);
 
             let scroll_delta = ui.scroll_delta_y();
             if !ui.scroll_consumed() && scroll_delta != 0.0 {
-                let dd_hovered = mouse_pos[0] >= dropdown_pos[0]
-                    && mouse_pos[0] <= dropdown_pos[0] + dropdown_size[0]
-                    && mouse_pos[1] >= dropdown_pos[1]
-                    && mouse_pos[1] <= dropdown_pos[1] + dropdown_size[1];
+                let dd_hovered = mouse_pos[0] >= sbox_pos[0]
+                    && mouse_pos[0] <= sbox_pos[0] + sbox_size[0]
+                    && mouse_pos[1] >= sbox_pos[1]
+                    && mouse_pos[1] <= sbox_pos[1] + sbox_size[1];
                 if dd_hovered {
                     state.scroll_offset =
                         (state.scroll_offset - scroll_delta).clamp(0.0, scroll_max);
@@ -835,8 +839,8 @@ impl Measurable for SelectBox {
                 let item_inset_x = style
                     .item_inset_x
                     .resolve(item_weights_for(&state, opt_idx));
-                let item_pos = [dropdown_pos[0] + item_inset_x, item_y];
-                let item_size = [dropdown_size[0] - item_inset_x * 2.0, item_height];
+                let item_pos = [sbox_pos[0] + item_inset_x, item_y];
+                let item_size = [sbox_size[0] - item_inset_x * 2.0, item_height];
 
                 let item_hovered = mouse_pos[0] >= item_pos[0]
                     && mouse_pos[0] <= item_pos[0] + item_size[0]
@@ -949,7 +953,10 @@ impl StatefulWidget for SelectBox {
         &self.id
     }
     fn initial_state(&self) -> Self::State {
-        SelectBoxState::default()
+        SelectBoxState {
+            selected: self.default_option.clone(),
+            ..Default::default()
+        }
     }
 }
 
