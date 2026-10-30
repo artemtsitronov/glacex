@@ -425,7 +425,6 @@ impl Painter {
         {
             surface_config.format = f;
         }
-        eprintln!("surface format: {:?}", surface_config.format);
         surface.configure(&device, &surface_config);
 
         let window_size_buffer = device.create_buffer_init(&BufferInitDescriptor {

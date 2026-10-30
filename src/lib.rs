@@ -214,7 +214,7 @@ impl<W: Widget> ApplicationHandler for App<W> {
         window.set_visible(true);
 
         let mut ui = pollster::block_on(Ui::new(window.clone()));
-        ui.set_theme(Theme::CATPPUCCIN_MOCHA);
+        ui.set_theme(Theme::default());
         self.root.on_start(&mut ui);
         self.window = Some(window);
         self.ui = Some(ui);

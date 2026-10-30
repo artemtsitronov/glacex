@@ -2,6 +2,34 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.2.4]
+
+### Fixed
+- **MAJOR FIX** The colors looked very washed, because of the double conversion to the sRGB profile. `Painter` now picks a non-sRGB surface format.
+- `TextEdit`. When text was selected, typing or pasting didn't replace the selection.
+- Many themes inconsistencies were present(different borders, colors, focus rings ...)
+- Added in `lib.rs` an initial `ui.set_theme(Theme::default())`. Previously, it resulted in broken themes, and incomplete looks.
+
+### Changed
+- **MAJOR CHANGE** Built-in themes changed: new 11 themes: `NORD`, `DRACULA`, `SOLARIZED_DARK`, `GRUVBOX_DARK`, `TOKYO_NIGHT`, `CATPPUCCIN_MOCHA`, `ROSE_PINE`, `MIDNIGHT`, `SOLARIZED_LIGHT`, `GRUVBOX_LIGHT`, `CATPPUCCIN_LATTE`.
+- The event loop uses `ControlFlow::Wait`, no longer redrawing every frame
+- Naming inconsistencies in the `SelectBox` widget: due to multiple contributors working on it, in the internal code, the widget was often named `dropdown`. Fixed with renaming the internal variables to `sbox_*`
+
+## Added
+- Themes: `DRACULA`, `SOLARIZED_DARK`, `SOLARIZED_LIGHT`, `MIDNIGHT`.
+- `Theme` colors: `accent`, `accent_hover`, `accent_pressed`, `active_pressed`, `disabled_bg`, `disabled_border`, `disabled_text`, `border_strong_hover`.
+- `Theme::shadow_xs()`.
+- Size fields in `Metrics` for every widget, so sizes aren't hardcoded anymore.
+- `Accordion` style fields: `fill`, `border`, `path`, `divider_width`.
+- `SelectBox::default_option(value)`
+
+## Removed
+- Removed shortcut functions in `Themes`, such as `light()`, `dark()`...
+
+## [0.2.3]
+
+~ I forgot to add it to the CHANGELOG. Oops ~
+
 ## [0.2.2]
 
 ### Fixed
