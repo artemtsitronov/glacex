@@ -1,6 +1,6 @@
 [package]
 name = "glacex"
-version = "0.2.3"
+version = "0.2.4"
 edition = "2024"
 rust-version = "1.88"
 description = "GPU-rendered, immediate-mode with SDF rendering GUI library."
@@ -9,8 +9,7 @@ repository = "https://github.com/artemtsitronov/glacex"
 keywords = ["gui", "wgpu", "ui", "immediate-mode", "graphics"]
 categories = ["gui", "graphics", "rendering"]
 # Fonts are embedded at compile-time via include_bytes! and must travel with
-# the source tree on crates.io. List them explicitly so they are included in
-# the published crate even though they live outside src/.
+# the source tree on crates.io.
 include = [
     "src/**/*",
     "assets/fonts/*.ttf",

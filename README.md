@@ -20,8 +20,7 @@ If you have any questions or problems, just email me at <artemtsitronov@gmail.co
 
 </div>
 
-> **Status**: 0.2.0 is a lot more stable than before and I'm not planning any big API changes.
-If something big does change, I'll let you know first.
+> **Status**: 0.2.x are a lot more stable than 0.1.x. It isn't a 100% stable release yet, but it's way more usable and reliable now.
 
 ## Table of Contents
 
@@ -56,29 +55,25 @@ If something big does change, I'll let you know first.
 - [Contributing](#contributing)
 - [License](#license)
 
-If you want a more experimental version of glacex, there's the programmersd21 fork at https://github.com/programmersd21/glacex
-
-Just so you know, I'm not responsible for that fork. That includes big changes, redesigns and AI generated stuff in it.
-
 ## What is glacex?
 
-`glacex` is an immediate mode UI library for Rust. It doesn't wrap a native toolkit or a browser engine. It draws everything itself.
+`glacex` is an immediate mode UI library for Rust with persistent state, fully GPU-Rendered, SDF, and accessibility features(via accesskit).
 
-Here's what it uses under the hood:
-
+## Main dependencies
 - **`winit`** handles the window and the event loop on every platform.
 - **`wgpu`** draws every shape on the GPU as an instanced SDF quad.
 - **`glyphon`** shapes the text and puts the glyphs into atlases, and each widget gets its own clipping.
 - **`taffy`** does the flexbox math for `row!` and `column!`.
 - **`image`** decodes images.
 - **`kurbo`** handles paths.
+- **`accesskit`** is responsible for accessibility features.
 
-There's no retained widget tree and no markup. You just write your UI in normal Rust every frame, and glacex measures it, lays it out, handles input, animates it and renders it.
+Other minor dependencies such as `arboard`, `uuid`, `tree-sitter` are also present.
 
 ## Features
 
-- Its own renderer. Shapes are anti aliased SDFs with borders and soft shadows, and everything with the same clip rect goes into one draw call.
-- Custom Bezier shapes with `MeasurablePath::Free`, drawn by a second mesh pipeline. So you're not stuck with rects and ellipses. More in [Custom Shapes / Paths](#custom-shapes--paths).
+- Its own renderer. Shapes are anti aliased SDFs.
+- Custom Bezier shapes with `MeasurablePath::Free`, drawn by a second mesh pipeline. More in [Custom Shapes / Paths](#custom-shapes--paths).
 - Text with `glyphon`, and every widget clips its own text.
 - Solid colors, gradients (linear, radial and conic) and images as fills. They get cached in a GPU atlas.
 - `Color` is `#[repr(C)]` and `Pod`/`Zeroable`, so it goes straight into vertex buffers. You can make colors from hex, RGB or HSV, and blend, lerp, lighten or darken them.
@@ -110,7 +105,7 @@ Or put it in your `Cargo.toml`
 
 ```toml
 [dependencies]
-glacex = "0.2.3"
+glacex = "0.2.4"
 ```
 
 ### From GitHub (main branch)

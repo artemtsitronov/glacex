@@ -1,6 +1,6 @@
 use glacex::{
     App, Border, Card, CardStyle, Fill, MeasurablePath, Motion, Path, ScrollConfig, ScrollView,
-    ScrollViewStyle, TabItem, Tabs, TabsStyle, Theme, Ui, Widget, column, row,
+    ScrollViewStyle, TabItem, Tabs, TabsStyle, Ui, Widget, column, row,
 };
 use kurbo::BezPath;
 
@@ -10,7 +10,6 @@ impl Widget for CustomizationExample {
     type Output = ();
 
     fn ui(&mut self, ui: &mut Ui) {
-        ui.set_theme(Theme::DARK);
         let window_size = ui.window_size();
         let theme = ui.theme();
 

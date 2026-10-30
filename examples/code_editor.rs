@@ -1,6 +1,6 @@
 use glacex::{
     Alignment, App, Expanded, FontFamily, Language, TabItem, Tabs, TextArea, TextEditState,
-    TextStyle, Theme, Ui, Widget, column,
+    TextStyle, Ui, Widget, column,
 };
 use std::fs::read_to_string;
 use std::path::Path;
@@ -73,8 +73,6 @@ impl Widget for CodeEditor {
     type Output = ();
 
     fn ui(&mut self, ui: &mut Ui) {
-        ui.set_theme(Theme::DARK);
-
         let tab_items = self
             .editor_files
             .iter()
