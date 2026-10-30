@@ -46,3 +46,13 @@ Open an issue on GitHub. Tell us how to reproduce it, what you expected and what
 ## License
 
 If you contribute, your code goes under the MIT License like the rest of the project.
+
+## AI Policy
+
+AI tools (ChatGPT, Codex, Claude, ...) may be used as a **tool** and not as a replacement for human-written code (no vibecoding).
+
+1. **You're responsible for it.** You must know what the LLM wrote, review it, and test it.
+2. **Disclose it.** Be transparent about it. If you used AI, please tell us what you wrote, and explain it.
+3. **No major AI contributions.** DON'T. VIBE. CODE. I (Artem Tsitronov) would prefer to see bad, honest code rather than perfect AI code. You are allowed to use it for repetitive boring/annoying stuff.
+
+I myself use AI as a tool, but strictly as a tool. Please do the same.
