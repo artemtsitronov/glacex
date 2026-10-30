@@ -54,7 +54,7 @@ impl ProgressBarStyle {
             sharp: false,
             path: Stateful::new(default_track_path()),
             progress_path: Stateful::new(default_track_path()),
-            progress_motion: Motion::FLUID,
+            progress_motion: Motion::SNAPPY,
             hover_motion: Motion::SNAPPY,
         }
     }

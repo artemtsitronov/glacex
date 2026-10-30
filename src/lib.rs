@@ -96,7 +96,7 @@ use accesskit_winit::Adapter;
 use std::sync::Arc;
 use winit::application::ApplicationHandler;
 use winit::event::{ElementState, MouseButton, WindowEvent};
-use winit::event_loop::{ActiveEventLoop, EventLoop};
+use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::keyboard::{Key, NamedKey, PhysicalKey};
 use winit::window::{Window, WindowId};
 
@@ -174,6 +174,7 @@ impl<W: Widget> App<W> {
                 return;
             }
         };
+        event_loop.set_control_flow(ControlFlow::Wait);
 
         let mut app = self;
         if let Err(error) = event_loop.run_app(&mut app) {
@@ -234,7 +235,6 @@ impl<W: Widget> ApplicationHandler for App<W> {
             WindowEvent::CloseRequested => event_loop.exit(), // imagine you not being able to exit, because I forgot to implement this
 
             WindowEvent::RedrawRequested => {
-                // every. single. frame. scandalous! Who was the idiot that wrote this!? Ah yes, me. (dw, will be fixed)
                 ui.begin_frame();
                 if let Some(update_fn) = self.update_fn.as_mut() {
                     update_fn(&mut self.root);
